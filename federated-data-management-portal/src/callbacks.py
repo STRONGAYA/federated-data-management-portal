@@ -177,8 +177,10 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     It processes the data to generate a DataFrame and a list of tooltips, which are then used to create a Dash DataTable.
 
     Parameters:
-    global_schema_data (dict): The global schema data to process. Each key is a variable name, and each value is a dictionary containing information about the variable.
-    descriptive_data (dict): The descriptive data to process. Each key is a timestamp, and each value is a dictionary containing the data fetched at that timestamp.
+    global_schema_data (dict): The global schema data to process. Each key is a variable name,
+    and each value is a dictionary containing information about the variable.
+    descriptive_data (dict): The descriptive data to process. Each key is a timestamp,
+    and each value is a dictionary containing the data fetched at that timestamp.
     text (str, optional): The text to use in the tooltips. Defaults to "AYA".
 
     Returns:
@@ -264,7 +266,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                         f'appear to be available.')
 
         tooltip_row = {
-            'Variables': f'__{variable.replace("_", " ").title()}__  \nAssociated class: {_variable_info[variable].get("class")}',
+            'Variables': f'__{variable.replace("_", " ").title()}__  \n'
+                         f'Associated class: {_variable_info[variable].get("class")}',
             'Values': '',
             f'Total {text}s': org_data
         }
@@ -288,7 +291,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                     else:
                         row[organisation] = 0
                         tooltip_row[
-                            organisation] = f'Data for __{variable.replace("_", " ")}__ appears unavailable for {organisation}.'
+                            organisation] = (f'Data for __{variable.replace("_", " ")}__ '
+                                             f'appears unavailable for {organisation}.')
             else:
                 row[organisation] = 0
                 tooltip_row[
@@ -333,7 +337,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
 
                 tooltip_row = {
                     'Variables': '',
-                    'Values': f'{variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \nAssociated class: {value_info.get("target_class")}',
+                    'Values': f'{variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
+                              f'Associated class: {value_info.get("target_class")}',
                     f'Total {text}s': org_data_str
                 }
 
@@ -350,16 +355,22 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                                     'sub_class') == value_info.get("target_class"):
                                 row[organisation] = int(info.get('sub_class_count', 0))
                                 tooltip_row[
-                                    organisation] = f'__{info.get("sub_class_count", 0)}__ {text}s in {organisation} have __{value.replace("_", " ")}__ as {variable.replace("_", " ")}.'
+                                    organisation] = (f'__{info.get("sub_class_count", 0)}__ {text}s '
+                                                     f'in {organisation} have __{value.replace("_", " ")}__ '
+                                                     f'as {variable.replace("_", " ")}.')
                                 break
                             else:
                                 row[organisation] = 0
                                 tooltip_row[
-                                    organisation] = f'No {text}s that have __{value.replace("_", " ")}__ as {variable.replace("_", " ")} appear available in {organisation}.'
+                                    organisation] = (f'No {text}s that have __{value.replace("_", " ")}__ '
+                                                     f'as {variable.replace("_", " ")} '
+                                                     f'appear available in {organisation}.')
                     else:
                         row[organisation] = 0
                         tooltip_row[
-                            organisation] = f'No {text}s that have __{value.replace("_", " ")}__ as {variable.replace("_", " ")} appear available in {organisation}.'
+                            organisation] = (f'No {text}s that have __{value.replace("_", " ")}__ '
+                                             f'as {variable.replace("_", " ")} '
+                                             f'appear available in {organisation}.')
 
                 # Append the row and tooltip row to the list of rows and tooltips
                 df_rows.append(row)
@@ -381,12 +392,14 @@ def create_data_table(df, tooltips):
     Function to create a Dash DataTable.
 
     This function takes a pandas DataFrame and a list of tooltips as input, and returns a Dash DataTable.
-    The DataTable includes several styles for the table, cells, data, and header, as well as conditional styles for the data.
+    The DataTable includes several styles for the table, cells, data, and header,
+    as well as conditional styles for the data.
     The tooltips are added to the DataTable based on the input list of tooltips.
 
     Parameters:
     df (pandas.DataFrame): The DataFrame to convert into a DataTable.
-    tooltips (list): A list of tooltips to add to the DataTable. Each tooltip is a dictionary where the keys are column names and the values are the tooltip texts.
+    tooltips (list): A list of tooltips to add to the DataTable.
+    Each tooltip is a dictionary where the keys are column names and the values are the tooltip texts.
 
     Returns:
     dash_table.DataTable: The created Dash DataTable.
@@ -433,7 +446,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_type="organisation"
     descriptive_data (dict): The descriptive data to generate the donut chart from. Each key is a timestamp,
                              and each value is a dictionary containing the data fetched at that timestamp.
     text (str, optional): The text to use in the donut chart title and hovertemplate. Defaults to "AYA".
-    chart_type (str, optional): The type of chart to generate. Can be "organisation" or "country". Defaults to "organisation".
+    chart_type (str, optional): The type of chart to generate.
+    Can be "organisation" or "country". Defaults to "organisation".
 
     Returns:
     dict: A dictionary representing the figure for the donut chart.
