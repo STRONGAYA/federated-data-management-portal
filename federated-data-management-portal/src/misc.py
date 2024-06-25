@@ -50,7 +50,8 @@ def fetch_data(vantage6_config, descriptive_data):
         del config
 
     else:
-        _new_data = json.load(open(f'example_data{os.path.sep}mockresult.json', 'r'))
+        directory = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        _new_data = json.load(open(rf"{directory}{os.path.sep}example_data{os.path.sep}mockresult.json", 'r'))
 
     try:
         new_data = {item['organisation']: {k: v for k, v in item.items() if k != 'organisation'} for item in
