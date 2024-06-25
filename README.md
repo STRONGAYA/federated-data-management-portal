@@ -1,7 +1,3 @@
-This branch is no longer being maintained, please refer to the new repository at
-https://github.com/STRONGAYA/federated-data-management-portal.
-
-------------------------------------------------------------------------------------------------------------------------
 # Federated Data Management Portal
 This repository contains the code for the Federated Data Management Portal,
 a web application that allows users to inspect data from multiple sources in a single interface.
