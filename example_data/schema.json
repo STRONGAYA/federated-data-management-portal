@@ -1,0 +1,323 @@
+{
+  "endpoint": "http://localhost:7200/repositories/userRepo/statements",
+  "database_name": "HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020",
+  "variable_info": {
+    "identifier": {
+      "predicate": "sio:000008",
+      "class": "ncit:C25364",
+      "local_definition": "id"
+    },
+    "biological_sex": {
+      "predicate": "roo:P100018",
+      "class": "ncit:C28421",
+      "local_definition": "biological_sex",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasdemographicvariable",
+          "class": "mesh:D000091569",
+          "class_label": "demographicClass",
+          "aesthetic_label": "Demographic"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "male": {
+            "local_term": "male",
+            "target_class": "ncit:C20197"
+          },
+          "female": {
+            "local_term": "female",
+            "target_class": "ncit:C16576"
+          }
+        }
+      }
+    },
+    "age_at_diagnosis": {
+      "predicate": "sio:000008",
+      "class": "ncit:C156420",
+      "local_definition": "age_at_diagnosis",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasdemographicvariable",
+          "class": "mesh:D000091569",
+          "class_label": "demographicClass",
+          "aesthetic_label": "Demographic"
+        },
+        {
+          "type": "node",
+          "predicate": "roo:P100027",
+          "class": "ncit:C29848",
+          "node_label": "years",
+          "aesthetic_label": "Years"
+        }
+      ]
+    },
+    "performance_status": {
+      "predicate": "sio:000008",
+      "class": "ncit:C105721",
+      "local_definition": "performance_status_ecog",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasdemographicvariable",
+          "class": "mesh:D000091569",
+          "class_label": "demographicClass",
+          "aesthetic_label": "Demographic"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "0": {
+            "local_term": "0",
+            "target_class": "ncit:C105722"
+          },
+          "1": {
+            "local_term": "1",
+            "target_class": "ncit:C105723"
+          }
+        }
+      }
+    },
+    "hpv_status": {
+      "predicate": "sio:000008",
+      "class": "ncit:C14226",
+      "local_definition": "overall_hpv_p16_status",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasdemographicvariable",
+          "class": "mesh:D000091569",
+          "class_label": "demographicClass",
+          "aesthetic_label": "Demographic"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "positive": {
+            "local_term": "positive",
+            "target_class": "ncit:C128839"
+          },
+          "negative": {
+            "local_term": "negative",
+            "target_class": "ncit:C131488"
+          }
+        }
+      }
+    },
+    "tumour_location": {
+      "predicate": "sio:000008",
+      "class": "ncit:C3263",
+      "local_definition": "index_tumour_location",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "oropharynx": {
+            "local_term": "oropharynx",
+            "target_class": "ncit:C12762"
+          },
+          "larynx": {
+            "local_term": "larynx",
+            "target_class": "ncit:C12420"
+          }
+        }
+      }
+    },
+    "t_stage": {
+      "predicate": "sio:000008",
+      "class": "ncit:C48885",
+      "local_definition": "clin_t",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "0": {
+            "local_term": "0",
+            "target_class": "ncit:C48719"
+          },
+          "1": {
+            "local_term": "1",
+            "target_class": "ncit:C48720"
+          },
+          "2": {
+            "local_term": "2",
+            "target_class": "ncit:C48724"
+          },
+          "3": {
+            "local_term": "3",
+            "target_class": "ncit:C48728"
+          },
+          "4": {
+            "local_term": "4",
+            "target_class": "ncit:C48732"
+          }
+        }
+      }
+    },
+    "n_stage": {
+      "predicate": "sio:000008",
+      "class": "ncit:C48884",
+      "local_definition": "clin_n",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "0": {
+            "local_term": "0",
+            "target_class": "ncit:C48705"
+          },
+          "1": {
+            "local_term": "1",
+            "target_class": "ncit:C48706"
+          },
+          "2": {
+            "local_term": "2",
+            "target_class": "ncit:C48786"
+          },
+          "3": {
+            "local_term": "3",
+            "target_class": "ncit:C48714"
+          }
+        }
+      }
+    },
+    "m_stage": {
+      "predicate": "sio:000008",
+      "class": "ncit:C48883",
+      "local_definition": "clin_m",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "0": {
+            "local_term": "0",
+            "target_class": "ncit:C48699"
+          },
+          "1": {
+            "local_term": "1",
+            "target_class": "ncit:C48700"
+          }
+        }
+      }
+    },
+    "survival_status": {
+      "predicate": "sio:000008",
+      "class": "ncit:C25717",
+      "local_definition": "event_overall_survival",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        }
+      ],
+      "value_mapping": {
+        "terms": {
+          "Dead": {
+            "local_term": "1",
+            "target_class": "ncit:C28554"
+          },
+          "Alive": {
+            "local_term": "0",
+            "target_class": "ncit:C37987"
+          }
+        }
+      }
+    },
+    "survival_days": {
+      "predicate": "sio:000008",
+      "class": "roo:overallsurvivaldays",
+      "local_definition": "overall_survival_in_days",
+      "schema_reconstruction": [
+        {
+          "type": "class",
+          "predicate": "roo:hasclinicalvariable",
+          "class": "mesh:C326200",
+          "class_label": "clinicalClass",
+          "aesthetic_label": "Clinical"
+        },
+        {
+          "type": "class",
+          "predicate": "roo:P100029",
+          "class": "ncit:C3262",
+          "class_label": "neoplasmClass",
+          "aesthetic_label": "Neoplasm"
+        },
+        {
+          "type": "node",
+          "predicate": "roo:P100027",
+          "class": "ncit:C25301",
+          "node_label": "days",
+          "aesthetic_label": "Days"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,202 @@
+@charset "UTF-8";
+
+
+/*Standard elements*/
+html {
+    min-height: 150%;
+    margin: 0;
+}
+
+body {
+    min-height: 150%;
+    margin: 0;
+    background: linear-gradient(to bottom, #f9f4ea, #ffffff);
+}
+
+.white-text {
+    color: white !important;
+}
+
+
+/*Standard aesthetics*/
+.modebar-group {
+    background-color: transparent !important;
+}
+
+.dash-table-tooltip {
+    text-align: left;
+    background-color: #f9f4ea !important; /* light background */
+    color: #212529 !important; /* dark text */
+    font-size: 14px !important; /* smaller font size */
+    border-color: #f9f4ea !important; /* light border color */
+    white-space: normal;
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important; /* subtle drop shadow */
+}
+
+.tooltip {
+    transition-delay: 0.5s !important;
+}
+
+.variable-info-table th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+}
+
+.variable-info-table td:nth-child(1),
+.variable-info-table td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+}
+
+
+/*First header; login section*/
+.primary-header {
+    content: '';
+    width: 80%;
+    height: 4.35%;
+    background: #f9741f;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.text-container {
+    width: 45%;
+    background-color: transparent;
+    display: flex;
+    position: absolute;
+    justify-content: space-between;
+    z-index: 10;
+    margin-right: 2%;
+}
+
+
+
+/*Second header; STRONG-AYA specific*/
+.secondary-header {
+    content: '';
+    width: 80%;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: absolute;
+    top: 4.35%;
+    left: 0;
+    z-index: 0;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    margin-right: 55%;
+    position: relative;
+    z-index: 3;
+}
+
+.text-field {
+    color: #696969;
+    text-decoration: none;
+    font-size: 14px;
+    z-index: 10;
+}
+
+.orange-cube {
+    width: 8%;
+    height: 88px;
+    background-color: #f9741f;
+    z-index: 2;
+}
+
+.footer {
+    height: 50px;
+    clear: both;
+    position: relative;
+    z-index: 10;
+    bottom: 0;
+    width: 100%;
+    background-color: transparent;
+}
+
+
+/*Content*/
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Adjust the number of columns as needed */
+    grid-gap: 20px;
+    height: 50%;
+    margin-top: 7%;
+    margin-right: 20%;
+    margin-left: 20%;
+    text-align: center;
+}
+
+.dashboard-title {
+    text-align: center;
+    color: #484848;
+    margin-top: 2.5%;
+    margin-right: 0;
+    margin-left: 18%;
+    font-size: 36px;
+    z-index: 2;
+    display: flex;
+    position: absolute;
+    alignment: center;
+}
+
+.tile {
+    background-color: #ffffff; /* Light grey background */
+    height: 60%;
+    width: 60%;
+    alignment: center;
+    text-align: center;
+    border-radius: 20px;
+    padding: 40px;
+    margin-top: 40%;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+}
+
+.tile-4 {
+    height: auto;
+    padding: 5px;
+    margin-top: 6.5%;
+    margin-right: 0;
+}
+
+.tile-5 {
+    height: auto;
+    padding: 5px;
+    margin-top: 6.5%;
+    margin-left: 0;
+}
+
+.tile-6 {
+    padding: 10px;
+    margin-top: 2.5%;
+}
+
+.tile-title {
+    font-size: 24px;
+    color: #484848;
+    margin-bottom: 5px;
+    margin-top: 0;
+}
+
+.tile-content {
+    font-size: 28px;
+    display: flex; /* Use flexbox */
+    align-items: center; /* Vertically center the content */
+    justify-content: center; /* Horizontally center the content */
+    height: 100%; /* Ensure the content fills the tile */
+}
+
+#table-data-availability {
+    width: 100%;
+}

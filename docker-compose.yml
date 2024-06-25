@@ -1,0 +1,36 @@
+services:
+  federated-data-management-portal:
+    image: fdmp_image
+    volumes:
+      - ./federated-data-management-portal:/app
+      - ${JSON_FILE_PATH}:/app/schema.json
+    environment:
+      - JSON_FILE_PATH=/app/schema.json
+    secrets:
+      - vantage6_service_username
+      - vantage6_service_password
+      - vantage6_server_url
+      - vantage6_server_port
+      - vantage6_server_api
+      - vantage6_collaboration
+      - vantage6_private_key_path
+      - vantage6_aggregating_organisation
+    ports:
+      - 8050:8050
+secrets:
+  vantage6_service_username:
+    external: true
+  vantage6_service_password:
+    external: true
+  vantage6_server_url:
+    external: true
+  vantage6_server_port:
+    external: true
+  vantage6_server_api:
+    external: true
+  vantage6_collaboration:
+    external: true
+  vantage6_private_key_path:
+    external: true
+  vantage6_aggregating_organisation:
+    external: true

@@ -1,0 +1,10 @@
+{
+  "collaboration": 1,
+  "aggregating_organisation": 1,
+  "server_url": "http://host.docker.internal",
+  "server_port": 5000,
+  "server_api": "/api",
+  "username": "org_1-admin",
+  "password": "password",
+  "organization_key": ""
+}

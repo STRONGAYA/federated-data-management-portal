@@ -1,0 +1,1319 @@
+[
+  {
+    "organisation": "Mare Moscoviense",
+    "country": "Far side of the Moon",
+    "sample_size": 75,
+    "variable_info": [
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      }
+    ]
+  },
+  {
+    "organisation": "Mare Imbrium",
+    "country": "Near side of the Moon",
+    "sample_size": 75,
+    "variable_info": [
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      }
+    ]
+  },
+  {
+    "organisation": "Mare Serenitatis",
+    "country": "Near side of the Moon",
+    "sample_size": 75,
+    "variable_info": [
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 62,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20197",
+        "sub_class_count": 62
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 45,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "sub_class_count": 45
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 33,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C131488",
+        "sub_class_count": 33
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28421",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.biological_sex",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16576",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 36,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "sub_class_count": 36
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105722",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C14226",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.overall_hpv_p16_status",
+        "main_class_count": 12,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C128839",
+        "sub_class_count": 12
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105721",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.performance_status_ecog",
+        "main_class_count": 2,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C105723",
+        "sub_class_count": 2
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 50,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12762",
+        "sub_class_count": 50
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 26,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48732",
+        "sub_class_count": 26
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 31,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48786",
+        "sub_class_count": 31
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 74,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48699",
+        "sub_class_count": 74
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 75,
+        "sub_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "sub_class_count": 75
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 41,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28554",
+        "sub_class_count": 41
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 20,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48720",
+        "sub_class_count": 20
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C25717",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.event_overall_survival",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C37987",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 34,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48705",
+        "sub_class_count": 34
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C3263",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.index_tumour_location",
+        "main_class_count": 25,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C12420",
+        "sub_class_count": 25
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 16,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48724",
+        "sub_class_count": 16
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 9,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48706",
+        "sub_class_count": 9
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48885",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_t",
+        "main_class_count": 13,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48728",
+        "sub_class_count": 13
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48884",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_n",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48714",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48883",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      },
+      {
+        "main_class": "http://data.local/rdf/ontology/HEAD-NECK-RADIOMICS-HN1_Clinical_data_updated_July_2020.clin_m",
+        "main_class_count": 1,
+        "sub_class": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C48700",
+        "sub_class_count": 1
+      }
+    ]
+  }
+]
