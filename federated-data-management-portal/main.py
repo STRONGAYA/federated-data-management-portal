@@ -8,13 +8,14 @@ import plotly.io as pio
 from apscheduler.schedulers.background import BackgroundScheduler
 from dash.dependencies import MATCH
 from dash.dependencies import Input, Output
+from dash import html, dcc
 
 # internal dependencies
 import src.callbacks as callbacks
-import src.layout as layout
 from src.misc import fetch_data
 
 pio.templates.default = 'seaborn'
+page_title = 'STRONG-AYA | Data Management Portal'
 
 
 class Dashboard:
@@ -38,13 +39,42 @@ class Dashboard:
             exit('Invalid schema file path')
 
         # refers to <folder_with_this_file>/assets/dashboard_aesthetics.css
-        self.App = dash.Dash(__name__, external_stylesheets=['dashboard_aesthetics.css', dbc.themes.BOOTSTRAP])
-        self.App.layout, self.App.title = layout.define_layout()
+        self.App = dash.Dash(__name__, pages_folder="pages", use_pages=True,
+                             external_stylesheets=['dashboard_aesthetics.css', dbc.themes.BOOTSTRAP])
+
+        self.App.layout = self.define_layout()
         self.App._favicon = f'..{os.path.sep}assets{os.path.sep}favicon.ico'
         self.register_callbacks()
 
+    def define_layout(self):
+        return html.Div([
+            dcc.Location(id='url', refresh=False),
+            dcc.Store(id='store'),
+            dcc.Store(id='data-availability-store-1'),
+            html.Div([
+                dcc.Link('Data availability', href='/data-availability'),
+                dcc.Link('Missing Data', href='/data-missingness')
+            ]),
+            dash.page_container
+        ])
+
     def register_callbacks(self):
         """"""
+        @self.App.callback(
+            Output('url', 'pathname'),
+            [Input('go-to-home', 'n_clicks'),
+             Input('go-to-missing-data', 'n_clicks')]
+        )
+        def navigate(n_clicks_home, n_clicks_missing_data):
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                return dash.no_update
+            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            if button_id == 'go-to-home':
+                return '/'
+            elif button_id == 'go-to-missing-data':
+                return '/missing-data'
+            return dash.no_update
 
         @self.App.callback(
             Output('tile-content-1', 'children'),

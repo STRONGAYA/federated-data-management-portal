@@ -17,6 +17,10 @@ body {
     color: white !important;
 }
 
+.no-decoration-link {
+    text-decoration: none;
+    color: inherit;
+}
 
 /*Standard aesthetics*/
 .modebar-group {
@@ -149,6 +153,86 @@ body {
     alignment: center;
 }
 
+.landing-title {
+    text-align: center;
+    color: #484848;
+    margin-top: -2.5%;
+    margin-right: 0;
+    margin-left: 20%;
+    font-size: 26px;
+    z-index: 2;
+    display: flex;
+    position: absolute;
+}
+
+.availability-title {
+    text-align: center;
+    color: #484848;
+    margin-top: -11%;
+    margin-right: 0;
+    margin-left: 44.5%;
+    font-size: 26px;
+    z-index: 2;
+    display: flex;
+    position: absolute;
+}
+
+.explanation {
+    opacity: 75%;
+    text-align: center;
+    color: #484848;
+    width: 40%;
+    margin-top: 1.5%;
+    margin-left: 30%;
+    font-size: 16px;
+    position: relative;
+}
+
+
+.landing-content {
+    text-align: center;
+    color: #484848;
+    margin-top: 2.5%;
+    margin-right: 0;
+    margin-left: 20%;
+    font-size: 18px;
+    z-index: 2;
+    display: flex;
+    position: absolute;
+}
+
+.btn-return{
+    opacity: 75%;
+    color: #484848;
+    position: absolute;
+    font-size: 16px;
+    margin-top: 3%;
+    margin-left: 20%;
+    cursor: pointer;
+}
+
+.btn-subject-a{
+    opacity: 75%;
+    color: #484848;
+    position: absolute;
+    font-size: 16px;
+    margin-top: 2%;
+    margin-left: 20%;
+    margin-bottom: 5%;
+    cursor: pointer;
+}
+
+.btn-subject-b{
+    opacity: 75%;
+    color: #484848;
+    position: absolute;
+    font-size: 16px;
+    margin-top: 2%;
+    margin-left: 73%;
+    margin-bottom: 5%;
+    cursor: pointer;
+}
+
 .tile {
     background-color: #ffffff; /* Light grey background */
     height: 60%;
@@ -158,6 +242,20 @@ body {
     border-radius: 20px;
     padding: 40px;
     margin-top: 40%;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+}
+
+.subject-tile {
+    background-color: #ffffff; /* Light grey background */
+    height: 80%;
+    width: 80%;
+    alignment: center;
+    text-align: center;
+    border-radius: 20px;
+    padding: 40px;
+    margin-top: 5%;
     margin-left: auto;
     margin-right: auto;
     box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
