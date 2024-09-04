@@ -140,10 +140,10 @@ layout = html.Div([
                      alt='Arrowhead pointing left',
                      style={'width': '2.5rem',
                             'height': '2.5rem'}),
-            dcc.Link('Data missingness', href='/data-missingness', className='no-decoration-link')
+            dcc.Link('Data outliers', href='/data-outliers', className='no-decoration-link')
         ]),
         html.Div(id='btn-subject-b', className='btn-subject-b', children=[
-            dcc.Link('Data outliers', href='/data-outliers', className='no-decoration-link'),
+            dcc.Link('Data missingness', href='/data-missingness', className='no-decoration-link'),
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
                      alt='Arrowhead pointing right',
                      style={'width': '2.5rem',

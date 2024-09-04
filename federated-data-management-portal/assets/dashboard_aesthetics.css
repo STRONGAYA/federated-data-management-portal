@@ -177,6 +177,10 @@ body {
     position: absolute;
 }
 
+.missingness-title {
+    margin-left: 44%;
+}
+
 .explanation {
     opacity: 75%;
     text-align: center;
@@ -223,12 +227,13 @@ body {
 }
 
 .btn-subject-b{
+    text-align: right;
     opacity: 75%;
     color: #484848;
     position: absolute;
     font-size: 16px;
     margin-top: 2%;
-    margin-left: 73%;
+    margin-left: 71%;
     margin-bottom: 5%;
     cursor: pointer;
 }
