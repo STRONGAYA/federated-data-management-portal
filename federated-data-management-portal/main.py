@@ -152,14 +152,14 @@ class Dashboard:
             Output({'type': 'dynamic-donut-one', 'index': MATCH}, 'figure'),
             [Input('store', 'data')]
         )
-        def update_sample_size_info(descriptive_data):
+        def update_organisation_availability_chart(descriptive_data):
             """
             Callback function to update the sample size information in the donut chart.
 
             This function is triggered whenever the data in the 'store' component changes.
             It calls the `generate_donut_chart` function from the `callbacks` module,
             passing the `descriptive_data` and the chart type as arguments.
-            The result of the `generate_donut_chart` function is then returned by the `update_sample_size_info` function,
+            The result of the `generate_donut_chart` function is then returned by the `update_organisation_availability_chart` function,
             which updates the 'dynamic-donut-one' component in the Dash app.
 
             Parameters:
@@ -170,20 +170,20 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated donut chart figure.
             """
-            return callbacks.generate_donut_chart(descriptive_data, chart_type="organisation")
+            return callbacks.generate_donut_chart(descriptive_data,chart_domain='availability', chart_type="organisation")
 
         @self.App.callback(
             Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure'),
             [Input('store', 'data')]
         )
-        def update_country_donut_chart(descriptive_data):
+        def update_country_availability_chart(descriptive_data):
             """
             Callback function to update the country donut chart.
 
             This function is triggered whenever the data in the 'store' component changes.
             It calls the `generate_donut_chart` function from the `callbacks` module,
             passing the `descriptive_data` and the chart type as arguments.
-            The result of the `generate_donut_chart` function is then returned by the `update_country_donut_chart` function,
+            The result of the `generate_donut_chart` function is then returned by the `update_country_availability_chart` function,
             which updates the 'dynamic-donut-two' component in the Dash app.
 
             Parameters:
@@ -194,15 +194,18 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated donut chart figure.
             """
-            return callbacks.generate_donut_chart(descriptive_data, chart_type="country")
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='availability', chart_type="country")
+
 
         @self.App.callback(
             [Output({'type': 'dynamic-donut-one', 'index': MATCH}, 'style'),
-             Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'style')],
+             Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'style'),
+             Output({'type': 'dynamic-donut-three', 'index': MATCH}, 'style')],
             [Input({'type': 'dynamic-donut-one', 'index': MATCH}, 'figure'),
-             Input({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure')]
+             Input({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure'),
+             Input({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure')]
         )
-        def update_graph_style(figure_one, figure_two):
+        def update_graph_style(figure_one, figure_two, figure_three):
             """
             Callback function to update the style of the donut charts.
 
@@ -221,13 +224,15 @@ class Dashboard:
             # Calculate the length of the legends
             legend_length_one = len(figure_one['data'][0]['labels'])
             legend_length_two = len(figure_two['data'][0]['labels'])
+            legend_length_three = len(figure_three['data'][0]['labels'])
 
             # Calculate the height of the dcc.Graph components based on the length of the legends
             height_one = max(400, legend_length_one * 20 + 200)
             height_two = max(400, legend_length_two * 20 + 200)
+            height_three = max(400, legend_length_three * 20 + 200)
 
             # Return the new styles
-            return {'height': f'{height_one}px'}, {'height': f'{height_two}px'}
+            return {'height': f'{height_one}px'}, {'height': f'{height_two}px'}, {'height': f'{height_three}px'}
 
         @self.App.callback(
             [Output('tile-content-6', 'children'),
@@ -298,7 +303,7 @@ if __name__ == '__main__':
         # This allows the user to provide the path to the global schema and Vantage6 config when not running in Docker
         config_path = input("Please provide the path to the Vantage6 configuration JSON file "
                             "or press enter to use mock data.\n")
-        json_file_path = input("Please provide the path to the global schema JSON file.\n")
+        json_file_path = r"C:\Users\p70087077\PycharmProjects\federated-data-managment-portal\example_data\schema.json"
         dash_app = Dashboard(json_file_path)
 
         if config_path and config_path.endswith('.json'):

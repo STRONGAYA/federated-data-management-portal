@@ -433,7 +433,7 @@ def create_data_table(df, tooltips):
     return data_table
 
 
-def generate_donut_chart(descriptive_data, text="AYA", chart_type="organisation"):
+def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availability', chart_type="organisation"):
     """
     Function to generate a donut chart of sample sizes per organisation or AYAs per country.
 
@@ -456,16 +456,17 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_type="organisation"
     if descriptive_data:
         latest_data = descriptive_data[max(descriptive_data.keys())]
 
-        if chart_type == "organisation":
-            labels = sorted(latest_data.keys())
-            sample_sizes = [int(data["sample_size"]) for data in latest_data.values()]
-            title = f'{text}s per organisation'
-        elif chart_type == "country":
-            country_data = defaultdict(int)
-            for data in latest_data.values():
-                country_data[data["country"]] += int(data["sample_size"])
-            labels, sample_sizes = zip(*sorted(country_data.items()))
-            title = f'{text}s per country'
+        if chart_domain == "availability":
+            if chart_type == "organisation":
+                labels = sorted(latest_data.keys())
+                sample_sizes = [int(data["sample_size"]) for data in latest_data.values()]
+                title = f'{text}s per organisation'
+            elif chart_type == "country":
+                country_data = defaultdict(int)
+                for data in latest_data.values():
+                    country_data[data["country"]] += int(data["sample_size"])
+                labels, sample_sizes = zip(*sorted(country_data.items()))
+                title = f'{text}s per country'
 
         data = [
             dict(
