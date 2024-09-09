@@ -140,19 +140,24 @@ layout = html.Div([
                      alt='Arrowhead pointing left',
                      style={'width': '2.5rem',
                             'height': '2.5rem'}),
-            dcc.Link('Data outliers', href='/data-outliers', className='no-decoration-link')
+            dcc.Link('Plausibility', href='/data-plausibility', className='no-decoration-link')
         ]),
         html.Div(id='btn-subject-b', className='btn-subject-b', children=[
-            dcc.Link('Data missingness', href='/data-missingness', className='no-decoration-link'),
+            dcc.Link('Completeness', href='/data-completeness', className='no-decoration-link'),
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
                      alt='Arrowhead pointing right',
                      style={'width': '2.5rem',
                             'height': '2.5rem'})
         ]),
         html.Div(id='availability-explanation', className='explanation',
-                 children='Data availability is based on the "Triplestore collaboration descriptives" '
-                          'Vantage6 algorithm '
-                          '(see https://github.com/STRONGAYA/v6-triplestore-collaboration-descriptives)')
+                 children=["Graphics aim to visualise how much data is available per location and "
+                           "explore the existence of expected and "
+                           "possible values between variables with "
+                           "semantic relationships between them.",
+                           html.Br(), html.Br(),
+                           'Availability and semantic consistency is based on the '
+                           '"Triplestore collaboration descriptives" Vantage6 algorithm. '
+                           'For reference https://github.com/STRONGAYA/v6-triplestore-collaboration-descriptives'])
     ]),
     html.Div(id='footer', className='footer')
 ])
