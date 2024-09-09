@@ -113,28 +113,6 @@ layout = html.Div([
             html.H5('Data availability', className='tile-title'),
             html.Div(id='tile-content-6', className='tile-content')
         ]),
-
-        html.Div(id='tile-7', className='tile tile-6', children=[
-            html.H5('Data Completeness', className='tile-title'),
-            html.Div(id='tile-content-7', className='tile-content', children=[
-                dcc.Graph(
-                    id={'type': 'dynamic-bar', 'index': 3},
-                    config={
-                        'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                   'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                   'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                   'toggleSpikelines'],
-                        'toImageButtonOptions': {
-                            'format': 'svg',
-                            'filename': 'data-completeness',
-                            'height': 500,
-                            'width': 700,
-                            'scale': 1
-                        }
-                    }
-                )
-            ])
-        ]),
         html.Div(id='btn-subject-a', className='btn-subject-a', children=[
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
                      alt='Arrowhead pointing left',
