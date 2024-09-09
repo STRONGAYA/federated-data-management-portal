@@ -29,12 +29,12 @@ body {
 
 .dash-table-tooltip {
     text-align: left;
-    background-color: #f9f4ea !important; /* light background */
-    color: #212529 !important; /* dark text */
-    font-size: 14px !important; /* smaller font size */
-    border-color: #f9f4ea !important; /* light border color */
+    background-color: #f9f4ea !important;
+    color: #212529 !important;
+    font-size: 14px !important;
+    border-color: #f9f4ea !important;
     white-space: normal;
-    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important; /* subtle drop shadow */
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
 }
 
 .tooltip {
@@ -130,7 +130,7 @@ body {
 /*Content*/
 .dashboard {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Adjust the number of columns as needed */
+    grid-template-columns: repeat(3, 1fr);
     grid-gap: 20px;
     height: 50%;
     margin-top: 7%;
@@ -146,7 +146,7 @@ body {
     margin-bottom: -50px;
     font-size: 36px;
     z-index: 2;
-    display: block; /* Ensure it does not interfere with the grid */
+    display: block;
     width: 100%;
     position: relative;
 }
@@ -161,22 +161,6 @@ body {
     align-items: center;
     margin-top: 50px;
     margin-bottom: -10px;
-}
-
-.availability-title {
-    text-align: center;
-    color: #484848;
-    margin-top: -11%;
-    margin-right: 0;
-    margin-left: 44.5%;
-    font-size: 26px;
-    z-index: 2;
-    display: flex;
-    position: absolute;
-}
-
-.missingness-title {
-    margin-left: 44%;
 }
 
 .explanation {
@@ -237,7 +221,7 @@ body {
 }
 
 .tile {
-    background-color: #ffffff; /* Light grey background */
+    background-color: #ffffff;
     height: 60%;
     width: 60%;
     alignment: center;
@@ -247,11 +231,43 @@ body {
     margin-top: 40%;
     margin-left: auto;
     margin-right: auto;
-    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2);
+}
+
+.tile-content {
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.tile-resizeable {
+    background-color: #ffffff;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    border-radius: 20px;
+    padding: 20px;
+    margin: 0;
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2);
+}
+
+.tile-content-resizeable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(1vw + 1vh);
+    padding: 0;
+    margin: 0;
 }
 
 .subject-tile {
-    background-color: #ffffff; /* Light grey background */
+    background-color: #ffffff;
     height: 80%;
     width: 50%;
     alignment: center;
@@ -261,8 +277,8 @@ body {
     margin-top: 5%;
     margin-left: auto;
     margin-right: auto;
-    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
-    cursor: pointer; /* Make the whole tile clickable */
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
 }
 
 .subject-title-container {
@@ -318,38 +334,6 @@ body {
     color: #484848;
     margin-bottom: 5px;
     margin-top: 0;
-}
-
-.tile-content {
-    font-size: 28px;
-    display: flex; /* Use flexbox */
-    align-items: center; /* Vertically center the content */
-    justify-content: center; /* Horizontally center the content */
-    height: 100%; /* Ensure the content fills the tile */
-}
-
-.tile-resizeable {
-    background-color: #ffffff; /* Light grey background */
-    height: 100%; /* Ensure the tile fills the column */
-    width: 100%; /* Ensure the tile fills the column */
-    text-align: center;
-    border-radius: 20px;
-    padding: 20px; /* Adjust padding as needed */
-    margin: 0; /* Remove margin */
-    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
-}
-
-.tile-content-resizeable {
-    display: flex; /* Use flexbox */
-    align-items: center; /* Vertically center the content */
-    justify-content: center; /* Horizontally center the content */
-    height: 100%; /* Ensure the content fills the tile */
-    overflow: hidden; /* Hide overflow text */
-    text-overflow: ellipsis; /* Add ellipsis for overflow text */
-    white-space: nowrap; /* Prevent text from wrapping */
-    font-size: calc(1vw + 1vh); /* Responsive font size based on viewport dimensions */
-    padding: 0; /* Remove padding */
-    margin: 0; /* Remove margin */
 }
 
 #table-data-availability {
