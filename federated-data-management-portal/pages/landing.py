@@ -45,19 +45,19 @@ layout = html.Div([
         ]),
     ]),
     html.Div([
+        html.H5(id='dashboard-title', className='dashboard-title', children=aesthetic_title),
         html.Div(id='dashboard', className='dashboard', children=[
-            html.H5(id='dashboard-title', className='dashboard-title', children=aesthetic_title),
-            html.Div(id='tile-1', className='tile', children=[
-                html.Div(id='tile-content-1', className='tile-content', children=tile_placeholders[0])
+            html.Div(id='tile-1', className='tile-resizeable', children=[
+                html.Div(id='tile-content-1', className='tile-content-resizeable', children=tile_placeholders[0])
             ]),
-            html.Div(id='tile-2', className='tile', children=[
-                html.Div(id='tile-content-2', className='tile-content', children=tile_placeholders[1])
+            html.Div(id='tile-2', className='tile-resizeable', children=[
+                html.Div(id='tile-content-2', className='tile-content-resizeable', children=tile_placeholders[1])
             ]),
-            html.Div(id='tile-3', className='tile', children=[
-                html.Div(id='tile-content-3', className='tile-content', children=tile_placeholders[2])
+            html.Div(id='tile-3', className='tile-resizeable', children=[
+                html.Div(id='tile-content-3', className='tile-content-resizeable', children=tile_placeholders[2])
             ])
         ]),
-        html.H3(id='landing-title', className='landing-title', children='Explore the following subjects'),
+        html.H3(id='landing-title', className='page-title', children='Explore the following subjects'),
         html.Div(id='availability-tile', className='subject-tile',
                  children=[
                      dcc.Link(href='/data-availability', className='no-decoration-link',

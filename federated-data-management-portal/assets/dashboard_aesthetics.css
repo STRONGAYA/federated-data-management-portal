@@ -80,7 +80,6 @@ body {
 }
 
 
-
 /*Second header; STRONG-AYA specific*/
 .secondary-header {
     content: '';
@@ -143,26 +142,25 @@ body {
 .dashboard-title {
     text-align: center;
     color: #484848;
-    margin-top: 2.5%;
-    margin-right: 0;
-    margin-left: 18%;
+    margin-top: 150px;
+    margin-bottom: -50px;
     font-size: 36px;
     z-index: 2;
-    display: flex;
-    position: absolute;
-    alignment: center;
+    display: block; /* Ensure it does not interfere with the grid */
+    width: 100%;
+    position: relative;
 }
 
-.landing-title {
+.page-title {
     text-align: center;
     color: #484848;
-    margin-top: -2.5%;
-    margin-right: 0;
-    margin-left: 20%;
     font-size: 26px;
     z-index: 2;
     display: flex;
-    position: absolute;
+    justify-content: center;
+    align-items: center;
+    margin-top: 50px;
+    margin-bottom: -10px;
 }
 
 .availability-title {
@@ -188,7 +186,7 @@ body {
     width: 40%;
     margin-top: 1.5%;
     margin-left: 30%;
-    font-size: 16px;
+    font-size: small;
     position: relative;
 }
 
@@ -205,7 +203,7 @@ body {
     position: absolute;
 }
 
-.btn-return{
+.btn-return {
     opacity: 75%;
     color: #484848;
     position: absolute;
@@ -215,24 +213,24 @@ body {
     cursor: pointer;
 }
 
-.btn-subject-a{
+.btn-subject-a {
     opacity: 75%;
     color: #484848;
     position: absolute;
     font-size: 16px;
-    margin-top: 2%;
+    margin-top: 4%;
     margin-left: 20%;
     margin-bottom: 5%;
     cursor: pointer;
 }
 
-.btn-subject-b{
+.btn-subject-b {
     text-align: right;
     opacity: 75%;
     color: #484848;
     position: absolute;
     font-size: 16px;
-    margin-top: 2%;
+    margin-top: 4%;
     margin-left: 71%;
     margin-bottom: 5%;
     cursor: pointer;
@@ -255,7 +253,7 @@ body {
 .subject-tile {
     background-color: #ffffff; /* Light grey background */
     height: 80%;
-    width: 80%;
+    width: 50%;
     alignment: center;
     text-align: center;
     border-radius: 20px;
@@ -264,6 +262,36 @@ body {
     margin-left: auto;
     margin-right: auto;
     box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+    cursor: pointer; /* Make the whole tile clickable */
+}
+
+.subject-title-container {
+    text-align: left;
+    margin-bottom: 20px;
+    font-size: x-large;
+}
+
+.subject-tile-content {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    align-items: center;
+}
+
+.subject-image {
+    width: 20%;
+    height: auto;
+    margin-right: 2%;
+}
+
+.subject-explanation {
+    z-index: 2;
+    opacity: 75%;
+    text-align: left;
+    color: #484848;
+    width: 68%;
+    font-size: medium;
+    position: relative;
 }
 
 .tile-4 {
@@ -298,6 +326,30 @@ body {
     align-items: center; /* Vertically center the content */
     justify-content: center; /* Horizontally center the content */
     height: 100%; /* Ensure the content fills the tile */
+}
+
+.tile-resizeable {
+    background-color: #ffffff; /* Light grey background */
+    height: 100%; /* Ensure the tile fills the column */
+    width: 100%; /* Ensure the tile fills the column */
+    text-align: center;
+    border-radius: 20px;
+    padding: 20px; /* Adjust padding as needed */
+    margin: 0; /* Remove margin */
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+}
+
+.tile-content-resizeable {
+    display: flex; /* Use flexbox */
+    align-items: center; /* Vertically center the content */
+    justify-content: center; /* Horizontally center the content */
+    height: 100%; /* Ensure the content fills the tile */
+    overflow: hidden; /* Hide overflow text */
+    text-overflow: ellipsis; /* Add ellipsis for overflow text */
+    white-space: nowrap; /* Prevent text from wrapping */
+    font-size: calc(1vw + 1vh); /* Responsive font size based on viewport dimensions */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
 }
 
 #table-data-availability {

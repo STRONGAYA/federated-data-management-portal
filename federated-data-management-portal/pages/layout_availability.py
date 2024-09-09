@@ -52,20 +52,20 @@ layout = html.Div([
                             'height': '2.5rem'}),
             dcc.Link('Return to subjects', href='/', className='no-decoration-link')
         ]),
+        html.H5(id='dashboard-title', className='dashboard-title', children=aesthetic_title),
         html.Div(id='dashboard', className='dashboard', children=[
-            html.H5(id='dashboard-title', className='dashboard-title', children=aesthetic_title),
-            html.Div(id='tile-1', className='tile', children=[
-                html.Div(id='tile-content-1', className='tile-content', children=tile_placeholders[0])
+            html.Div(id='tile-1', className='tile-resizeable', children=[
+                html.Div(id='tile-content-1', className='tile-content-resizeable', children=tile_placeholders[0])
             ]),
-            html.Div(id='tile-2', className='tile', children=[
-                html.Div(id='tile-content-2', className='tile-content', children=tile_placeholders[1])
+            html.Div(id='tile-2', className='tile-resizeable', children=[
+                html.Div(id='tile-content-2', className='tile-content-resizeable', children=tile_placeholders[1])
             ]),
-            html.Div(id='tile-3', className='tile', children=[
-                html.Div(id='tile-content-3', className='tile-content', children=tile_placeholders[2])
+            html.Div(id='tile-3', className='tile-resizeable', children=[
+                html.Div(id='tile-content-3', className='tile-content-resizeable', children=tile_placeholders[2])
             ])
         ]),
         html.Div([
-            html.H3(id='availability-title', className='availability-title', children='Data availability'),
+            html.H3(id='availability-title', className='page-title', children='Data availability'),
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
