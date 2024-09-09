@@ -495,7 +495,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     missing_counts.append(total_categorical_count + total_numerical_count)
                     _custom_data.append((round((relative_missing_count * 100), 1)))
 
-                title = f'Complete {text} data per organisation'
+                title = f'Complete {text} data points per organisation'
                 sample_sizes = missing_counts
             elif chart_type == "country":
                 country_data = defaultdict(float)
@@ -521,10 +521,81 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
 
                 labels, sample_sizes = zip(*sorted(country_data.items()))
                 _custom_data = [relative_country_data[label] for label in labels]
-                title = f'Complete {text} data per country'
-            hover = f"<b>%{{label}}</b><br>Relative missing data: <b>%{{customdata}}%</b><br><br>" \
-                    f"Complete {text} data: <b>%{{value}}</b><br>" \
-                    f"Proportion of all complete {text} data: <b>%{{percent}}</b>"
+                title = f'Complete {text} data points per country'
+            hover = f"<b>%{{label}}</b><br>Relative incomplete data points: <b>%{{customdata}}%</b><br><br>" \
+                    f"Complete {text} data points: <b>%{{value}}</b><br>" \
+                    f"Proportion of all complete {text} data points: <b>%{{percent}}</b>"
+            # Calculate plausible counts and relative plausible counts
+        elif chart_domain == "plausibility":
+            if chart_type == "organisation":
+                labels = sorted(latest_data.keys())
+                plausible_counts = []
+                _custom_data = []
+                for org in labels:
+                    data = latest_data[org]
+                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+
+                    # Calculate total counts excluding 'outliers'
+                    total_categorical_count = categorical_data["count"].sum()
+                    total_numerical_count = numerical_data[numerical_data["statistic"] == "count"]["value"].sum()
+
+                    # Calculate implausible counts
+                    implausible_categorical_count = categorical_data[categorical_data["value"] == "outliers"][
+                        "count"].sum()
+                    implausible_numerical_count = numerical_data[numerical_data["statistic"] == "outliers"][
+                        "value"].sum()
+
+                    # Calculate plausible counts
+                    plausible_categorical_count = total_categorical_count - implausible_categorical_count
+                    plausible_numerical_count = total_numerical_count - implausible_numerical_count
+
+                    # Calculate relative plausible counts
+                    total_count = total_categorical_count + total_numerical_count
+                    plausible_count = plausible_categorical_count + plausible_numerical_count
+                    relative_plausible_count = plausible_count / total_count if total_count != 0 else 0
+
+                    plausible_counts.append(plausible_count)
+                    _custom_data.append(round((relative_plausible_count * 100), 1))
+
+                title = f'Plausible {text} data points per organisation'
+                sample_sizes = plausible_counts
+
+            elif chart_type == "country":
+                country_data = defaultdict(float)
+                relative_country_data = defaultdict(float)
+                for data in latest_data.values():
+                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+
+                    # Calculate total counts excluding 'outliers'
+                    total_categorical_count = categorical_data["count"].sum()
+                    total_numerical_count = numerical_data[numerical_data["statistic"] == "count"]["value"].sum()
+
+                    # Calculate implausible counts
+                    implausible_categorical_count = categorical_data[categorical_data["value"] == "outliers"][
+                        "count"].sum()
+                    implausible_numerical_count = numerical_data[numerical_data["statistic"] == "outliers"][
+                        "value"].sum()
+
+                    # Calculate plausible counts
+                    plausible_categorical_count = total_categorical_count - implausible_categorical_count
+                    plausible_numerical_count = total_numerical_count - implausible_numerical_count
+
+                    # Calculate relative plausible counts
+                    total_count = total_categorical_count + total_numerical_count
+                    plausible_count = plausible_categorical_count + plausible_numerical_count
+                    relative_plausible_count = plausible_count / total_count if total_count != 0 else 0
+
+                    country_data[data["country"]] += plausible_count
+                    relative_country_data[data["country"]] += round((relative_plausible_count * 100), 1)
+
+                labels, sample_sizes = zip(*sorted(country_data.items()))
+                _custom_data = [min(relative_country_data[label], 100) for label in labels]  # Ensure max 100%
+            title = f'Plausible {text} data points per country'
+            hover = f"<b>%{{label}}</b><br>Relative plausible data points: <b>%{{customdata}}%</b><br><br>" \
+                    f"Plausible {text} data points: <b>%{{value}}</b><br>" \
+                    f"Proportion of all plausible {text} data points: <b>%{{percent}}</b>"
 
         data = [
             dict(
@@ -559,31 +630,33 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
 
 def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA"):
     """
-    Function to generate a completeness chart.
+    Function to generate a bar chart for data completeness or plausibility.
 
-    This function takes in a dictionary of descriptive data, calculates the completeness of the data,
-    and generates a completeness chart showing the completeness of the data.
-    The completeness chart includes annotations showing the completeness for each organisation and
-    the proportion of the total completeness that this represents.
+    This function takes in a dictionary of descriptive data, calculates the completeness or plausibility of the data,
+    and generates a bar chart showing the completeness or plausibility of the data.
+    The chart includes annotations showing the completeness or plausibility for each organization and
+    the proportion of the total completeness or plausibility that this represents.
 
     Parameters:
-    descriptive_data (dict): The descriptive data to generate the completeness chart from.
-    text (str, optional): The text to use in the completeness chart title and hovertemplate. Defaults to "AYA".
+    descriptive_data (dict): The descriptive data to generate the chart from.
+    domain (str, optional): The domain to generate the chart for. Can be 'completeness' or 'plausibility'. Defaults to 'completeness'.
+    text (str, optional): The text to use in the chart title and hovertemplate. Defaults to "AYA".
 
     Returns:
-    dict: A dictionary representing the figure for the completeness chart.
-    This includes the data for the completeness chart and the layout of the chart.
+    dict: A dictionary representing the figure for the chart.
+    This includes the data for the chart and the layout of the chart.
     """
     if descriptive_data:
-        # Retrieve the latest data
+        # Get the latest data entry based on the keys
         latest_data = descriptive_data[max(descriptive_data.keys())]
 
         if domain == 'completeness':
-            # Initialize dictionaries to store total counts
+            # Initialize dictionaries to store total available and unavailable data points
             total_available = {}
             total_unavailable = {}
             completeness_info = {}
 
+            # Get sorted list of organization labels
             labels = sorted(latest_data.keys())
 
             for org in labels:
@@ -592,13 +665,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 categorical_data = pd.DataFrame(json.loads(data["categorical"]))
                 numerical_data = pd.DataFrame(json.loads(data["numerical"]))
 
-                # Sum missing data for categorical variables
+                # Process categorical data
                 for var in categorical_data['variable'].unique():
-                    missing_count = \
-                        categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')][
-                            'count'].sum()
-                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')][
-                            'count'].sum()
+                    missing_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')]['count'].sum()
+                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')]['count'].sum()
                     if var not in total_available:
                         total_available[var] = 0
                         total_unavailable[var] = 0
@@ -608,14 +678,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, missing_count)})
 
-                # Sum missing data for numerical variables
+                # Process numerical data
                 for var in numerical_data['variable'].unique():
-                    missing_count = \
-                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')][
-                            'value'].sum()
-                    total_count = \
-                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
-                            'value'].sum()
+                    missing_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')]['value'].sum()
+                    total_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')]['value'].sum()
 
                     if var not in total_available:
                         total_available[var] = 0
@@ -626,66 +692,167 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, missing_count)})
 
-        # Create DataFrame from total counts
-        visualisation_df = pd.DataFrame({
-            'Variables': list(total_available.keys()),
-            f'Total available {text}s': list(total_available.values()),
-            f'Total unavailable {text}s': list(total_unavailable.values())
-        })
+            # Create DataFrame for visualization
+            visualisation_df = pd.DataFrame({
+                'Variables': list(total_available.keys()),
+                f'Total available {text}s': list(total_available.values()),
+                f'Total unavailable {text}s': list(total_unavailable.values())
+            })
 
-        # Convert the values into percentages
-        visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
-                visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
-        visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
-                visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            # Calculate percentages
+            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
+                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
+                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
 
-        # Ensure minimum bar height for both available and unavailable data
-        min_bar_height = 0.01
-        if visualisation_df[f'Percentage available {text}s'].min() != 0:
-            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Percentage available {text}s'].apply(
-                lambda x: max(x, min_bar_height))
-        if visualisation_df[f'Percentage unavailable {text}s'].min() != 0:
-            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[
-                f'Percentage unavailable {text}s'].apply(
-                lambda x: max(x, min_bar_height))
+            # Ensure minimum bar height
+            min_bar_height = 0.01
+            if visualisation_df[f'Percentage available {text}s'].min() != 0:
+                visualisation_df[f'Percentage available {text}s'] = visualisation_df[
+                    f'Percentage available {text}s'].apply(
+                    lambda x: max(x, min_bar_height))
+            if visualisation_df[f'Percentage unavailable {text}s'].min() != 0:
+                visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[
+                    f'Percentage unavailable {text}s'].apply(
+                    lambda x: max(x, min_bar_height))
 
-        # Create the figure
+            # Set chart labels and hover templates for completeness
+            yaxis_title = "Data point completeness"
+            bar_name_available = "Complete data points"
+            bar_name_unavailable = "Incomplete data points"
+            pattern_shape = "\\"
+            hovertemplate_available = [
+                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
+                f"Percentage complete points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
+                f"Share per organisation<br>" + "<br>".join(
+                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete data points)"
+                    for org in labels
+                )
+                for index, row in visualisation_df.iterrows()
+            ]
+            hovertemplate_unavailable = [
+                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
+                f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
+                f"Share per organisation<br>" + "<br>".join(
+                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% incomplete data points)"
+                    for org in labels
+                )
+                for index, row in visualisation_df.iterrows()
+            ]
+
+        elif domain == 'plausibility':
+            # Initialize dictionaries to store total available and unavailable data points
+            total_available = {}
+            total_unavailable = {}
+            completeness_info = {}
+
+            # Get sorted list of organization labels
+            labels = sorted(latest_data.keys())
+
+            for org in labels:
+                completeness_info[org] = {}
+                data = latest_data[org]
+                categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+
+                # Process categorical data
+                for var in categorical_data['variable'].unique():
+                    implausible_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'outliers')]['count'].sum()
+                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'outliers')]['count'].sum()
+                    if var not in total_available:
+                        total_available[var] = 0
+                        total_unavailable[var] = 0
+
+                    total_available[var] += total_count
+                    total_unavailable[var] += implausible_count
+
+                    completeness_info[org].update({var: (total_count, implausible_count)})
+
+                # Process numerical data
+                for var in numerical_data['variable'].unique():
+                    implausible_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'outliers')]['value'].sum()
+                    total_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')]['value'].sum() - implausible_count
+
+                    if var not in total_available:
+                        total_available[var] = 0
+                        total_unavailable[var] = 0
+
+                    total_available[var] += total_count
+                    total_unavailable[var] += implausible_count
+
+                    completeness_info[org].update({var: (total_count, implausible_count)})
+
+            # Create DataFrame for visualization
+            visualisation_df = pd.DataFrame({
+                'Variables': list(total_available.keys()),
+                f'Total available {text}s': list(total_available.values()),
+                f'Total unavailable {text}s': list(total_unavailable.values())
+            })
+
+            # Calculate percentages
+            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
+                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
+                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+
+            # Ensure minimum bar height
+            min_bar_height = 0.01
+            if visualisation_df[f'Percentage available {text}s'].min() != 0:
+                visualisation_df[f'Percentage available {text}s'] = visualisation_df[
+                    f'Percentage available {text}s'].apply(
+                    lambda x: max(x, min_bar_height))
+            if visualisation_df[f'Percentage unavailable {text}s'].min() != 0:
+                visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[
+                    f'Percentage unavailable {text}s'].apply(
+                    lambda x: max(x, min_bar_height))
+
+            # Set chart labels and hover templates for plausibility
+            yaxis_title = "Data point plausibility"
+            bar_name_available = "Plausible data points"
+            bar_name_unavailable = "Implausible data points"
+            pattern_shape = "/"
+            hovertemplate_available = [
+                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
+                f"Percentage plausible data points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
+                f"Share per organisation<br>" + "<br>".join(
+                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% plausible data points)"
+                    for org in labels
+                )
+                for index, row in visualisation_df.iterrows()
+            ]
+            hovertemplate_unavailable = [
+                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
+                f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
+                f"Share per organisation<br>" + "<br>".join(
+                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% implausible data points)"
+                    for org in labels
+                )
+                for index, row in visualisation_df.iterrows()
+            ]
+
+        # Create the bar chart figure
         fig = go.Figure(data=[
             go.Bar(
-                name='Complete information',
+                name=bar_name_available,
                 x=visualisation_df['Variables'],
                 y=visualisation_df[f'Percentage available {text}s'],
                 width=0.4,
-                hovertemplate=[
-                    f"<extra></extra><b>{row['Variables']}</b><br>"
-                    f"Total complete information: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
-                    f"Percentage complete: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
-                    f"Share per organisation<br>" + "<br>".join(
-                        f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete)"
-                        for org in labels
-                    )
-                    for index, row in visualisation_df.iterrows()
-                ]
+                hovertemplate=hovertemplate_available
             ),
             go.Bar(
-                name='Incomplete information',
+                name=bar_name_unavailable,
                 x=visualisation_df['Variables'],
                 y=visualisation_df[f'Percentage unavailable {text}s'],
                 width=0.4,
-                hovertemplate=[
-                    f"<extra></extra><b>{row['Variables']}</b><br>"
-                    f"Total incomplete information: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
-                    f"Percentage incomplete: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
-                    f"Share per organisation<br>" + "<br>".join(
-                        f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% incomplete)"
-                        for org in labels
-                    )
-                    for index, row in visualisation_df.iterrows()
-                ],
+                hovertemplate=hovertemplate_unavailable,
                 marker=dict(
-                    pattern_shape="\\",  # You can change this to any pattern shape you prefer
+                    pattern_shape=pattern_shape,
                     pattern_fillmode="replace",
-                    pattern_solidity=0.3  # Adjust the solidity of the pattern
+                    pattern_solidity=0.3
                 )
             )
         ])
@@ -706,7 +873,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 x=0.5,
                 orientation="h"
             ),
-            yaxis_title=f"Completeness (in per cent)",
+            yaxis_title=yaxis_title,
             yaxis=dict(tickformat=".0%")
         )
 

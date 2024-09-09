@@ -61,6 +61,7 @@ class Dashboard:
 
     def register_callbacks(self):
         """"""
+
         @self.App.callback(
             Output('url', 'pathname'),
             [Input('go-to-home', 'n_clicks'),
@@ -251,14 +252,70 @@ class Dashboard:
                                                   chart_type="country")
 
         @self.App.callback(
+            Output({'type': 'dynamic-donut-five', 'index': MATCH}, 'figure'),
+            [Input('store', 'data')]
+        )
+        def update_organisation_plausibility_chart(descriptive_data):
+            """
+            Callback function to update the plausibility information in the donut chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_donut_chart` function from the `callbacks` module,
+            passing the `descriptive_data` and the chart type as arguments.
+            The result of the `generate_donut_chart`
+            function is then returned by the `update_organisation_plausibility_chart` function,
+            which updates the 'dynamic-donut-five' component in the Dash app.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+                                     Each key is a timestamp,
+                                     and each value is a dictionary containing the data fetched at that timestamp.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            """
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='plausibility',
+                                                  chart_type="organisation")
+
+        @self.App.callback(
+            Output({'type': 'dynamic-donut-six', 'index': MATCH}, 'figure'),
+            [Input('store', 'data')]
+        )
+        def update_country_plausibility_chart(descriptive_data):
+            """
+            Callback function to update the plausibility information in the donut chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_donut_chart` function from the `callbacks` module,
+            passing the `descriptive_data` and the chart type as arguments.
+            The result of the `generate_donut_chart`
+            function is then returned by the `update_country_plausibility_chart` function,
+            which updates the 'dynamic-donut-six' component in the Dash app.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+                                     Each key is a timestamp,
+                                     and each value is a dictionary containing the data fetched at that timestamp.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            """
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='plausibility',
+                                                  chart_type="country")
+
+        @self.App.callback(
             [Output({'type': 'dynamic-donut-one', 'index': MATCH}, 'style'),
              Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'style'),
              Output({'type': 'dynamic-donut-three', 'index': MATCH}, 'style'),
-             Output({'type': 'dynamic-donut-four', 'index': MATCH}, 'style')],
+             Output({'type': 'dynamic-donut-four', 'index': MATCH}, 'style'),
+             Output({'type': 'dynamic-donut-five', 'index': MATCH}, 'style'),
+             Output({'type': 'dynamic-donut-six', 'index': MATCH}, 'style')],
             [Input({'type': 'dynamic-donut-one', 'index': MATCH}, 'figure'),
              Input({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure'),
              Input({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure'),
-             Input({'type': 'dynamic-donut-four', 'index': MATCH}, 'figure')]
+             Input({'type': 'dynamic-donut-four', 'index': MATCH}, 'figure'),
+             Input({'type': 'dynamic-donut-five', 'index': MATCH}, 'figure'),
+             Input({'type': 'dynamic-donut-sex', 'index': MATCH}, 'figure')]
         )
         def update_graph_style(figure_one, figure_two, figure_three, figure_four):
             """
@@ -384,15 +441,16 @@ class Dashboard:
             """
             Callback function to update the completeness chart.
 
-            This function is triggered whenever the data in the 'data-availability-store-1' component changes.
-            It calls the `generate_completeness_chart` function from the `callbacks` module,
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_variable_bar_chart` function from the `callbacks` module,
             passing the `availability_data` as an argument.
-            The result of the `generate_completeness_chart` function is then returned by the `update_completeness_info` function,
+            The result of the `generate_variable_bar_chart` function is then returned by
+            the `update_variable_completeness_info` function,
             which updates the 'dynamic-completeness-bar' component in the Dash app.
 
             Parameters:
-            availability_data (str): The data stored in the 'store' component.
-                                     This is a JSON string representing a DataFrame.
+            descriptive_data (str): The data stored in the 'store' component.
+                                    This is a JSON string representing a DataFrame.
 
             Returns:
             plotly.graph_objs._figure.Figure: The updated completeness chart figure.
@@ -406,6 +464,39 @@ class Dashboard:
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
                 return "Select an organisation to view the variable completeness"
+
+        @self.App.callback(
+            Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
+            [Input('store', 'data'),
+             Input('subset-selection-checkboxes', 'value')]
+        )
+        def update_variable_plausibility_info(descriptive_data, selection):
+            """
+            Callback function to update the plausibility chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_variable_bar_chart` function from the `callbacks` module,
+            passing the `availability_data` as an argument.
+            The result of the `generate_variable_bar_chart` function is then returned by
+            the `update_variable_plausibility_info` function,
+            which updates the 'dynamic-plausibility-bar' component in the Dash app.
+
+            Parameters:
+            descriptive_data (str): The data stored in the 'store' component.
+                                    This is a JSON string representing a DataFrame.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated plausibility chart figure.
+            """
+            if selection:
+                _descriptive_data = copy.deepcopy(descriptive_data)
+                for timestamp in descriptive_data.keys():
+                    for org in descriptive_data[timestamp].keys():
+                        if org not in selection:
+                            del _descriptive_data[timestamp][org]
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
+            else:
+                return "Select an organisation to view the variable plausibility"
 
     def run(self, debug=None):
         """
