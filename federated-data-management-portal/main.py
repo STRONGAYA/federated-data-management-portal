@@ -1,3 +1,4 @@
+import copy
 import dash
 import json
 import os
@@ -170,7 +171,8 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated donut chart figure.
             """
-            return callbacks.generate_donut_chart(descriptive_data,chart_domain='availability', chart_type="organisation")
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='availability',
+                                                  chart_type="organisation")
 
         @self.App.callback(
             Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure'),
@@ -196,16 +198,69 @@ class Dashboard:
             """
             return callbacks.generate_donut_chart(descriptive_data, chart_domain='availability', chart_type="country")
 
+        @self.App.callback(
+            Output({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure'),
+            [Input('store', 'data')]
+        )
+        def update_organisation_completeness_chart(descriptive_data):
+            """
+            Callback function to update the completeness information in the donut chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_donut_chart` function from the `callbacks` module,
+            passing the `descriptive_data` and the chart type as arguments.
+            The result of the `generate_donut_chart`
+            function is then returned by the `update_organisation_completeness_chart` function,
+            which updates the 'dynamic-donut-three' component in the Dash app.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+                                     Each key is a timestamp,
+                                     and each value is a dictionary containing the data fetched at that timestamp.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            """
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='completeness',
+                                                  chart_type="organisation")
+
+        @self.App.callback(
+            Output({'type': 'dynamic-donut-four', 'index': MATCH}, 'figure'),
+            [Input('store', 'data')]
+        )
+        def update_country_completeness_chart(descriptive_data):
+            """
+            Callback function to update the completeness information in the donut chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_donut_chart` function from the `callbacks` module,
+            passing the `descriptive_data` and the chart type as arguments.
+            The result of the `generate_donut_chart`
+            function is then returned by the `update_country_completeness_chart` function,
+            which updates the 'dynamic-donut-four' component in the Dash app.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+                                     Each key is a timestamp,
+                                     and each value is a dictionary containing the data fetched at that timestamp.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            """
+            return callbacks.generate_donut_chart(descriptive_data, chart_domain='completeness',
+                                                  chart_type="country")
 
         @self.App.callback(
             [Output({'type': 'dynamic-donut-one', 'index': MATCH}, 'style'),
              Output({'type': 'dynamic-donut-two', 'index': MATCH}, 'style'),
-             Output({'type': 'dynamic-donut-three', 'index': MATCH}, 'style')],
+             Output({'type': 'dynamic-donut-three', 'index': MATCH}, 'style'),
+             Output({'type': 'dynamic-donut-four', 'index': MATCH}, 'style')],
             [Input({'type': 'dynamic-donut-one', 'index': MATCH}, 'figure'),
              Input({'type': 'dynamic-donut-two', 'index': MATCH}, 'figure'),
-             Input({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure')]
+             Input({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure'),
+             Input({'type': 'dynamic-donut-four', 'index': MATCH}, 'figure')]
         )
-        def update_graph_style(figure_one, figure_two, figure_three):
+        def update_graph_style(figure_one, figure_two, figure_three, figure_four):
             """
             Callback function to update the style of the donut charts.
 
@@ -216,23 +271,30 @@ class Dashboard:
             Parameters:
             figure_one (plotly.graph_objs._figure.Figure): The figure in the 'dynamic-donut-one' component.
             figure_two (plotly.graph_objs._figure.Figure): The figure in the 'dynamic-donut-two' component.
+            figure_three (plotly.graph_objs._figure.Figure): The figure in the 'dynamic-donut-three' component.
+            figure_four (plotly.graph_objs._figure.Figure): The figure in the 'dynamic-donut-four' component.
 
             Returns:
             dict: The new style for the 'dynamic-donut-one' component.
             dict: The new style for the 'dynamic-donut-two' component.
+            dict: The new style for the 'dynamic-donut-three' component.
+            dict: The new style for the 'dynamic-donut-four' component.
             """
             # Calculate the length of the legends
             legend_length_one = len(figure_one['data'][0]['labels'])
             legend_length_two = len(figure_two['data'][0]['labels'])
             legend_length_three = len(figure_three['data'][0]['labels'])
+            legend_length_four = len(figure_four['data'][0]['labels'])
 
             # Calculate the height of the dcc.Graph components based on the length of the legends
             height_one = max(400, legend_length_one * 20 + 200)
             height_two = max(400, legend_length_two * 20 + 200)
             height_three = max(400, legend_length_three * 20 + 200)
+            height_four = max(400, legend_length_four * 20 + 200)
 
             # Return the new styles
-            return {'height': f'{height_one}px'}, {'height': f'{height_two}px'}, {'height': f'{height_three}px'}
+            return ({'height': f'{height_one}px'}, {'height': f'{height_two}px'},
+                    {'height': f'{height_three}px'}, {'height': f'{height_four}px'})
 
         @self.App.callback(
             [Output('tile-content-6', 'children'),
@@ -260,10 +322,65 @@ class Dashboard:
             return dash_table, df.to_json(date_format='iso', orient='split')
 
         @self.App.callback(
-            Output({'type': 'dynamic-bar', 'index': MATCH}, 'figure'),
-            [Input('data-availability-store-1', 'data')]
+            [Output('subset-selection-checkboxes', 'options'),
+             Output('country-selection-checkboxes', 'options'),
+             Output('subset-selection-checkboxes', 'value'),
+             Output('country-selection-checkboxes', 'value')],
+            [Input('store', 'data'),
+             Input('subset-selection-checkboxes', 'value'),
+             Input('country-selection-checkboxes', 'value')]
         )
-        def update_completeness_info(availability_data):
+        def update_checkboxes(descriptive_data, selected_organisations, selected_countries):
+            """
+            Callback function to update the options for the organisation selection checkboxes and
+            country selection checkboxes.
+
+            This function is triggered whenever the data in the 'store' component changes or
+            when the user selects an organisation or country.
+            It extracts the latest data from the descriptive data and generates a list of options for
+            the checkboxes based on the keys in the latest data.
+            It also ensures that the selections in the two checkboxes are linked.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+                                     Each key is a timestamp,
+                                     and each value is a dictionary containing the data fetched at that timestamp.
+            selected_organisations (list): The currently selected organisations.
+            selected_countries (list): The currently selected countries.
+
+            Returns:
+            list: A list of dictionaries representing the options for the organisation checkboxes.
+            list: A list of dictionaries representing the options for the country checkboxes.
+            list: The updated selected organisations.
+            list: The updated selected countries.
+            """
+            # Get the latest data
+            latest_data = descriptive_data[max(descriptive_data.keys())]
+
+            # Generate options for organisations and countries
+            organisation_options = [{'label': f'{k}', 'value': k} for k in latest_data.keys()]
+            country_options = [{'label': f'{v["country"]}', 'value': v['country'], 'disabled': True}
+                               for k, v in latest_data.items()]
+
+            # Ensure unique country options
+            country_options = [dict(t) for t in {tuple(d.items()) for d in country_options}]
+
+            # Update selected organisations and countries based on the selections
+            if selected_organisations:
+                selected_countries = list(set([latest_data[org]['country'] for org in selected_organisations]))
+            elif selected_countries:
+                selected_organisations = [org for org, data in latest_data.items() if
+                                          data['country'] in selected_countries]
+
+            return (organisation_options, country_options,
+                    selected_organisations, selected_countries)
+
+        @self.App.callback(
+            Output({'type': 'dynamic-completeness-bar', 'index': MATCH}, 'figure'),
+            [Input('store', 'data'),
+             Input('subset-selection-checkboxes', 'value')]
+        )
+        def update_variable_completeness_info(descriptive_data, selection):
             """
             Callback function to update the completeness chart.
 
@@ -271,16 +388,24 @@ class Dashboard:
             It calls the `generate_completeness_chart` function from the `callbacks` module,
             passing the `availability_data` as an argument.
             The result of the `generate_completeness_chart` function is then returned by the `update_completeness_info` function,
-            which updates the 'dynamic-bar' component in the Dash app.
+            which updates the 'dynamic-completeness-bar' component in the Dash app.
 
             Parameters:
-            availability_data (str): The data stored in the 'data-availability-store-1' component.
+            availability_data (str): The data stored in the 'store' component.
                                      This is a JSON string representing a DataFrame.
 
             Returns:
             plotly.graph_objs._figure.Figure: The updated completeness chart figure.
             """
-            return callbacks.generate_completeness_chart(availability_data)
+            if selection:
+                _descriptive_data = copy.deepcopy(descriptive_data)
+                for timestamp in descriptive_data.keys():
+                    for org in descriptive_data[timestamp].keys():
+                        if org not in selection:
+                            del _descriptive_data[timestamp][org]
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
+            else:
+                return "Select an organisation to view the variable completeness"
 
     def run(self, debug=None):
         """

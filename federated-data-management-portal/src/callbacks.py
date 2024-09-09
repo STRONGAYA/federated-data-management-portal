@@ -1,6 +1,6 @@
 import copy
 import io
-
+import json
 
 import numpy as np
 import pandas as pd
@@ -467,6 +467,64 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     country_data[data["country"]] += int(data["sample_size"])
                 labels, sample_sizes = zip(*sorted(country_data.items()))
                 title = f'{text}s per country'
+            _custom_data = None
+            hover = f"<b>%{{label}}</b><br>Available {text} data: <b>%{{value}}</b><br>" \
+                    f"Proportion of all available {text} data: <b>%{{percent}}</b>"
+        elif chart_domain == "completeness":
+            if chart_type == "organisation":
+                labels = sorted(latest_data.keys())
+                missing_counts = []
+                _custom_data = []
+                for org in labels:
+                    data = latest_data[org]
+                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+
+                    # Calculate total counts excluding 'nan' and 'outliers'
+                    total_categorical_count = categorical_data[categorical_data["value"] != "nan"]["count"].sum()
+                    total_numerical_count = numerical_data[numerical_data["statistic"] == "count"]["value"].sum()
+
+                    # Calculate missing counts
+                    missing_categorical_count = categorical_data[categorical_data["value"] == "nan"]["count"].sum()
+                    missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
+
+                    # Sum relative missing counts
+                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
+                            (total_categorical_count + missing_categorical_count) + (
+                            total_numerical_count + missing_numerical_count))
+                    missing_counts.append(total_categorical_count + total_numerical_count)
+                    _custom_data.append((round((relative_missing_count * 100), 1)))
+
+                title = f'Complete {text} data per organisation'
+                sample_sizes = missing_counts
+            elif chart_type == "country":
+                country_data = defaultdict(float)
+                relative_country_data = defaultdict(float)
+                for data in latest_data.values():
+                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+
+                    # Calculate total counts excluding 'nan' and 'outliers'
+                    total_categorical_count = categorical_data[categorical_data["value"] != "nan"]["count"].sum()
+                    total_numerical_count = numerical_data[numerical_data["statistic"] == "count"]["value"].sum()
+
+                    # Calculate missing counts
+                    missing_categorical_count = categorical_data[categorical_data["value"] == "nan"]["count"].sum()
+                    missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
+
+                    # Sum relative missing counts
+                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
+                            (total_categorical_count + missing_categorical_count) + (
+                            total_numerical_count + missing_numerical_count))
+                    country_data[data["country"]] += (total_categorical_count + total_numerical_count)
+                    relative_country_data[data["country"]] += round((relative_missing_count * 100), 1)
+
+                labels, sample_sizes = zip(*sorted(country_data.items()))
+                _custom_data = [relative_country_data[label] for label in labels]
+                title = f'Complete {text} data per country'
+            hover = f"<b>%{{label}}</b><br>Relative missing data: <b>%{{customdata}}%</b><br><br>" \
+                    f"Complete {text} data: <b>%{{value}}</b><br>" \
+                    f"Proportion of all complete {text} data: <b>%{{percent}}</b>"
 
         data = [
             dict(
@@ -475,10 +533,9 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 type='pie',
                 hole=.56,
                 name='',
-                hovertemplate=(
-                    f"<b>%{{label}}</b><br>Available {text} data: <b>%{{value}}</b><br>"
-                    f"Proportion of all available {text} data: <b>%{{percent}}</b>"
-                )
+                hovertemplate=(hover),
+                customdata=_custom_data,
+                textinfo='value'
             )
         ]
 
@@ -500,133 +557,157 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
         return figure
 
 
-def generate_completeness_chart(availability_data, text="AYA"):
+def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA"):
     """
     Function to generate a completeness chart.
 
-    This function takes in a DataFrame of data availability, calculates the completeness of the data,
+    This function takes in a dictionary of descriptive data, calculates the completeness of the data,
     and generates a completeness chart showing the completeness of the data.
     The completeness chart includes annotations showing the completeness for each organisation and
     the proportion of the total completeness that this represents.
 
     Parameters:
-    df (pandas.DataFrame): The DataFrame of data availability to generate the completeness chart from.
+    descriptive_data (dict): The descriptive data to generate the completeness chart from.
     text (str, optional): The text to use in the completeness chart title and hovertemplate. Defaults to "AYA".
 
     Returns:
     dict: A dictionary representing the figure for the completeness chart.
     This includes the data for the completeness chart and the layout of the chart.
     """
-    # Convert the input data to a DataFrame
-    initial_df = pd.read_json(io.StringIO(availability_data), orient='split')
-    _initial_df_copy = initial_df.copy()
+    if descriptive_data:
+        # Retrieve the latest data
+        latest_data = descriptive_data[max(descriptive_data.keys())]
 
-    # Create a DataFrame that contains the variable counts per organisation
-    available_variable_counts_df = _initial_df_copy[_initial_df_copy['Variables'] != '']
-    available_variable_counts_df = available_variable_counts_df.drop('Values', axis=1)
+        if domain == 'completeness':
+            # Initialize dictionaries to store total counts
+            total_available = {}
+            total_unavailable = {}
+            completeness_info = {}
 
-    # Create a DataFrame that contains the sum of the value counts per organisation
-    # Fill forward the 'Variables' column in the DataFrame
-    initial_df['Variables'] = initial_df['Variables'].replace('', np.nan).ffill()
+            labels = sorted(latest_data.keys())
 
-    unavailable_df = pd.DataFrame()
-    for column in initial_df.columns[2:]:
-        column_counts = initial_df[initial_df['Values'] != ''].groupby('Variables')[column].sum().reset_index()
+            for org in labels:
+                completeness_info[org] = {}
+                data = latest_data[org]
+                categorical_data = pd.DataFrame(json.loads(data["categorical"]))
+                numerical_data = pd.DataFrame(json.loads(data["numerical"]))
 
-        if unavailable_df.empty:
-            unavailable_df = column_counts
-        else:
-            unavailable_df = unavailable_df.join(column_counts.set_index('Variables'), on='Variables', rsuffix='_r')
+                # Sum missing data for categorical variables
+                for var in categorical_data['variable'].unique():
+                    missing_count = \
+                        categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')][
+                            'count'].sum()
+                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')][
+                            'count'].sum()
+                    if var not in total_available:
+                        total_available[var] = 0
+                        total_unavailable[var] = 0
 
-    # Calculate the difference; i.e. how much missing information is there
-    unavailable_df = unavailable_df.set_index('Variables').subtract(available_variable_counts_df.set_index('Variables'),
-                                                                    fill_value=0).reset_index()
+                    total_available[var] += total_count
+                    total_unavailable[var] += missing_count
 
-    # Set positive differences to 0 and make negative differences positive
-    unavailable_df[unavailable_df.columns[1:]] = unavailable_df[unavailable_df.columns[1:]].clip(upper=0).abs()
+                    completeness_info[org].update({var: (total_count, missing_count)})
 
-    # Calculate the difference; i.e. how much usable information is there
-    available_variable_counts_df = available_variable_counts_df.set_index('Variables').subtract(
-        unavailable_df.set_index('Variables'), fill_value=0).reset_index()
+                # Sum missing data for numerical variables
+                for var in numerical_data['variable'].unique():
+                    missing_count = \
+                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')][
+                            'value'].sum()
+                    total_count = \
+                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
+                            'value'].sum()
 
-    # Rename the columns
-    unavailable_df = unavailable_df.rename(
-        columns={f'Total {text}s': f'Total unavailable {text}s'})
-    available_variable_counts_df = available_variable_counts_df.rename(
-        columns={f'Total {text}s': f'Total available {text}s'})
+                    if var not in total_available:
+                        total_available[var] = 0
+                        total_unavailable[var] = 0
 
-    # Merge the dataframes on 'Variables' column
-    visualisation_df = unavailable_df.merge(available_variable_counts_df[['Variables', f'Total available {text}s']],
-                                            on='Variables',
-                                            how='left')
+                    total_available[var] += total_count
+                    total_unavailable[var] += missing_count
 
-    # Get the list of columns to drop
-    columns_to_drop = visualisation_df.columns.difference(
-        ['Variables', f'Total available {text}s', f'Total unavailable {text}s'])
+                    completeness_info[org].update({var: (total_count, missing_count)})
 
-    # Drop the columns
-    visualisation_df = visualisation_df.drop(columns=columns_to_drop)
+        # Create DataFrame from total counts
+        visualisation_df = pd.DataFrame({
+            'Variables': list(total_available.keys()),
+            f'Total available {text}s': list(total_available.values()),
+            f'Total unavailable {text}s': list(total_unavailable.values())
+        })
 
-    # Convert 'Total available AYAs' and 'Total unavailable AYAs' columns to integer
-    visualisation_df[f'Total available {text}s'] = visualisation_df[f'Total available {text}s'].astype(int)
-    visualisation_df[f'Total unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'].astype(int)
+        # Convert the values into percentages
+        visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
+                visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+        visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
+                visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
 
-    # Create a dictionary mapping each organisation to its (un)available count
-    unavailable_counts = unavailable_df.set_index('Variables').to_dict()
-    available_counts = available_variable_counts_df.set_index('Variables').to_dict()
+        # Ensure minimum bar height for both available and unavailable data
+        min_bar_height = 0.01
+        if visualisation_df[f'Percentage available {text}s'].min() != 0:
+            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Percentage available {text}s'].apply(
+                lambda x: max(x, min_bar_height))
+        if visualisation_df[f'Percentage unavailable {text}s'].min() != 0:
+            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[
+                f'Percentage unavailable {text}s'].apply(
+                lambda x: max(x, min_bar_height))
 
-    # Create the figure
-    fig = go.Figure(data=[
-        go.Bar(
-            name='Complete information',
-            x=visualisation_df['Variables'],
-            y=visualisation_df[f'Total available {text}s'],
-            width=0.5,
-            hovertemplate=[
-                f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total complete information: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br><br>"
-                f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{int(available_counts[org][row['Variables'].title()])}</b>"
-                    for org in available_variable_counts_df.columns[2:]  # Iterate over the organisations
+        # Create the figure
+        fig = go.Figure(data=[
+            go.Bar(
+                name='Complete information',
+                x=visualisation_df['Variables'],
+                y=visualisation_df[f'Percentage available {text}s'],
+                width=0.4,
+                hovertemplate=[
+                    f"<extra></extra><b>{row['Variables']}</b><br>"
+                    f"Total complete information: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
+                    f"Percentage complete: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
+                    f"Share per organisation<br>" + "<br>".join(
+                        f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete)"
+                        for org in labels
+                    )
+                    for index, row in visualisation_df.iterrows()
+                ]
+            ),
+            go.Bar(
+                name='Incomplete information',
+                x=visualisation_df['Variables'],
+                y=visualisation_df[f'Percentage unavailable {text}s'],
+                width=0.4,
+                hovertemplate=[
+                    f"<extra></extra><b>{row['Variables']}</b><br>"
+                    f"Total incomplete information: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
+                    f"Percentage incomplete: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
+                    f"Share per organisation<br>" + "<br>".join(
+                        f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% incomplete)"
+                        for org in labels
+                    )
+                    for index, row in visualisation_df.iterrows()
+                ],
+                marker=dict(
+                    pattern_shape="\\",  # You can change this to any pattern shape you prefer
+                    pattern_fillmode="replace",
+                    pattern_solidity=0.3  # Adjust the solidity of the pattern
                 )
-                for index, row in visualisation_df.iterrows()
-            ]
-        ),
-        go.Bar(
-            name='Incomplete information',
-            x=visualisation_df['Variables'],
-            y=visualisation_df[f'Total unavailable {text}s'],
-            width=0.5,
-            # <extra> represents the trace's tag next to the tooltip, which we set to an empty string here
-            hovertemplate=[
-                f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total incomplete information: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br><br>"
-                f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{int(unavailable_counts[org][row['Variables'].title()])}</b>"
-                    for org in unavailable_df.columns[2:]  # Iterate over the organisations
-                )
-                for index, row in visualisation_df.iterrows()
-            ]
+            )
+        ])
+
+        # Update the layout of the figure
+        fig.update_layout(
+            hoverlabel=dict(font_family='Poppins, sans-serif'),
+            barmode='stack',
+            font=dict(family='Poppins, sans-serif'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            width=850,
+            height=400,
+            margin=dict(l=20, r=20, t=20, b=20),
+            legend=dict(
+                yanchor="top",
+                y=-0.3,
+                xanchor="center",
+                x=0.5,
+                orientation="h"
+            ),
+            yaxis_title=f"Completeness (in per cent)",
+            yaxis=dict(tickformat=".0%")
         )
-    ])
 
-    # Update the layout of the figure
-    fig.update_layout(
-        hoverlabel=dict(font_family='Poppins, sans-serif'),
-        barmode='stack',
-        font=dict(family='Poppins, sans-serif'),
-        plot_bgcolor='rgba(0,0,0,0)',
-        width=1100,
-        height=400,
-        margin=dict(l=20, r=20, t=20, b=20),
-        legend=dict(
-            yanchor="top",
-            y=-0.3,
-            xanchor="center",
-            x=0.5,
-            orientation="h"
-        ),
-        yaxis_title=f"Total number of {text}s",
-    )
-
-    return fig
+        return fig

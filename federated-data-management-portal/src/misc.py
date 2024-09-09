@@ -45,17 +45,31 @@ def fetch_data(vantage6_config, descriptive_data):
     if config is not None:
         # Fetch the new data from your task
         _new_data = json.loads(retrieve_triplestore_collaboration_descriptives(config))
+        _new_descriptive_stats = None
 
         # Clear the config; keep Docker's secrets, secret
         del config
 
     else:
         directory = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        _new_data = json.load(open(rf"{directory}{os.path.sep}example_data{os.path.sep}mockresult.json", 'r'))
-
+        _new_data = json.load(open(rf"{directory}{os.path.sep}example_data{os.path.sep}mock_descriptives_collaboration.json", 'r'))
+        _new_descriptive_stats = json.load(open(rf"{directory}{os.path.sep}example_data{os.path.sep}mock_descriptive_statistics.json", 'r'))
     try:
         new_data = {item['organisation']: {k: v for k, v in item.items() if k != 'organisation'} for item in
                     _new_data}
+
+        # combine the new data with the descriptive statistics
+        _partial_stats = _new_descriptive_stats['partial_results']
+        _new_stats = {item['organisation_name']: item for item in _partial_stats}
+
+        for org in new_data:
+            if org in _new_stats:
+                new_data[org].update({
+                    'categorical': _new_stats[org]['categorical'],
+                    'numerical': _new_stats[org]['numerical'],
+                    'excluded_variables': _new_stats[org]['excluded_variables']
+                })
+
     except TypeError:
         new_data = {}
 
