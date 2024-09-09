@@ -723,7 +723,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             pattern_shape = "\\"
             hovertemplate_available = [
                 f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
+                f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage complete points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete data points)"
@@ -733,7 +733,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             ]
             hovertemplate_unavailable = [
                 f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
+                f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% incomplete data points)"
@@ -815,7 +815,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             pattern_shape = "/"
             hovertemplate_available = [
                 f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b> {text}s<br>"
+                f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage plausible data points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% plausible data points)"
@@ -825,7 +825,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             ]
             hovertemplate_unavailable = [
                 f"<extra></extra><b>{row['Variables']}</b><br>"
-                f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b> {text}s<br>"
+                f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% implausible data points)"

@@ -165,7 +165,7 @@ layout = html.Div([
                             'height': '2.5rem'})
         ]),
         html.Div(id='availability-explanation', className='explanation',
-                 children=['The shown graphics aim portray the believability or truthfulness of data values'
+                 children=['The shown graphics aim to portray the believability or truthfulness of data values '
                            'by assessing the acceptable variable value range and '
                            'distribution in both atemporal as temporal data fields.',
                            html.Br(), html.Br(),
