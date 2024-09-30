@@ -463,7 +463,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
-                return "Select an organisation to view the variable completeness"
+                return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
 
         @self.App.callback(
             Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
@@ -496,7 +496,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
             else:
-                return "Select an organisation to view the variable plausibility"
+                return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
 
     def run(self, debug=None):
         """

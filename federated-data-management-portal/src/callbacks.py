@@ -11,6 +11,8 @@ from dash import dash_table
 from dash import html
 from datetime import datetime
 
+names_to_capitalise = ["eortc", "hads"]
+
 
 def fetch_field_count(descriptive_data, field_name="country", text='countr'):
     """
@@ -190,7 +192,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     tooltips = []  # Initialize tooltips as a list
     # prefixes for replacement purposes; TODO move to global schema json
     prefixes = {"ncit": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#",
-                "sct": "http://snomed.info/sct"}
+                "sct": "http://snomed.info/id",
+                "strongaya": "http://strongaya.eu/"}
 
     variable_info = global_schema_data.get('variable_info')
     if variable_info is None:
@@ -241,12 +244,13 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
         total_count = 0
         for info_list in org_variable_info.values():
             for info in info_list:
-                if info.get('main_class') == _variable_info[variable].get("class") and info.get('sub_class') == \
-                        _variable_info[variable].get("class"):
+                if info.get('main_class') == _variable_info[variable].get("class") and (
+                        info.get('sub_class') == _variable_info[variable].get("class") or info.get('sub_class') == ''):
                     total_count += info.get('main_class_count', 0)
 
         row = {
-            'Variables': variable.replace('_', ' ').title(),
+            'Variables': variable.replace('_', ' ').upper() if
+            any(name in variable for name in names_to_capitalise) else variable.replace('_', ' ').title(),
             'Values': '',
             f'Total {text}s': total_count,  # Include the total count in the row
         }
@@ -255,18 +259,21 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
         org_data = [f'{org}: __{info_list[0].get("main_class_count", 0)}__' for org, info_list in
                     org_variable_info.items()
                     if
-                    any(info.get('main_class') == _variable_info[variable].get("class") and info.get('sub_class') == \
-                        _variable_info[variable].get("class") for info in info_list)]
+                    any(info.get('main_class') == _variable_info[variable].get("class") and (
+                                info.get('sub_class') == _variable_info[variable].get("class") or info.get(
+                            'sub_class') == '') for info in info_list)]
 
         if org_data:
-            org_data = (f'__{variable.replace("_", " ").title()}__  \n'
-                        f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
+            org_data = (
+                           f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
+                           f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
         else:
-            org_data = (f'No {text}s with information on __{variable.replace("_", " ")}__ '
-                        f'appear to be available.')
+            org_data = (
+                f'No {text}s with information on __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ '
+                f'appear to be available.')
 
         tooltip_row = {
-            'Variables': f'__{variable.replace("_", " ").title()}__  \n'
+            'Variables': f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
                          f'Associated class: {_variable_info[variable].get("class")}',
             'Values': '',
             f'Total {text}s': org_data
@@ -281,8 +288,9 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
         for organisation, info_list in org_variable_info.items():
             if info_list:
                 for info in info_list:
-                    if info.get('main_class') == _variable_info[variable].get("class") and info.get('sub_class') == \
-                            _variable_info[variable].get("class"):
+                    if info.get('main_class') == _variable_info[variable].get("class") and (
+                            info.get('sub_class') == _variable_info[variable].get("class") or info.get(
+                            'sub_class') == ''):
                         row[organisation] = int(info.get('main_class_count', 0))
                         tooltip_row[
                             organisation] = (f'__{info.get("main_class_count", 0)}__ {text}s in {organisation} '
@@ -291,12 +299,13 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                     else:
                         row[organisation] = 0
                         tooltip_row[
-                            organisation] = (f'Data for __{variable.replace("_", " ")}__ '
-                                             f'appears unavailable for {organisation}.')
+                            organisation] = (
+                            f'Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ '
+                            f'appears unavailable for {organisation}.')
             else:
                 row[organisation] = 0
                 tooltip_row[
-                    organisation] = f'Data for __{variable.replace("_", " ")}__ appears unavailable for {organisation}.'
+                    organisation] = f'Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ appears unavailable for {organisation}.'
 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
@@ -312,8 +321,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                 # go through the results
                 for info_list in org_variable_info.values():
                     for info in info_list:
-                        if info.get('main_class') == _variable_info[variable].get("class") and info.get('sub_class') == \
-                                value_info.get("target_class"):
+                        if info.get('main_class') == _variable_info[variable].get("class") and info.get(
+                                'sub_class') == value_info.get("target_class"):
                             total_count += info.get('sub_class_count', 0)
 
                 row = {
@@ -329,15 +338,17 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                             and info.get('sub_class') == value_info.get("target_class")]
 
                 if org_data:
-                    org_data_str = (f'{variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
-                                    f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
+                    org_data_str = (
+                                       f'{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
+                                       f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
                 else:
-                    org_data_str = (f'No {text}s with __{value.replace("_", " ")}__ for {variable.replace("_", " ")} '
-                                    f'appear to be available.')
+                    org_data_str = (
+                        f'No {text}s with __{value.replace("_", " ")}__ for {variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")} '
+                        f'appear to be available.')
 
                 tooltip_row = {
                     'Variables': '',
-                    'Values': f'{variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
+                    'Values': f'{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
                               f'Associated class: {value_info.get("target_class")}',
                     f'Total {text}s': org_data_str
                 }
@@ -405,8 +416,8 @@ def create_data_table(df, tooltips):
     dash_table.DataTable: The created Dash DataTable.
     """
     _style_table = {'height': '450px', 'overflowY': 'auto', 'max-width': '100%', 'width': '100%', 'overflowX': 'auto'}
-    _style_cell = {'fontSize': '14px', 'border': 'none', 'padding': '0px 15px 0px 0px', 'width': '{}%',
-                   'textOverflow': 'ellipsis', 'overflow': 'hidden'}
+    _style_cell = {'fontSize': '14px', 'border': 'none', 'padding': '0px 0px 0px 0px', 'textOverflow': 'ellipsis',
+                   'overflow': 'hidden'}
     _style_data = {'border': 'none'}
     _style_header = {'position': 'sticky', 'top': 0, 'backgroundColor': '#ffffff', 'fontWeight': 'bold'}
 
@@ -422,13 +433,24 @@ def create_data_table(df, tooltips):
             {'if': {'column_id': col, 'filter_query': '{' + col + '} eq "' + symbol + '"'}, 'color': color}
             for col in df.columns[3:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
         ],
+        style_cell_conditional=[
+            {'if': {'column_id': 'Variables'}, 'width': '20px'},
+            {'if': {'column_id': 'Values'}, 'width': '20px'},
+            *[
+                {'if': {'column_id': col}, 'width': '10px'}
+                for col in df.columns[2:]
+            ]
+        ],
         tooltip_data=[
             {column: {'value': str(tooltip[column]), 'type': 'markdown'}
             if column in tooltip else None for column in df.columns}
             for tooltip in tooltips
         ],
         fixed_columns={'headers': True, 'data': 2},
-        tooltip_duration=None
+        tooltip_duration=None,
+        filter_action="native",  # Enable search functionality
+        sort_action="native",
+        page_action="native",
     )
     return data_table
 
@@ -667,8 +689,12 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
-                    missing_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')]['count'].sum()
-                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')]['count'].sum()
+                    missing_count = \
+                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')][
+                        'count'].sum()
+                    total_count = \
+                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')][
+                        'count'].sum()
                     if var not in total_available:
                         total_available[var] = 0
                         total_unavailable[var] = 0
@@ -680,8 +706,12 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                 # Process numerical data
                 for var in numerical_data['variable'].unique():
-                    missing_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')]['value'].sum()
-                    total_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')]['value'].sum()
+                    missing_count = \
+                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')][
+                        'value'].sum()
+                    total_count = \
+                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
+                        'value'].sum()
 
                     if var not in total_available:
                         total_available[var] = 0
@@ -722,9 +752,9 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Incomplete data points"
             pattern_shape = "\\"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
                 f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
-                f"Percentage complete points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
+                f"Percentage complete points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete data points)"
                     for org in labels
@@ -732,7 +762,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 for index, row in visualisation_df.iterrows()
             ]
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
                 f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
@@ -759,8 +789,12 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
-                    implausible_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'outliers')]['count'].sum()
-                    total_count = categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'outliers')]['count'].sum()
+                    implausible_count = \
+                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'outliers')][
+                        'count'].sum()
+                    total_count = \
+                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'outliers')][
+                        'count'].sum()
                     if var not in total_available:
                         total_available[var] = 0
                         total_unavailable[var] = 0
@@ -772,8 +806,12 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                 # Process numerical data
                 for var in numerical_data['variable'].unique():
-                    implausible_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'outliers')]['value'].sum()
-                    total_count = numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')]['value'].sum() - implausible_count
+                    implausible_count = \
+                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'outliers')][
+                        'value'].sum()
+                    total_count = \
+                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
+                        'value'].sum() - implausible_count
 
                     if var not in total_available:
                         total_available[var] = 0
@@ -814,9 +852,9 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Implausible data points"
             pattern_shape = "/"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
                 f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
-                f"Percentage plausible data points: <b>{row[f'Percentage available {text}s']*100:.1f}%</b><br><br>"
+                f"Percentage plausible data points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
                     f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% plausible data points)"
                     for org in labels
@@ -824,7 +862,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 for index, row in visualisation_df.iterrows()
             ]
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables']}</b><br>"
+                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
                 f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
@@ -833,6 +871,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 )
                 for index, row in visualisation_df.iterrows()
             ]
+
+        visualisation_df['Variables'] = visualisation_df['Variables'].apply(
+            lambda x: x.replace('_', ' ').upper() if any(s in x for s in names_to_capitalise) else x.replace('_',
+                                                                                                             ' ').title())
 
         # Create the bar chart figure
         fig = go.Figure(data=[
@@ -857,24 +899,59 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             )
         ])
 
-        # Update the layout of the figure
         fig.update_layout(
             hoverlabel=dict(font_family='Poppins, sans-serif'),
             barmode='stack',
             font=dict(family='Poppins, sans-serif'),
             plot_bgcolor='rgba(0,0,0,0)',
-            width=850,
+            width=1100,
             height=400,
             margin=dict(l=20, r=20, t=20, b=20),
             legend=dict(
                 yanchor="top",
-                y=-0.3,
+                y=-1.2,
                 xanchor="center",
                 x=0.5,
                 orientation="h"
             ),
             yaxis_title=yaxis_title,
-            yaxis=dict(tickformat=".0%")
+            yaxis=dict(tickformat=".0%"),
+            xaxis=dict(
+                tickangle=-45,
+                rangeslider=dict(visible=True),
+                range=[-0.5, 8.5]
+            )
         )
 
         return fig
+
+
+def generate_unavailable_organisation_annotation(domain):
+    """
+    Generate a Plotly figure with a centered annotation.
+
+    This function creates a Plotly figure that contains a centered annotation with a message
+    indicating that the user should select an organisation to inspect variable data.
+    The figure has no visible axes and a transparent background.
+
+    Parameters:
+    domain (str, optional): The domain to include in the annotation text.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: A Plotly figure with the annotation.
+    """
+    fig = go.Figure().add_annotation(
+        text=f"Select an organisation to visualise variable {domain}",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(family='Poppins, sans-serif', size=20),
+        width=850,
+        height=400,
+        xanchor='center', yanchor='middle'
+    )
+    fig.update_layout(
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig

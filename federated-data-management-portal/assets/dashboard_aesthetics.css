@@ -35,10 +35,13 @@ body {
     border-color: #f9f4ea !important;
     white-space: normal;
     box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    z-index: 10 !important;
+    overflow: visible !important;
 }
 
 .tooltip {
     transition-delay: 0.5s !important;
+    z-index: 10 !important;
 }
 
 .variable-info-table th {
@@ -270,6 +273,11 @@ body {
     overflow-x: auto;
     white-space: nowrap;
     position: relative;
+}
+
+.tile-6 .tile-content {
+    overflow: visible !important;
+    white-space: normal;
 }
 
 .tile-content .plotly-graph-div {
