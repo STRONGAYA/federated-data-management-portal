@@ -10,6 +10,11 @@ The provided implementation has a large dependency on the collaboration descript
 please refer to its respective repository for more information
 (https://github.com/STRONGAYA/triplestore-collaboration-descriptives).
 
+A demo can be seen below or found in the form of an mp4 file in the `example_data/` directory.
+
+https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
+
+
 ## Prequisites
 - ### When using the triplestore-collaboration-descriptives algorithm (default)
   - Vantage6 server and collaboration with nodes running on version 4.x.x
