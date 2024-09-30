@@ -519,7 +519,7 @@ if __name__ == '__main__':
         # This allows the user to provide the path to the global schema and Vantage6 config when not running in Docker
         config_path = input("Please provide the path to the Vantage6 configuration JSON file "
                             "or press enter to use mock data.\n")
-        json_file_path = r"C:\Users\p70087077\PycharmProjects\federated-data-managment-portal\example_data\schema.json"
+        json_file_path = input("Please provide the path to the global schema JSON file.\n")
         dash_app = Dashboard(json_file_path)
 
         if config_path and config_path.endswith('.json'):
@@ -529,7 +529,8 @@ if __name__ == '__main__':
             vantage6_config = None
 
     # Call the fetch_data function immediately at startup
-    dash_app.App.layout['store'].data = fetch_data(vantage6_config, None)
+    dash_app.App.layout['store'].data = fetch_data(vantage6_config, None,
+                                                   dash_app.global_schema_data['variable_info'])
 
     # Run the fetch_data function every six days
     scheduler = BackgroundScheduler()
