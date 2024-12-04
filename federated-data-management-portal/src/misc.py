@@ -87,13 +87,15 @@ def fetch_data(vantage6_config, descriptive_data, schema):
                     'numerical': pd.DataFrame(json.loads(_new_stats[org]['numerical'])),
                     'excluded_variables': _new_stats[org]['excluded_variables']
                 })
-                new_data[org]['categorical']['variable'] = (
-                    new_data[org]['categorical']['variable'].map(variable_class_code_to_name, na_action='ignore'))
-                # TODO map values as well
-                # new_data[org]['categorical']['value'] = (
-                #     new_data[org]['categorical']['value'].map(value_class_code_to_name, na_action='ignore'))
-                new_data[org]['numerical']['variable'] = (
-                    new_data[org]['numerical']['variable'].map(variable_class_code_to_name, na_action='ignore'))
+
+                new_data[org]['categorical']['variable'] = new_data[org]['categorical']['variable'].apply(
+                    lambda x: variable_class_code_to_name.get(x, x))
+
+                # new_data[org]['categorical']['value'] = new_data[org]['categorical']['value'].apply(
+                #     lambda x: value_class_code_to_name.get(x, x))
+
+                new_data[org]['numerical']['variable'] = new_data[org]['numerical']['variable'].apply(
+                    lambda x: variable_class_code_to_name.get(x, x))
 
                 new_data[org]['categorical'] = new_data[org]['categorical'].to_json()
                 new_data[org]['numerical'] = new_data[org]['numerical'].to_json()
