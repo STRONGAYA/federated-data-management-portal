@@ -519,7 +519,10 @@ if __name__ == '__main__':
         # This allows the user to provide the path to the global schema and Vantage6 config when not running in Docker
         config_path = input("Please provide the path to the Vantage6 configuration JSON file "
                             "or press enter to use mock data.\n")
-        json_file_path = input("Please provide the path to the global schema JSON file.\n")
+        if len(config_path) == 0:
+            json_file_path = os.path.join(os.getcwd(), 'example_data', 'schema.json')
+        else:
+            json_file_path = input("Please provide the path to the global schema JSON file.\n")
         dash_app = Dashboard(json_file_path)
 
         if config_path and config_path.endswith('.json'):
