@@ -53,7 +53,7 @@ def retrieve_triplestore_collaboration_descriptives(config):
         collaboration=config.get('collaboration'),
         organizations=config.get('aggregating_organisation'),
         name="Data management descriptive info retrieval",
-        image="jhogenboom/collaboration-descriptives:latest",  # TODO switch to trusted repository
+        image="ghcr.io/strongaya/v6-triplestore-collaboration-descriptives:v1.0.0",
         description='Task to retrieve the triplestore descriptives in light of a data management portal.',
         input_={'method': 'central'},
         databases=[{'label': 'default'}]
