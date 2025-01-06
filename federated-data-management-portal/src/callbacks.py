@@ -1,6 +1,7 @@
 import copy
 import io
 import json
+import re
 
 import numpy as np
 import pandas as pd
@@ -260,8 +261,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                     org_variable_info.items()
                     if
                     any(info.get('main_class') == _variable_info[variable].get("class") and (
-                                info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                            'sub_class') == '') for info in info_list)]
+                            info.get('sub_class') == _variable_info[variable].get("class") or info.get(
+                        'sub_class') == '') for info in info_list)]
 
         if org_data:
             org_data = (
@@ -290,7 +291,7 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
                 for info in info_list:
                     if info.get('main_class') == _variable_info[variable].get("class") and (
                             info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                            'sub_class') == ''):
+                        'sub_class') == ''):
                         row[organisation] = int(info.get('main_class_count', 0))
                         tooltip_row[
                             organisation] = (f'__{info.get("main_class_count", 0)}__ {text}s in {organisation} '
@@ -690,11 +691,11 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
                     missing_count = \
-                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')][
-                        'count'].sum()
+                        categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'nan')][
+                            'count'].sum()
                     total_count = \
-                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')][
-                        'count'].sum()
+                        categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'nan')][
+                            'count'].sum()
                     if var not in total_available:
                         total_available[var] = 0
                         total_unavailable[var] = 0
@@ -707,11 +708,11 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 # Process numerical data
                 for var in numerical_data['variable'].unique():
                     missing_count = \
-                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')][
-                        'value'].sum()
+                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'nan')][
+                            'value'].sum()
                     total_count = \
-                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
-                        'value'].sum()
+                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
+                            'value'].sum()
 
                     if var not in total_available:
                         total_available[var] = 0
@@ -756,7 +757,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage complete points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% complete data points)"
+                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[0] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% complete data points)"
+                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
+                        completeness_info[org].get(row['Variables'], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
@@ -766,7 +770,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% incomplete data points)"
+                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[1] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% incomplete data points)"
+                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
+                        completeness_info[org].get(row['Variables'], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
@@ -790,11 +797,13 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
                     implausible_count = \
-                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] == 'outliers')][
-                        'count'].sum()
+                        categorical_data[
+                            (categorical_data['variable'] == var) & (categorical_data['value'] == 'outliers')][
+                            'count'].sum()
                     total_count = \
-                    categorical_data[(categorical_data['variable'] == var) & (categorical_data['value'] != 'outliers')][
-                        'count'].sum()
+                        categorical_data[
+                            (categorical_data['variable'] == var) & (categorical_data['value'] != 'outliers')][
+                            'count'].sum()
                     if var not in total_available:
                         total_available[var] = 0
                         total_unavailable[var] = 0
@@ -807,11 +816,12 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 # Process numerical data
                 for var in numerical_data['variable'].unique():
                     implausible_count = \
-                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'outliers')][
-                        'value'].sum()
+                        numerical_data[
+                            (numerical_data['variable'] == var) & (numerical_data['statistic'] == 'outliers')][
+                            'value'].sum()
                     total_count = \
-                    numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
-                        'value'].sum() - implausible_count
+                        numerical_data[(numerical_data['variable'] == var) & (numerical_data['statistic'] == 'count')][
+                            'value'].sum() - implausible_count
 
                     if var not in total_available:
                         total_available[var] = 0
@@ -856,7 +866,9 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage plausible data points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% plausible data points)"
+                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({(completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1])) * 100:.1f}% plausible data points)"
+                    if (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][
+                        1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
@@ -866,7 +878,9 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1]) * 100:.1f}% implausible data points)"
+                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({(completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1])) * 100:.1f}% implausible data points)"
+                    if (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][
+                        1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
