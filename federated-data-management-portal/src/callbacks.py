@@ -191,10 +191,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     """
     df_rows = []
     tooltips = []  # Initialize tooltips as a list
-    # prefixes for replacement purposes; TODO move to global schema json
-    prefixes = {"ncit": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#",
-                "sct": "http://snomed.info/id",
-                "strongaya": "http://strongaya.eu/"}
+    # prefixes for replacement purposes
+    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_schema_data.get('prefixes', '')))
 
     variable_info = global_schema_data.get('variable_info')
     if variable_info is None:
