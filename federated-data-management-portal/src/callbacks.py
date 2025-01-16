@@ -191,8 +191,10 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     """
     df_rows = []
     tooltips = []  # Initialize tooltips as a list
+
     # prefixes for replacement purposes
     prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_schema_data.get('prefixes', '')))
+    prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
 
     variable_info = global_schema_data.get('variable_info')
     if variable_info is None:
@@ -314,6 +316,8 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
         value_mapping = _variable_info[variable].get('value_mapping', {})
         if value_mapping:
             for value, value_info in value_mapping.get('terms', {}).items():
+                if value == 'missing_or_unspecified':
+                    continue
                 # Compute the total count
                 total_count = 0
 
