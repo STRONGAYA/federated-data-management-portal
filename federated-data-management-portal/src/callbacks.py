@@ -868,21 +868,24 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                 f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage plausible data points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][0]}</b> ({(completeness_info[org][row['Variables']][0] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1])) * 100:.1f}% plausible data points)"
-                    if (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][
-                        1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% plausible data points)"
+                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
+
             hovertemplate_unavailable = [
                 f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
                 f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org][row['Variables']][1]}</b> ({(completeness_info[org][row['Variables']][1] / (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][1])) * 100:.1f}% implausible data points)"
-                    if (completeness_info[org][row['Variables']][0] + completeness_info[org][row['Variables']][
-                        1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% implausible data points)"
+                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
