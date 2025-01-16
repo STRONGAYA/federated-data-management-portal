@@ -148,7 +148,7 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
         collaboration=config.get('collaboration'),
         organizations=config.get('aggregating_organisation'),
         name="Data management descriptive statistics",
-        image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.0",
+        image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.1",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
         input_={'method': 'central',
                 'kwargs': {
