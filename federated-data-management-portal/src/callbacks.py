@@ -129,6 +129,75 @@ def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
     return filtered_data
 
 
+def filter_descriptive_data_by_schema_categories(descriptive_data, selected_categories, schema_data, max_depth=2):
+    """
+    Filter descriptive data to only include variables that belong to the selected schema categories.
+
+    Parameters:
+    descriptive_data (dict): Dictionary containing the descriptive data with timestamps as keys
+    selected_categories (list): List of category strings to filter variables by (e.g., ['demographic', 'clinical'])
+    schema_data (dict): Schema data containing variable_info with schema_reconstruction
+    max_depth (int): Maximum depth to check in schema_reconstruction
+
+    Returns:
+    dict: Filtered descriptive data containing only variables with matching categories
+    """
+    if not descriptive_data or not selected_categories or not schema_data:
+        return descriptive_data
+
+    # Create mapping from category values to aesthetic labels
+    category_mapping = {}
+    for cat in selected_categories:
+        # Convert back from value format to aesthetic label
+        category_mapping[cat] = cat.replace('_', ' ').title()
+
+    # Get variables that belong to selected categories
+    selected_variables = set()
+    if 'variable_info' in schema_data:
+        for variable_name, variable_data in schema_data['variable_info'].items():
+            if 'schema_reconstruction' in variable_data:
+                # Check each level in schema_reconstruction up to max_depth
+                for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+                    if level >= max_depth:
+                        break
+                    
+                    if (reconstruction_item.get('type') == 'class' and 
+                        'aesthetic_label' in reconstruction_item):
+                        aesthetic_label = reconstruction_item['aesthetic_label']
+                        # Check if this variable belongs to any selected category
+                        for cat_value, cat_label in category_mapping.items():
+                            if aesthetic_label.lower() == cat_label.lower():
+                                selected_variables.add(variable_name)
+                                break
+
+    if not selected_variables:
+        return descriptive_data
+
+    filtered_data = {}
+
+    for timestamp, data in descriptive_data.items():
+        filtered_data[timestamp] = {}
+
+        for org, org_data in data.items():
+            filtered_data[timestamp][org] = org_data.copy()
+
+            # Filter categorical data
+            if 'categorical' in org_data:
+                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                mask = categorical_df['variable'].isin(selected_variables)
+                filtered_categorical = categorical_df[mask]
+                filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
+
+            # Filter numerical data
+            if 'numerical' in org_data:
+                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                mask = numerical_df['variable'].isin(selected_variables)
+                filtered_numerical = numerical_df[mask]
+                filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
+
+    return filtered_data
+
+
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
     """
     Function to generate a horizontal bar chart of sample sizes per organisation.

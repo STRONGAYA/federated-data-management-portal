@@ -47,6 +47,34 @@ class Dashboard:
         self.App._favicon = f'..{os.path.sep}assets{os.path.sep}favicon.ico'
         self.register_callbacks()
 
+    def extract_categories_from_schema(self, max_depth=2):
+        """
+        Extract categories from schema_reconstruction hierarchy for filtering.
+        
+        Parameters:
+        max_depth (int): Maximum depth to traverse in schema_reconstruction (default: 2)
+        
+        Returns:
+        list: List of unique category labels with their corresponding values for filtering
+        """
+        categories = set()
+        
+        if 'variable_info' not in self.global_schema_data:
+            return []
+            
+        for variable_name, variable_data in self.global_schema_data['variable_info'].items():
+            if 'schema_reconstruction' in variable_data:
+                # Process each level in schema_reconstruction up to max_depth
+                for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+                    if level >= max_depth:
+                        break
+                    
+                    if (reconstruction_item.get('type') == 'class' and 
+                        'aesthetic_label' in reconstruction_item):
+                        categories.add(reconstruction_item['aesthetic_label'])
+        
+        return sorted(list(categories))
+
     def define_layout(self):
         return html.Div([
             dcc.Location(id='url', refresh=False),
@@ -377,15 +405,33 @@ class Dashboard:
             The result of the function from the `callbacks` module.
             """
             # Create filtered copies to avoid modifying originals
-            _descriptive_data = callbacks.filter_descriptive_data_by_prefix(descriptive_data,
-                                                                  prefix_selection) if prefix_selection else descriptive_data
+            _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(descriptive_data,
+                                                                  prefix_selection, self.global_schema_data) if prefix_selection else descriptive_data
 
             # Filter global schema data
             filtered_schema = copy.deepcopy(self.global_schema_data)
             if prefix_selection:
+                # Get variables that belong to selected categories
+                selected_variables = set()
+                category_mapping = {cat: cat.replace('_', ' ').title() for cat in prefix_selection}
+                
+                for variable_name, variable_data in filtered_schema['variable_info'].items():
+                    if 'schema_reconstruction' in variable_data:
+                        for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+                            if level >= 2:  # max_depth
+                                break
+                            
+                            if (reconstruction_item.get('type') == 'class' and 
+                                'aesthetic_label' in reconstruction_item):
+                                aesthetic_label = reconstruction_item['aesthetic_label']
+                                for cat_value, cat_label in category_mapping.items():
+                                    if aesthetic_label.lower() == cat_label.lower():
+                                        selected_variables.add(variable_name)
+                                        break
+                
                 filtered_schema['variable_info'] = {
                     var: info for var, info in filtered_schema['variable_info'].items()
-                    if any(var.startswith(prefix) for prefix in prefix_selection)
+                    if var in selected_variables
                 }
 
             # Generate table with filtered data
@@ -452,11 +498,10 @@ class Dashboard:
             [Input('store', 'data')]
         )
         def update_table_prefix_options(descriptive_data):
-            """Updates the prefix selection options with predefined prefixes."""
-            # Define your predefined prefix list
-            # TODO, properly implement this
-            predefined_prefixes = ['Biological', 'Survival', 'Cancer', 'TNM', 'Progression', 'General Status', 'Surgery', 'Medical Treatment', 'Radiotherapy']  # modify this list as needed
-            prefix_options = [{'label': prefix, 'value': prefix.lower().replace(' ', '_')} for prefix in sorted(predefined_prefixes)]
+            """Updates the prefix selection options with categories extracted from schema."""
+            # Extract categories dynamically from schema
+            schema_categories = self.extract_categories_from_schema()
+            prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in schema_categories]
             return prefix_options, []
 
         @self.App.callback(
@@ -491,7 +536,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_prefix(_descriptive_data, prefix_selection)
+                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
@@ -529,7 +574,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_prefix(_descriptive_data, prefix_selection)
+                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
             else:
