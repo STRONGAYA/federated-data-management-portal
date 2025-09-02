@@ -148,7 +148,7 @@ def filter_descriptive_data_by_schema_categories(descriptive_data, selected_cate
     # Create mapping from category values to aesthetic labels
     category_mapping = {}
     for cat in selected_categories:
-        # Convert back from value format to aesthetic label
+        # Convert back from value format to aesthetic label with proper spacing
         category_mapping[cat] = cat.replace('_', ' ').title()
 
     # Get variables that belong to selected categories
@@ -162,8 +162,10 @@ def filter_descriptive_data_by_schema_categories(descriptive_data, selected_cate
                         break
                     
                     if (reconstruction_item.get('type') == 'class' and 
-                        'aesthetic_label' in reconstruction_item):
-                        aesthetic_label = reconstruction_item['aesthetic_label']
+                        'aesthetic_label' in reconstruction_item and
+                        reconstruction_item.get('placement') != 'after'):
+                        # Remove underscores from aesthetic label and normalize
+                        aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
                         # Check if this variable belongs to any selected category
                         for cat_value, cat_label in category_mapping.items():
                             if aesthetic_label.lower() == cat_label.lower():

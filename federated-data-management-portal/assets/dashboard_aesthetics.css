@@ -375,3 +375,85 @@ body {
     margin-right: 20px;
 }
 
+/* Custom pagination styling to match dashboard arrow aesthetic */
+.dash-table-pagination-control {
+    font-family: inherit !important;
+    margin-top: 10px !important;
+}
+
+.dash-table-pagination-control .control-button {
+    background: none !important;
+    border: none !important;
+    padding: 8px !important;
+    margin: 0 4px !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    transition: background-color 0.2s ease !important;
+    position: relative !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.dash-table-pagination-control .control-button:hover {
+    background-color: #f8f9fa !important;
+}
+
+.dash-table-pagination-control .control-button:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+}
+
+/* Style the previous/next buttons with arrow aesthetic */
+.dash-table-pagination-control .control-button[aria-label*="Previous"]:before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background-image: url('../assets/arrow-left.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    display: block;
+}
+
+.dash-table-pagination-control .control-button[aria-label*="Next"]:before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background-image: url('../assets/arrow-right.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    display: block;
+}
+
+/* Hide the default text in pagination buttons */
+.dash-table-pagination-control .control-button[aria-label*="Previous"] span,
+.dash-table-pagination-control .control-button[aria-label*="Next"] span {
+    display: none !important;
+}
+
+/* Style the current page input and page info */
+.dash-table-pagination-control .current-page {
+    margin: 0 8px !important;
+    font-size: 14px !important;
+    color: #484848 !important;
+}
+
+.dash-table-pagination-control input {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 14px !important;
+    width: 60px !important;
+    text-align: center !important;
+}
+
+.dash-table-pagination-control input:focus {
+    outline: none !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+}
+

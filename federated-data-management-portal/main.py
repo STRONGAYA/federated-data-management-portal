@@ -70,8 +70,11 @@ class Dashboard:
                         break
                     
                     if (reconstruction_item.get('type') == 'class' and 
-                        'aesthetic_label' in reconstruction_item):
-                        categories.add(reconstruction_item['aesthetic_label'])
+                        'aesthetic_label' in reconstruction_item and
+                        reconstruction_item.get('placement') != 'after'):
+                        # Remove underscores and format the aesthetic label nicely
+                        aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
+                        categories.add(aesthetic_label)
         
         return sorted(list(categories))
 
@@ -422,8 +425,10 @@ class Dashboard:
                                 break
                             
                             if (reconstruction_item.get('type') == 'class' and 
-                                'aesthetic_label' in reconstruction_item):
-                                aesthetic_label = reconstruction_item['aesthetic_label']
+                                'aesthetic_label' in reconstruction_item and
+                                reconstruction_item.get('placement') != 'after'):
+                                # Remove underscores from aesthetic label and normalize
+                                aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
                                 for cat_value, cat_label in category_mapping.items():
                                     if aesthetic_label.lower() == cat_label.lower():
                                         selected_variables.add(variable_name)
