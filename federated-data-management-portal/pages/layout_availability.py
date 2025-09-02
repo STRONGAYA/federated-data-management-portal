@@ -111,6 +111,14 @@ layout = html.Div([
         ]),
         html.Div(id='tile-6', className='tile tile-6', children=[
             html.H5('Semantic consistency', className='tile-title'),
+            html.Div(children=[
+                "Select the table(s) you would like to visualise",
+                dcc.Checklist(
+                    id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
+                    options=[],
+                    value=[],
+                    labelStyle={'display': 'inline-block'}
+                )]),
             html.Div(id='tile-content-6', className='tile-content')
         ]),
         html.Div(id='btn-subject-a', className='btn-subject-a', children=[

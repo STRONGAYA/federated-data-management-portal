@@ -356,9 +356,10 @@ class Dashboard:
         @self.App.callback(
             [Output('tile-content-6', 'children'),
              Output('data-availability-store-1', 'data')],
-            [Input('store', 'data')]
+            [Input('store', 'data'),
+             Input('subset-prefix-selection-checkboxes', 'value')]
         )
-        def update_data_availability_table(descriptive_data):
+        def update_data_availability_table(descriptive_data, prefix_selection):
             """
             Callback function to update the data availability table.
 
@@ -375,8 +376,21 @@ class Dashboard:
             Returns:
             The result of the function from the `callbacks` module.
             """
-            df, dash_table = callbacks.generate_fair_data_availability(self.global_schema_data, descriptive_data)
-            return dash_table, df.to_json(date_format='iso', orient='split')
+            # Create filtered copies to avoid modifying originals
+            _descriptive_data = callbacks.filter_descriptive_data_by_prefix(descriptive_data,
+                                                                  prefix_selection) if prefix_selection else descriptive_data
+
+            # Filter global schema data
+            filtered_schema = copy.deepcopy(self.global_schema_data)
+            if prefix_selection:
+                filtered_schema['variable_info'] = {
+                    var: info for var, info in filtered_schema['variable_info'].items()
+                    if any(var.startswith(prefix) for prefix in prefix_selection)
+                }
+
+            # Generate table with filtered data
+            df, dash_table = callbacks.generate_fair_data_availability(filtered_schema, _descriptive_data)
+            return dash_table, df.to_json()
 
         @self.App.callback(
             [Output('subset-selection-checkboxes', 'options'),
@@ -433,11 +447,25 @@ class Dashboard:
                     selected_organisations, selected_countries)
 
         @self.App.callback(
+            Output('subset-prefix-selection-checkboxes', 'options'),
+            Output('subset-prefix-selection-checkboxes', 'value'),
+            [Input('store', 'data')]
+        )
+        def update_table_prefix_options(descriptive_data):
+            """Updates the prefix selection options with predefined prefixes."""
+            # Define your predefined prefix list
+            # TODO, properly implement this
+            predefined_prefixes = ['Biological', 'Survival', 'Cancer', 'TNM', 'Progression', 'General Status', 'Surgery', 'Medical Treatment', 'Radiotherapy']  # modify this list as needed
+            prefix_options = [{'label': prefix, 'value': prefix.lower().replace(' ', '_')} for prefix in sorted(predefined_prefixes)]
+            return prefix_options, []
+
+        @self.App.callback(
             Output({'type': 'dynamic-completeness-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
-             Input('subset-selection-checkboxes', 'value')]
+             Input('subset-selection-checkboxes', 'value'),
+             Input('subset-prefix-selection-checkboxes', 'value')]
         )
-        def update_variable_completeness_info(descriptive_data, selection):
+        def update_variable_completeness_info(descriptive_data, selection, prefix_selection):
             """
             Callback function to update the completeness chart.
 
@@ -461,6 +489,10 @@ class Dashboard:
                     for org in descriptive_data[timestamp].keys():
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
+
+                # Filter data based on selected prefixes
+                _descriptive_data = callbacks.filter_descriptive_data_by_prefix(_descriptive_data, prefix_selection)
+
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
@@ -468,9 +500,10 @@ class Dashboard:
         @self.App.callback(
             Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
-             Input('subset-selection-checkboxes', 'value')]
+             Input('subset-selection-checkboxes', 'value'),
+             Input('subset-prefix-selection-checkboxes', 'value')]
         )
-        def update_variable_plausibility_info(descriptive_data, selection):
+        def update_variable_plausibility_info(descriptive_data, selection, prefix_selection):
             """
             Callback function to update the plausibility chart.
 
@@ -494,6 +527,10 @@ class Dashboard:
                     for org in descriptive_data[timestamp].keys():
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
+
+                # Filter data based on selected prefixes
+                _descriptive_data = callbacks.filter_descriptive_data_by_prefix(_descriptive_data, prefix_selection)
+
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')

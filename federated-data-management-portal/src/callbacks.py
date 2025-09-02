@@ -86,6 +86,49 @@ def fetch_total_sample_size(descriptive_data, text="AYA"):
         return [f"{num_patients}", html.Br(), f"{text}{'s' if num_patients > 1 else ''}"]
 
 
+def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
+    """
+    Filter descriptive data to only include variables that start with the selected prefixes.
+
+    Parameters:
+    descriptive_data (dict): Dictionary containing the descriptive data with timestamps as keys
+    selected_prefixes (list): List of prefix strings to filter variables by
+
+    Returns:
+    dict: Filtered descriptive data containing only variables with matching prefixes
+    """
+    if not descriptive_data or not selected_prefixes:
+        return descriptive_data
+
+    filtered_data = {}
+
+    for timestamp, data in descriptive_data.items():
+        filtered_data[timestamp] = {}
+
+        for org, org_data in data.items():
+            filtered_data[timestamp][org] = org_data.copy()
+
+            # Filter categorical data
+            if 'categorical' in org_data:
+                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                mask = categorical_df['variable'].apply(
+                    lambda x: any(x.startswith(prefix) for prefix in selected_prefixes)
+                )
+                filtered_categorical = categorical_df[mask]
+                filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
+
+            # Filter numerical data
+            if 'numerical' in org_data:
+                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                mask = numerical_df['variable'].apply(
+                    lambda x: any(x.startswith(prefix) for prefix in selected_prefixes)
+                )
+                filtered_numerical = numerical_df[mask]
+                filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
+
+    return filtered_data
+
+
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
     """
     Function to generate a horizontal bar chart of sample sizes per organisation.
@@ -190,7 +233,7 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     dash_table.DataTable: The created Dash DataTable.
     """
     df_rows = []
-    tooltips = []  # Initialize tooltips as a list
+    tooltips = []   # Initialise tooltips as a list
 
     # prefixes for replacement purposes
     prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_schema_data.get('prefixes', '')))
