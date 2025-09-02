@@ -376,82 +376,86 @@ body {
 }
 
 /* Custom pagination styling to match dashboard arrow aesthetic */
-.dash-table-pagination-control {
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination {
+    margin-top: 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
     font-family: inherit !important;
-    margin-top: 10px !important;
 }
 
-.dash-table-pagination-control .control-button {
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button {
     background: none !important;
-    border: none !important;
-    padding: 8px !important;
-    margin: 0 4px !important;
+    border: 1px solid #ddd !important;
+    padding: 8px 12px !important;
+    margin: 0 2px !important;
     cursor: pointer !important;
-    border-radius: 4px !important;
-    transition: background-color 0.2s ease !important;
-    position: relative !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
     width: 40px !important;
     height: 40px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    font-size: 0 !important; /* Hide text */
+    position: relative !important;
 }
 
-.dash-table-pagination-control .control-button:hover {
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:hover:not(:disabled) {
     background-color: #f8f9fa !important;
+    border-color: #adb5bd !important;
 }
 
-.dash-table-pagination-control .control-button:disabled {
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
+    border-color: #e9ecef !important;
 }
 
-/* Style the previous/next buttons with arrow aesthetic */
-.dash-table-pagination-control .control-button[aria-label*="Previous"]:before {
+/* Previous button arrow */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:first-of-type:before {
     content: '';
-    width: 24px;
-    height: 24px;
-    background-image: url('../assets/arrow-left.svg');
+    width: 20px;
+    height: 20px;
+    background-image: url('arrow-left.svg');
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
     display: block;
 }
 
-.dash-table-pagination-control .control-button[aria-label*="Next"]:before {
+/* Next button arrow */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:last-of-type:before {
     content: '';
-    width: 24px;
-    height: 24px;
-    background-image: url('../assets/arrow-right.svg');
+    width: 20px;
+    height: 20px;
+    background-image: url('arrow-right.svg');
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
     display: block;
 }
 
-/* Hide the default text in pagination buttons */
-.dash-table-pagination-control .control-button[aria-label*="Previous"] span,
-.dash-table-pagination-control .control-button[aria-label*="Next"] span {
-    display: none !important;
-}
-
-/* Style the current page input and page info */
-.dash-table-pagination-control .current-page {
-    margin: 0 8px !important;
+/* Page number display */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination .current-page {
+    margin: 0 12px !important;
     font-size: 14px !important;
     color: #484848 !important;
+    font-weight: 500 !important;
 }
 
-.dash-table-pagination-control input {
+/* Page input styling */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination input[type="number"] {
     border: 1px solid #ddd !important;
     border-radius: 4px !important;
-    padding: 4px 8px !important;
+    padding: 6px 8px !important;
     font-size: 14px !important;
     width: 60px !important;
     text-align: center !important;
+    margin: 0 4px !important;
 }
 
-.dash-table-pagination-control input:focus {
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination input[type="number"]:focus {
     outline: none !important;
     border-color: #007bff !important;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;

@@ -39,6 +39,9 @@ class Dashboard:
         else:
             exit('Invalid schema file path')
 
+        # Set default max_depth for schema category extraction
+        self.max_depth = 2
+
         # refers to <folder_with_this_file>/assets/dashboard_aesthetics.css
         self.App = dash.Dash(__name__, pages_folder="pages", use_pages=True,
                              external_stylesheets=['dashboard_aesthetics.css', dbc.themes.BOOTSTRAP])
@@ -63,8 +66,9 @@ class Dashboard:
             return []
             
         for variable_name, variable_data in self.global_schema_data['variable_info'].items():
-            if 'schema_reconstruction' in variable_data:
+            if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
                 # Process each level in schema_reconstruction up to max_depth
+                # Only look at class items (not nodes) within the specified depth
                 for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
                     if level >= max_depth:
                         break
@@ -409,7 +413,7 @@ class Dashboard:
             """
             # Create filtered copies to avoid modifying originals
             _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(descriptive_data,
-                                                                  prefix_selection, self.global_schema_data) if prefix_selection else descriptive_data
+                                                                  prefix_selection, self.global_schema_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
 
             # Filter global schema data
             filtered_schema = copy.deepcopy(self.global_schema_data)
@@ -505,7 +509,7 @@ class Dashboard:
         def update_table_prefix_options(descriptive_data):
             """Updates the prefix selection options with categories extracted from schema."""
             # Extract categories dynamically from schema
-            schema_categories = self.extract_categories_from_schema()
+            schema_categories = self.extract_categories_from_schema(max_depth=self.max_depth)
             prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in schema_categories]
             return prefix_options, []
 
@@ -541,7 +545,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data)
+                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
@@ -579,7 +583,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data)
+                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
             else:

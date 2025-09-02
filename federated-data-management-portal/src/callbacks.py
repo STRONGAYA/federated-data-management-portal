@@ -155,8 +155,9 @@ def filter_descriptive_data_by_schema_categories(descriptive_data, selected_cate
     selected_variables = set()
     if 'variable_info' in schema_data:
         for variable_name, variable_data in schema_data['variable_info'].items():
-            if 'schema_reconstruction' in variable_data:
+            if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
                 # Check each level in schema_reconstruction up to max_depth
+                # Only look at class items (not nodes) within the specified depth
                 for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
                     if level >= max_depth:
                         break
