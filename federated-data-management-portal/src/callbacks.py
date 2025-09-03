@@ -129,7 +129,7 @@ def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
     return filtered_data
 
 
-def filter_descriptive_data_by_schema_categories(descriptive_data, selected_categories, schema_data, max_depth=2):
+def filter_descriptive_data_by_schema_categories(descriptive_data, selected_categories, schema_data, max_depth=0):
     """
     Filter descriptive data to only include variables that belong to the selected schema categories.
 
@@ -164,7 +164,7 @@ def filter_descriptive_data_by_schema_categories(descriptive_data, selected_cate
                     
                     if (reconstruction_item.get('type') == 'class' and 
                         'aesthetic_label' in reconstruction_item and
-                        reconstruction_item.get('placement') != 'after'):
+                        reconstruction_item.get('placement') != 'before'):
                         # Remove underscores from aesthetic label and normalize
                         aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
                         # Check if this variable belongs to any selected category

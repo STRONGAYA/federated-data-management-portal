@@ -40,7 +40,7 @@ class Dashboard:
             exit('Invalid schema file path')
 
         # Set default max_depth for schema category extraction
-        self.max_depth = 2
+        self.max_depth = 1
 
         # refers to <folder_with_this_file>/assets/dashboard_aesthetics.css
         self.App = dash.Dash(__name__, pages_folder="pages", use_pages=True,
@@ -50,7 +50,7 @@ class Dashboard:
         self.App._favicon = f'..{os.path.sep}assets{os.path.sep}favicon.ico'
         self.register_callbacks()
 
-    def extract_categories_from_schema(self, max_depth=2):
+    def extract_categories_from_schema(self, max_depth=0):
         """
         Extract categories from schema_reconstruction hierarchy for filtering.
         
@@ -75,7 +75,7 @@ class Dashboard:
                     
                     if (reconstruction_item.get('type') == 'class' and 
                         'aesthetic_label' in reconstruction_item and
-                        reconstruction_item.get('placement') != 'after'):
+                        reconstruction_item.get('placement') != 'before'):
                         # Remove underscores and format the aesthetic label nicely
                         aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
                         categories.add(aesthetic_label)
