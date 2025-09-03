@@ -375,3 +375,61 @@ body {
     margin-right: 20px;
 }
 
+/* Simple pagination styling with clickable text only - no button backgrounds */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination {
+    margin-top: 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    font-family: inherit !important;
+}
+
+/* Remove all button styling - make it look like clickable text */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button {
+    background: none !important;
+    border: none !important;
+    padding: 4px 8px !important;
+    margin: 0 4px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    color: #484848 !important;
+    text-decoration: none !important;
+    transition: color 0.2s ease !important;
+}
+
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:hover:not(:disabled) {
+    color: #007bff !important;
+    text-decoration: underline !important;
+}
+
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    color: #999 !important;
+}
+
+/* Page number display */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination .current-page {
+    margin: 0 12px !important;
+    font-size: 14px !important;
+    color: #484848 !important;
+    font-weight: 500 !important;
+}
+
+/* Page input styling */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination input[type="number"] {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 6px 8px !important;
+    font-size: 14px !important;
+    width: 60px !important;
+    text-align: center !important;
+    margin: 0 4px !important;
+}
+
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination input[type="number"]:focus {
+    outline: none !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+}
+

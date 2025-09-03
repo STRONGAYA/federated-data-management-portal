@@ -7,7 +7,7 @@ from datetime import datetime
 from .vantage_client import retrieve_triplestore_collaboration_descriptives, retrieve_descriptive_statistics
 
 
-def fetch_data(vantage6_config, descriptive_data, schema):
+def fetch_data(vantage6_config, descriptive_data, semantic_map):
     """
     This function fetches data from a vantage6 task or from a local JSON file.
 
@@ -22,7 +22,7 @@ def fetch_data(vantage6_config, descriptive_data, schema):
                             If None, data is read from a local JSON file.
     descriptive_data (dict): The existing descriptive data to append the fetched data to.
                              If None, a new dictionary is created.
-    schema (dict): The schema defining the structure of the data; see the 'schema' variable in the 'main.py' file.
+    semantic_map (dict): The semantic_map defining the structure of the data; see the 'semantic_map' variable in the 'main.py' file.
 
     Returns:
     dict: The updated descriptive data with the fetched data appended.
@@ -44,7 +44,7 @@ def fetch_data(vantage6_config, descriptive_data, schema):
         config = vantage6_config
 
     variables_to_describe = {}
-    for value in schema.values():
+    for value in semantic_map.values():
         if any(reconstruction.get('type') == 'node' for reconstruction in value.get('schema_reconstruction', [])):
             variables_to_describe[value['class']] = {'datatype': 'numerical'}
         else:
@@ -68,12 +68,12 @@ def fetch_data(vantage6_config, descriptive_data, schema):
         new_data = {item['organisation']: {k: v for k, v in item.items() if k != 'organisation'} for item in _new_data}
 
         # Create a mapping of class codes to names
-        variable_class_code_to_name = {v['class']: k for k, v in schema.items()}
+        variable_class_code_to_name = {v['class']: k for k, v in semantic_map.items()}
         value_class_code_to_name = {}
         for variable in variable_class_code_to_name.values():
-            if schema[variable].get('value_mapping') is not None:
-                for value in schema[variable].get('value_mapping').get('terms'):
-                    value_class_code_to_name.update({schema[variable].get(
+            if semantic_map[variable].get('value_mapping') is not None:
+                for value in semantic_map[variable].get('value_mapping').get('terms'):
+                    value_class_code_to_name.update({semantic_map[variable].get(
                         'value_mapping').get('terms').get(value).get('target_class'): value})
 
         # Combine the new data with the descriptive statistics

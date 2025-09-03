@@ -109,7 +109,7 @@ layout = html.Div([
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Variable completeness', className='tile-title'),
             html.Div(children=[
-                "Select the table(s) you would like to visualise",
+                "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
                     id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
                     options=[],
