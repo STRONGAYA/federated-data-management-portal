@@ -387,7 +387,7 @@ body {
 #table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button {
     background: none !important;
     border: 1px solid #ddd !important;
-    padding: 8px 12px !important;
+    padding: 0 !important;
     margin: 0 2px !important;
     cursor: pointer !important;
     border-radius: 6px !important;
@@ -399,11 +399,14 @@ body {
     justify-content: center !important;
     font-size: 0 !important; /* Hide text */
     position: relative !important;
+    min-width: 40px !important; /* Ensure consistent width */
+    max-width: 40px !important; /* Prevent expansion */
 }
 
 #table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:hover:not(:disabled) {
-    background-color: #f8f9fa !important;
-    border-color: #adb5bd !important;
+    background: none !important; /* Remove grey background */
+    border-color: #007bff !important; /* Use blue border for feedback */
+    transform: scale(1.05) !important; /* Subtle scale effect instead of background */
 }
 
 #table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:disabled {
@@ -434,6 +437,15 @@ body {
     background-position: center;
     background-size: contain;
     display: block;
+}
+
+/* Ensure all pagination buttons have consistent styling */
+#table-data-availability .dash-spreadsheet-container .dash-table .dash-table-pagination button:nth-of-type(n) {
+    font-size: 0 !important; /* Force all buttons to have no text size */
+    text-indent: -9999px !important; /* Hide any text content */
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
 }
 
 /* Page number display */

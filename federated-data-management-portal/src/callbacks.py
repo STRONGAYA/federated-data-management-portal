@@ -129,20 +129,20 @@ def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
     return filtered_data
 
 
-def filter_descriptive_data_by_schema_categories(descriptive_data, selected_categories, schema_data, max_depth=0):
+def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selected_categories, semantic_map_data, max_depth=0):
     """
-    Filter descriptive data to only include variables that belong to the selected schema categories.
+    Filter descriptive data to only include variables that belong to the selected semantic_map categories.
 
     Parameters:
     descriptive_data (dict): Dictionary containing the descriptive data with timestamps as keys
     selected_categories (list): List of category strings to filter variables by (e.g., ['demographic', 'clinical'])
-    schema_data (dict): Schema data containing variable_info with schema_reconstruction
+    semantic_map_data (dict): Semantic_map data containing variable_info with schema_reconstruction
     max_depth (int): Maximum depth to check in schema_reconstruction
 
     Returns:
     dict: Filtered descriptive data containing only variables with matching categories
     """
-    if not descriptive_data or not selected_categories or not schema_data:
+    if not descriptive_data or not selected_categories or not semantic_map_data:
         return descriptive_data
 
     # Create mapping from category values to aesthetic labels
@@ -153,8 +153,8 @@ def filter_descriptive_data_by_schema_categories(descriptive_data, selected_cate
 
     # Get variables that belong to selected categories
     selected_variables = set()
-    if 'variable_info' in schema_data:
-        for variable_name, variable_data in schema_data['variable_info'].items():
+    if 'variable_info' in semantic_map_data:
+        for variable_name, variable_data in semantic_map_data['variable_info'].items():
             if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
                 # Check each level in schema_reconstruction up to max_depth
                 # Only look at class items (not nodes) within the specified depth
@@ -287,15 +287,15 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         return figure
 
 
-def generate_fair_data_availability(global_schema_data, descriptive_data, text="AYA"):
+def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA"):
     """
     Function to generate a DataFrame and a list of tooltips for FAIR data availability.
 
-    This function takes in a dictionary of global schema data, a dictionary of descriptive data, and a string text.
+    This function takes in a dictionary of global semantic_map data, a dictionary of descriptive data, and a string text.
     It processes the data to generate a DataFrame and a list of tooltips, which are then used to create a Dash DataTable.
 
     Parameters:
-    global_schema_data (dict): The global schema data to process. Each key is a variable name,
+    global_semantic_map_data (dict): The global semantic_map data to process. Each key is a variable name,
     and each value is a dictionary containing information about the variable.
     descriptive_data (dict): The descriptive data to process. Each key is a timestamp,
     and each value is a dictionary containing the data fetched at that timestamp.
@@ -308,10 +308,10 @@ def generate_fair_data_availability(global_schema_data, descriptive_data, text="
     tooltips = []   # Initialise tooltips as a list
 
     # prefixes for replacement purposes
-    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_schema_data.get('prefixes', '')))
+    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_semantic_map_data.get('prefixes', '')))
     prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
 
-    variable_info = global_schema_data.get('variable_info')
+    variable_info = global_semantic_map_data.get('variable_info')
     if variable_info is None:
         variable_info = {}
 

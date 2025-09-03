@@ -35,11 +35,11 @@ class Dashboard:
         """
         if json_file_path.endswith('.json'):
             with open(json_file_path, 'r') as f:
-                self.global_schema_data = json.load(f)
+                self.global_semantic_map_data = json.load(f)
         else:
-            exit('Invalid schema file path')
+            exit('Invalid semantic_map file path')
 
-        # Set default max_depth for schema category extraction
+        # Set default max_depth for semantic_map category extraction
         self.max_depth = 1
 
         # refers to <folder_with_this_file>/assets/dashboard_aesthetics.css
@@ -50,22 +50,22 @@ class Dashboard:
         self.App._favicon = f'..{os.path.sep}assets{os.path.sep}favicon.ico'
         self.register_callbacks()
 
-    def extract_categories_from_schema(self, max_depth=0):
+    def extract_categories_from_semantic_map(self, max_depth=0):
         """
-        Extract categories from schema_reconstruction hierarchy for filtering.
+        Extract categories from semantic_map_reconstruction hierarchy for filtering.
         
         Parameters:
-        max_depth (int): Maximum depth to traverse in schema_reconstruction (default: 2)
+        max_depth (int): Maximum depth to traverse in semantic_map_reconstruction (default: 2)
         
         Returns:
         list: List of unique category labels with their corresponding values for filtering
         """
         categories = set()
         
-        if 'variable_info' not in self.global_schema_data:
+        if 'variable_info' not in self.global_semantic_map_data:
             return []
             
-        for variable_name, variable_data in self.global_schema_data['variable_info'].items():
+        for variable_name, variable_data in self.global_semantic_map_data['variable_info'].items():
             if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
                 # Process each level in schema_reconstruction up to max_depth
                 # Only look at class items (not nodes) within the specified depth
@@ -412,17 +412,17 @@ class Dashboard:
             The result of the function from the `callbacks` module.
             """
             # Create filtered copies to avoid modifying originals
-            _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(descriptive_data,
-                                                                  prefix_selection, self.global_schema_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
+            _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(descriptive_data,
+                                                                  prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
 
-            # Filter global schema data
-            filtered_schema = copy.deepcopy(self.global_schema_data)
+            # Filter global semantic_map data
+            filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
             if prefix_selection:
                 # Get variables that belong to selected categories
                 selected_variables = set()
                 category_mapping = {cat: cat.replace('_', ' ').title() for cat in prefix_selection}
                 
-                for variable_name, variable_data in filtered_schema['variable_info'].items():
+                for variable_name, variable_data in filtered_semantic_map['variable_info'].items():
                     if 'schema_reconstruction' in variable_data:
                         for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
                             if level >= 2:  # max_depth
@@ -438,13 +438,13 @@ class Dashboard:
                                         selected_variables.add(variable_name)
                                         break
                 
-                filtered_schema['variable_info'] = {
-                    var: info for var, info in filtered_schema['variable_info'].items()
+                filtered_semantic_map['variable_info'] = {
+                    var: info for var, info in filtered_semantic_map['variable_info'].items()
                     if var in selected_variables
                 }
 
             # Generate table with filtered data
-            df, dash_table = callbacks.generate_fair_data_availability(filtered_schema, _descriptive_data)
+            df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)
             return dash_table, df.to_json()
 
         @self.App.callback(
@@ -507,10 +507,10 @@ class Dashboard:
             [Input('store', 'data')]
         )
         def update_table_prefix_options(descriptive_data):
-            """Updates the prefix selection options with categories extracted from schema."""
-            # Extract categories dynamically from schema
-            schema_categories = self.extract_categories_from_schema(max_depth=self.max_depth)
-            prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in schema_categories]
+            """Updates the prefix selection options with categories extracted from semantic_map."""
+            # Extract categories dynamically from semantic_map
+            semantic_map_categories = self.extract_categories_from_semantic_map(max_depth=self.max_depth)
+            prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in semantic_map_categories]
             return prefix_options, []
 
         @self.App.callback(
@@ -545,7 +545,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data, max_depth=self.max_depth)
+                _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
             else:
@@ -583,7 +583,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_schema_categories(_descriptive_data, prefix_selection, self.global_schema_data, max_depth=self.max_depth)
+                _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
             else:
@@ -607,13 +607,13 @@ if __name__ == '__main__':
         dash_app = Dashboard(json_file_path)
         vantage6_config = None
     else:
-        # This allows the user to provide the path to the global schema and Vantage6 config when not running in Docker
+        # This allows the user to provide the path to the global semantic_map and Vantage6 config when not running in Docker
         config_path = input("Please provide the path to the Vantage6 configuration JSON file "
                             "or press enter to use mock data.\n")
         if len(config_path) == 0:
             json_file_path = os.path.join(os.getcwd(), 'example_data', 'schema.json')
         else:
-            json_file_path = input("Please provide the path to the global schema JSON file.\n")
+            json_file_path = input("Please provide the path to the global semantic_map JSON file.\n")
         dash_app = Dashboard(json_file_path)
 
         if config_path and config_path.endswith('.json'):
@@ -624,7 +624,7 @@ if __name__ == '__main__':
 
     # Call the fetch_data function immediately at startup
     dash_app.App.layout['store'].data = fetch_data(vantage6_config, None,
-                                                   dash_app.global_schema_data['variable_info'])
+                                                   dash_app.global_semantic_map_data['variable_info'])
 
     # Run the fetch_data function every six days
     scheduler = BackgroundScheduler()
