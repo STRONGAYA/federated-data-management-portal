@@ -376,7 +376,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             has_data = any(info.get('main_class') == _variable_info[variable].get("class") and (
                     info.get('sub_class') == _variable_info[variable].get("class") or info.get(
                 'sub_class') == '') and info.get('main_class_count', 0) > 0 for info in info_list)
-            org_data_list.append(f'{org}: {"✔" if has_data else "❌"}')
+            org_data_list.append(f'{org}: ✓' if has_data else f'{org}: ✗')
 
         org_data = (
                        f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
@@ -403,14 +403,14 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                         row[organisation] = int(info.get('main_class_count', 0))
                         
                         # Build tooltip with primary concept availability and value mapping concepts
-                        main_status = "✔" if info.get("main_class_count", 0) > 0 else "❌"
+                        main_status = '✓' if info.get("main_class_count", 0) > 0 else '✗'
                         main_text = "available" if info.get("main_class_count", 0) > 0 else "unavailable"
                         tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
                         
                         # Add value mapping concepts if they exist
                         value_mapping = _variable_info[variable].get('value_mapping', {})
                         if value_mapping and value_mapping.get('terms'):
-                            tooltip_text += f'  \n  \nValue concepts:'
+                            tooltip_text += f'  \n  \nDetected value concepts:'
                             for value, value_info in value_mapping.get('terms', {}).items():
                                 if value == 'missing_or_unspecified':
                                     continue
@@ -421,17 +421,17 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                                     org_info.get('sub_class_count', 0) > 0
                                     for org_info in info_list
                                 )
-                                value_status = "✔" if has_value_data else "❌"
+                                value_status = '✓' if has_value_data else '✗'
                                 tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
                         
                         tooltip_row[organisation] = tooltip_text
                         break
                     else:
                         row[organisation] = 0
-                        tooltip_row[organisation] = f'❌ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
+                        tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
             else:
                 row[organisation] = 0
-                tooltip_row[organisation] = f'❌ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
+                tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
