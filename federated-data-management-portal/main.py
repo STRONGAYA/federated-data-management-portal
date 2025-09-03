@@ -78,7 +78,7 @@ class Dashboard:
                         reconstruction_item.get('placement') != 'before'):
                         # Remove underscores and format the aesthetic label nicely
                         aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
-                        categories.add(aesthetic_label)
+                        categories.add(f" {aesthetic_label}")
         
         return sorted(list(categories))
 
