@@ -367,7 +367,6 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
             any(name in variable for name in names_to_capitalise) else variable.replace('_', ' ').title(),
-            'Values': '',
             f'Total {text}s': total_count,  # Include the total count in the row
         }
 
@@ -386,7 +385,6 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         tooltip_row = {
             'Variables': f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
                          f'Associated class: {_variable_info[variable].get("class")}',
-            'Values': '',
             f'Total {text}s': org_data
         }
 
@@ -403,8 +401,30 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             info.get('sub_class') == _variable_info[variable].get("class") or info.get(
                         'sub_class') == ''):
                         row[organisation] = int(info.get('main_class_count', 0))
-                        # Update tooltip to show checkmark/cross instead of count
-                        tooltip_row[organisation] = f'{"✔" if info.get("main_class_count", 0) > 0 else "❌"} Data for __{variable.replace("_", " ")}__ {"available" if info.get("main_class_count", 0) > 0 else "unavailable"} in {organisation}.'
+                        
+                        # Build tooltip with primary concept availability and value mapping concepts
+                        main_status = "✔" if info.get("main_class_count", 0) > 0 else "❌"
+                        main_text = "available" if info.get("main_class_count", 0) > 0 else "unavailable"
+                        tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
+                        
+                        # Add value mapping concepts if they exist
+                        value_mapping = _variable_info[variable].get('value_mapping', {})
+                        if value_mapping and value_mapping.get('terms'):
+                            tooltip_text += f'  \n  \nValue concepts:'
+                            for value, value_info in value_mapping.get('terms', {}).items():
+                                if value == 'missing_or_unspecified':
+                                    continue
+                                # Check if this organization has data for this value mapping
+                                has_value_data = any(
+                                    org_info.get('main_class') == _variable_info[variable].get("class") and 
+                                    org_info.get('sub_class') == value_info.get("target_class") and
+                                    org_info.get('sub_class_count', 0) > 0
+                                    for org_info in info_list
+                                )
+                                value_status = "✔" if has_value_data else "❌"
+                                tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
+                        
+                        tooltip_row[organisation] = tooltip_text
                         break
                     else:
                         row[organisation] = 0
@@ -424,7 +444,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
     # Create a new DataFrame for display purposes
     display_df = df.copy()
-    for col in display_df.columns[3:]:
+    for col in display_df.columns[2:]:
         display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
 
     return df, create_data_table(display_df, tooltips)
@@ -463,14 +483,13 @@ def create_data_table(df, tooltips):
         style_header=_style_header,
         style_data_conditional=[
             {'if': {'column_id': col, 'filter_query': '{' + col + '} eq "' + symbol + '"'}, 'color': color}
-            for col in df.columns[3:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
+            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
         ],
         style_cell_conditional=[
             {'if': {'column_id': 'Variables'}, 'width': '20px'},
-            {'if': {'column_id': 'Values'}, 'width': '20px'},
             *[
                 {'if': {'column_id': col}, 'width': '10px'}
-                for col in df.columns[2:]
+                for col in df.columns[1:]
             ]
         ],
         tooltip_data=[
