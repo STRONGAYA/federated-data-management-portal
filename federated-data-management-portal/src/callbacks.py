@@ -367,31 +367,24 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
             any(name in variable for name in names_to_capitalise) else variable.replace('_', ' ').title(),
-            'Values': '',
             f'Total {text}s': total_count,  # Include the total count in the row
         }
 
-        # Create a tooltip row for each row
-        org_data = [f'{org}: __{info_list[0].get("main_class_count", 0)}__' for org, info_list in
-                    org_variable_info.items()
-                    if
-                    any(info.get('main_class') == _variable_info[variable].get("class") and (
-                            info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                        'sub_class') == '') for info in info_list)]
+        # Create a tooltip row for each row - simplified to show only checkmarks/crosses
+        org_data_list = []
+        for org, info_list in org_variable_info.items():
+            has_data = any(info.get('main_class') == _variable_info[variable].get("class") and (
+                    info.get('sub_class') == _variable_info[variable].get("class") or info.get(
+                'sub_class') == '') and info.get('main_class_count', 0) > 0 for info in info_list)
+            org_data_list.append(f'{org}: ✓' if has_data else f'{org}: ✗')
 
-        if org_data:
-            org_data = (
-                           f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
-                           f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
-        else:
-            org_data = (
-                f'No {text}s with information on __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ '
-                f'appear to be available.')
+        org_data = (
+                       f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
+                       f'Availability per organisation  \n') + '  \n'.join(org_data_list)
 
         tooltip_row = {
             'Variables': f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
                          f'Associated class: {_variable_info[variable].get("class")}',
-            'Values': '',
             f'Total {text}s': org_data
         }
 
@@ -408,109 +401,50 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             info.get('sub_class') == _variable_info[variable].get("class") or info.get(
                         'sub_class') == ''):
                         row[organisation] = int(info.get('main_class_count', 0))
-                        tooltip_row[
-                            organisation] = (f'__{info.get("main_class_count", 0)}__ {text}s in {organisation} '
-                                             f'have information on __{variable.replace("_", " ")}__.')
+                        
+                        # Build tooltip with primary concept availability and value mapping concepts
+                        main_status = '✓' if info.get("main_class_count", 0) > 0 else '✗'
+                        main_text = "available" if info.get("main_class_count", 0) > 0 else "unavailable"
+                        tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
+                        
+                        # Add value mapping concepts if they exist
+                        value_mapping = _variable_info[variable].get('value_mapping', {})
+                        if value_mapping and value_mapping.get('terms'):
+                            tooltip_text += f'  \n  \nDetected value concepts:'
+                            for value, value_info in value_mapping.get('terms', {}).items():
+                                if value == 'missing_or_unspecified':
+                                    continue
+                                # Check if this organization has data for this value mapping
+                                has_value_data = any(
+                                    org_info.get('main_class') == _variable_info[variable].get("class") and 
+                                    org_info.get('sub_class') == value_info.get("target_class") and
+                                    org_info.get('sub_class_count', 0) > 0
+                                    for org_info in info_list
+                                )
+                                value_status = '✓' if has_value_data else '✗'
+                                tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
+                        
+                        tooltip_row[organisation] = tooltip_text
                         break
                     else:
                         row[organisation] = 0
-                        tooltip_row[
-                            organisation] = (
-                            f'Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ '
-                            f'appears unavailable for {organisation}.')
+                        tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
             else:
                 row[organisation] = 0
-                tooltip_row[
-                    organisation] = f'Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ appears unavailable for {organisation}.'
+                tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
         tooltips.append(tooltip_row)
 
-        # Replace the prefix in the 'value_mapping' field
-        value_mapping = _variable_info[variable].get('value_mapping', {})
-        if value_mapping:
-            for value, value_info in value_mapping.get('terms', {}).items():
-                if value == 'missing_or_unspecified':
-                    continue
-                # Compute the total count
-                total_count = 0
-
-                # go through the results
-                for info_list in org_variable_info.values():
-                    for info in info_list:
-                        if info.get('main_class') == _variable_info[variable].get("class") and info.get(
-                                'sub_class') == value_info.get("target_class"):
-                            total_count += info.get('sub_class_count', 0)
-
-                row = {
-                    'Variables': '',
-                    'Values': value.replace('_', ' ').title(),
-                    f'Total {text}s': total_count,  # Include the total count in the row
-                }
-
-                # Create a tooltip row for each row
-                org_data = [f'{org}: __{info.get("sub_class_count", 0)}__' for org, info_list in
-                            org_variable_info.items()
-                            for info in info_list if info.get('main_class') == _variable_info[variable].get("class")
-                            and info.get('sub_class') == value_info.get("target_class")]
-
-                if org_data:
-                    org_data_str = (
-                                       f'{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
-                                       f'Available {text} data per organisation  \n') + '  \n'.join(org_data)
-                else:
-                    org_data_str = (
-                        f'No {text}s with __{value.replace("_", " ")}__ for {variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")} '
-                        f'appear to be available.')
-
-                tooltip_row = {
-                    'Variables': '',
-                    'Values': f'{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()} - __{value.replace("_", " ").title()}__  \n'
-                              f'Associated class: {value_info.get("target_class")}',
-                    f'Total {text}s': org_data_str
-                }
-
-                # Replace the full URI with a prefix in the tooltip
-                for prefix, uri in prefixes.items():
-                    if uri in tooltip_row['Values']:
-                        tooltip_row['Values'] = tooltip_row['Values'].replace(uri, prefix + ":")
-                        break
-
-                for organisation, info_list in org_variable_info.items():
-                    if info_list:
-                        for info in info_list:
-                            if info.get('main_class') == _variable_info[variable].get("class") and info.get(
-                                    'sub_class') == value_info.get("target_class"):
-                                row[organisation] = int(info.get('sub_class_count', 0))
-                                tooltip_row[
-                                    organisation] = (f'__{info.get("sub_class_count", 0)}__ {text}s '
-                                                     f'in {organisation} have __{value.replace("_", " ")}__ '
-                                                     f'as {variable.replace("_", " ")}.')
-                                break
-                            else:
-                                row[organisation] = 0
-                                tooltip_row[
-                                    organisation] = (f'No {text}s that have __{value.replace("_", " ")}__ '
-                                                     f'as {variable.replace("_", " ")} '
-                                                     f'appear available in {organisation}.')
-                    else:
-                        row[organisation] = 0
-                        tooltip_row[
-                            organisation] = (f'No {text}s that have __{value.replace("_", " ")}__ '
-                                             f'as {variable.replace("_", " ")} '
-                                             f'appear available in {organisation}.')
-
-                # Append the row and tooltip row to the list of rows and tooltips
-                df_rows.append(row)
-                tooltips.append(tooltip_row)
+        # Remove value mapping processing to show only primary concepts
 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
 
     # Create a new DataFrame for display purposes
     display_df = df.copy()
-    for col in display_df.columns[3:]:
+    for col in display_df.columns[2:]:
         display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
 
     return df, create_data_table(display_df, tooltips)
@@ -549,14 +483,13 @@ def create_data_table(df, tooltips):
         style_header=_style_header,
         style_data_conditional=[
             {'if': {'column_id': col, 'filter_query': '{' + col + '} eq "' + symbol + '"'}, 'color': color}
-            for col in df.columns[3:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
+            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
         ],
         style_cell_conditional=[
             {'if': {'column_id': 'Variables'}, 'width': '20px'},
-            {'if': {'column_id': 'Values'}, 'width': '20px'},
             *[
                 {'if': {'column_id': col}, 'width': '10px'}
-                for col in df.columns[2:]
+                for col in df.columns[1:]
             ]
         ],
         tooltip_data=[
