@@ -293,6 +293,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
     This function takes in a dictionary of global semantic_map data, a dictionary of descriptive data, and a string text.
     It processes the data to generate a DataFrame and a list of tooltips, which are then used to create a Dash DataTable.
+    Updated to use categorical and numerical statistics instead of variable_info for determining variable availability.
 
     Parameters:
     global_semantic_map_data (dict): The global semantic_map data to process. Each key is a variable name,
@@ -341,28 +342,46 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                         target_info['target_class'] = target_info['target_class'].replace(prefix + ":", uri)
                         break
 
-    # For each key and class in the 'variable_info' field, create a row
+    # For each variable in the semantic map, create a row using categorical and numerical statistics
     for variable in variable_info.keys():
-        org_variable_info = {}
+        org_variable_counts = {}
+        variable_class = _variable_info[variable].get("class")
 
         for organisation in organizations:
-            try:
-                _org_variable_info = [local_variable_info for local_variable_info in
-                                      descriptive_data_most_recent[organisation]['variable_info'] if
-                                      local_variable_info.get('main_class') == _variable_info[variable].get("class")]
-            except KeyError:
-                _org_variable_info = [{'main_class': '', 'main_class_count': 0,
-                                       'sub_class': '', 'sub_class_count': 0}]
+            org_data = descriptive_data_most_recent[organisation]
+            total_available = 0
+            
+            # Process categorical data for this variable
+            if 'categorical' in org_data:
+                try:
+                    categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                    # Find rows for this variable (excluding nan values)
+                    # The variable names should be already mapped from class codes in misc.py
+                    var_data = categorical_df[
+                        (categorical_df['variable'] == variable) & 
+                        (categorical_df['value'] != 'nan')
+                    ]
+                    total_available += var_data['count'].sum()
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            
+            # Process numerical data for this variable  
+            if 'numerical' in org_data:
+                try:
+                    numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                    # Find rows for this variable with 'count' statistic
+                    var_data = numerical_df[
+                        (numerical_df['variable'] == variable) & 
+                        (numerical_df['statistic'] == 'count')
+                    ]
+                    total_available += var_data['value'].sum()
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            
+            org_variable_counts[organisation] = int(total_available)
 
-            org_variable_info[organisation] = _org_variable_info
-
-        # Compute the total count
-        total_count = 0
-        for info_list in org_variable_info.values():
-            for info in info_list:
-                if info.get('main_class') == _variable_info[variable].get("class") and (
-                        info.get('sub_class') == _variable_info[variable].get("class") or info.get('sub_class') == ''):
-                    total_count += info.get('main_class_count', 0)
+        # Compute the total count across all organizations
+        total_count = sum(org_variable_counts.values())
 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
@@ -372,10 +391,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
         # Create a tooltip row for each row - simplified to show only checkmarks/crosses
         org_data_list = []
-        for org, info_list in org_variable_info.items():
-            has_data = any(info.get('main_class') == _variable_info[variable].get("class") and (
-                    info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                'sub_class') == '') and info.get('main_class_count', 0) > 0 for info in info_list)
+        for org, count in org_variable_counts.items():
+            has_data = count > 0
             org_data_list.append(f'{org}: ✓' if has_data else f'{org}: ✗')
 
         org_data = (
@@ -384,7 +401,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
         tooltip_row = {
             'Variables': f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
-                         f'Associated class: {_variable_info[variable].get("class")}',
+                         f'Associated class: {variable_class}',
             f'Total {text}s': org_data
         }
 
@@ -394,50 +411,47 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                 tooltip_row['Variables'] = tooltip_row['Variables'].replace(uri, prefix + ":")
                 break
 
-        for organisation, info_list in org_variable_info.items():
-            if info_list:
-                for info in info_list:
-                    if info.get('main_class') == _variable_info[variable].get("class") and (
-                            info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                        'sub_class') == ''):
-                        row[organisation] = int(info.get('main_class_count', 0))
-                        
-                        # Build tooltip with primary concept availability and value mapping concepts
-                        main_status = '✓' if info.get("main_class_count", 0) > 0 else '✗'
-                        main_text = "available" if info.get("main_class_count", 0) > 0 else "unavailable"
-                        tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
-                        
-                        # Add value mapping concepts if they exist
-                        value_mapping = _variable_info[variable].get('value_mapping', {})
-                        if value_mapping and value_mapping.get('terms'):
-                            tooltip_text += f'  \n  \nDetected value concepts:'
-                            for value, value_info in value_mapping.get('terms', {}).items():
-                                if value == 'missing_or_unspecified':
-                                    continue
-                                # Check if this organization has data for this value mapping
-                                has_value_data = any(
-                                    org_info.get('main_class') == _variable_info[variable].get("class") and 
-                                    org_info.get('sub_class') == value_info.get("target_class") and
-                                    org_info.get('sub_class_count', 0) > 0
-                                    for org_info in info_list
-                                )
-                                value_status = '✓' if has_value_data else '✗'
-                                tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
-                        
-                        tooltip_row[organisation] = tooltip_text
-                        break
-                    else:
-                        row[organisation] = 0
-                        tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
-            else:
-                row[organisation] = 0
-                tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
+        # Add organization-specific data to the row and tooltip
+        for organisation in organizations:
+            count = org_variable_counts[organisation]
+            row[organisation] = count
+            
+            # Build tooltip with availability information
+            main_status = '✓' if count > 0 else '✗'
+            main_text = "available" if count > 0 else "unavailable"
+            tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
+            
+            if count > 0:
+                tooltip_text += f'  \nTotal records: {count}'
+            
+            # Add value mapping concepts if they exist
+            value_mapping = _variable_info[variable].get('value_mapping', {})
+            if value_mapping and value_mapping.get('terms') and count > 0:
+                tooltip_text += f'  \n  \nDetected value concepts:'
+                org_data = descriptive_data_most_recent[organisation]
+                
+                # Check categorical data for value mappings
+                if 'categorical' in org_data:
+                    try:
+                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        for value, value_info in value_mapping.get('terms', {}).items():
+                            if value == 'missing_or_unspecified':
+                                continue
+                            # Check if this organization has data for this specific value
+                            value_count = categorical_df[
+                                (categorical_df['variable'] == variable) & 
+                                (categorical_df['value'] == value)
+                            ]['count'].sum()
+                            value_status = '✓' if value_count > 0 else '✗'
+                            tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+            
+            tooltip_row[organisation] = tooltip_text
 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
         tooltips.append(tooltip_row)
-
-        # Remove value mapping processing to show only primary concepts
 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
