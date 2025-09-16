@@ -535,7 +535,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             categorical_df['variable'] == variable
                         ]['value'].unique()
                         
-                        # Check each value mapping term
+                        # Check each value mapping term to see if its target class is represented
                         for term_key, value_info in value_mapping.get('terms', {}).items():
                             if term_key == 'missing_or_unspecified':
                                 continue
@@ -547,28 +547,38 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                                     target_class = target_class.replace(prefix + ":", uri)
                                     break
                             
-                            # Check if any actual data values map to this concept
-                            # This could be direct matches or abbreviation matches
-                            concept_found = False
+                            # Check if this target class is represented in the actual data
+                            # by looking for data values that map to this concept
+                            target_class_found = False
                             
-                            # First, check for direct term matches
+                            # Map actual data values to this target class concept
+                            # Check for direct term matches first
                             if term_key in actual_values:
-                                concept_found = True
+                                target_class_found = True
                             else:
-                                # Check for common abbreviation patterns
-                                # For example: male->M, female->F
+                                # Check for common mapping patterns between data values and schema terms
                                 term_lower = term_key.lower()
                                 for actual_val in actual_values:
+                                    # Skip nan and outliers
+                                    if actual_val in ['nan', 'outliers']:
+                                        continue
+                                        
+                                    # Case-insensitive match
                                     if actual_val.lower() == term_lower:
-                                        concept_found = True
+                                        target_class_found = True
                                         break
-                                    # Check if actual value is first letter of term
+                                    # Abbreviation match (e.g., M matches male)
                                     elif len(actual_val) == 1 and actual_val.upper() == term_lower[0].upper():
-                                        concept_found = True
+                                        target_class_found = True
+                                        break
+                                    # Other common abbreviations
+                                    elif (term_lower == 'male' and actual_val.upper() == 'M') or \
+                                         (term_lower == 'female' and actual_val.upper() == 'F'):
+                                        target_class_found = True
                                         break
                             
-                            # Show the concept with its ontology code
-                            value_status = '✓' if concept_found else '✗'
+                            # Show whether this target class is represented
+                            value_status = '✓' if target_class_found else '✗'
                             # Display the target class (ontology code) with prefix for readability
                             display_target = target_class
                             for prefix, uri in prefixes.items():
