@@ -15,6 +15,93 @@ from datetime import datetime
 names_to_capitalise = ["eortc", "hads"]
 
 
+def _get_organization_sample_size(org_data):
+    """
+    Helper function to get the sample size for a single organization.
+    
+    Priority:
+    1. Look for ncit:C164339 variable (explicit sample size variable)
+    2. Use the highest count from numerical data (count statistic)
+    3. Use the highest total count from categorical data (excluding nan)
+    
+    Parameters:
+    org_data (dict): The organization data containing categorical and numerical statistics
+    
+    Returns:
+    int: The calculated sample size for the organization
+    """
+    sample_size = 0
+    
+    # First, try to find ncit:C164339 variable (preferred sample size variable)
+    target_variable = "ncit:C164339"
+    found_target = False
+    
+    # Check categorical data for ncit:C164339
+    if 'categorical' in org_data:
+        try:
+            categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+            target_data = categorical_df[
+                (categorical_df['variable'] == target_variable) & 
+                (categorical_df['value'] != 'nan')
+            ]
+            if not target_data.empty:
+                sample_size = target_data['count'].sum()
+                found_target = True
+        except (json.JSONDecodeError, KeyError):
+            pass
+    
+    # Check numerical data for ncit:C164339 if not found in categorical
+    if not found_target and 'numerical' in org_data:
+        try:
+            numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+            target_data = numerical_df[
+                (numerical_df['variable'] == target_variable) & 
+                (numerical_df['statistic'] == 'count')
+            ]
+            if not target_data.empty:
+                sample_size = target_data['value'].sum()
+                found_target = True
+        except (json.JSONDecodeError, KeyError):
+            pass
+    
+    # If ncit:C164339 not found, use highest count from numerical data first
+    if not found_target:
+        max_count = 0
+        
+        # Check numerical data for highest count (preferred fallback)
+        if 'numerical' in org_data:
+            try:
+                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                for variable in numerical_df['variable'].unique():
+                    var_data = numerical_df[
+                        (numerical_df['variable'] == variable) & 
+                        (numerical_df['statistic'] == 'count')
+                    ]
+                    if not var_data.empty:
+                        var_count = var_data['value'].sum()
+                        max_count = max(max_count, var_count)
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        # Check categorical data for highest count (last fallback)
+        if max_count == 0 and 'categorical' in org_data:
+            try:
+                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                for variable in categorical_df['variable'].unique():
+                    var_data = categorical_df[
+                        (categorical_df['variable'] == variable) & 
+                        (categorical_df['value'] != 'nan')
+                    ]
+                    var_count = var_data['count'].sum()
+                    max_count = max(max_count, var_count)
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        sample_size = max_count
+    
+    return int(sample_size)
+
+
 def fetch_field_count(descriptive_data, field_name="country", text='countr'):
     """
     Function to fetch the count of unique fields from the descriptive data.
@@ -67,7 +154,8 @@ def fetch_total_sample_size(descriptive_data, text="AYA"):
 
     This function takes in a dictionary of descriptive data,
     finds the latest data entry based on the keys (assumed to be timestamps),
-    and sums up the "sample_size" field from each data entry in the latest data.
+    and calculates the sample size using categorical and numerical statistics.
+    Priority: 1) ncit:C164339 variable, 2) highest count from numerical data, 3) highest count from categorical data.
     It then returns a list containing the total sample size, a line break,
     and the provided text (default is "AYA") with an 's' added if the total sample size is more than 1.
 
@@ -82,8 +170,13 @@ def fetch_total_sample_size(descriptive_data, text="AYA"):
     """
     if descriptive_data:
         latest_data = descriptive_data[max(descriptive_data.keys())]
-        num_patients = sum(int(data["sample_size"]) for data in latest_data.values())
-        return [f"{num_patients}", html.Br(), f"{text}{'s' if num_patients > 1 else ''}"]
+        total_sample_size = 0
+        
+        for data in latest_data.values():
+            sample_size = _get_organization_sample_size(data)
+            total_sample_size += sample_size
+            
+        return [f"{total_sample_size}", html.Br(), f"{text}{'s' if total_sample_size > 1 else ''}"]
 
 
 def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
@@ -223,13 +316,16 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         # Get the latest data
         latest_data = descriptive_data[max(descriptive_data.keys())]
 
-        # Calculate the sample sizes and their proportions
-        sample_sizes = [int(data["sample_size"]) for data in latest_data.values()]
-        total_sample_size = sum(sample_sizes)
-        proportions = [round((size / total_sample_size), ndigits=2) for size in sample_sizes]
-
-        # Get the sorted list of organisations
+        # Calculate the sample sizes using the consistent approach
+        sample_sizes = []
         organisations = sorted(latest_data.keys())
+        
+        for org in organisations:
+            sample_size = _get_organization_sample_size(latest_data[org])
+            sample_sizes.append(sample_size)
+        
+        total_sample_size = sum(sample_sizes)
+        proportions = [round((size / total_sample_size), ndigits=2) if total_sample_size > 0 else 0 for size in sample_sizes]
 
         # Create the data for the bar chart
         data = [
@@ -549,151 +645,16 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 sample_sizes = []
                 
                 for org in labels:
-                    data = latest_data[org]
-                    sample_size = 0
-                    
-                    # First, try to find ncit:C164339 variable (preferred sample size variable)
-                    target_variable = "ncit:C164339"
-                    found_target = False
-                    
-                    # Check categorical data for ncit:C164339
-                    if 'categorical' in data:
-                        try:
-                            categorical_df = pd.DataFrame(json.loads(data['categorical']))
-                            target_data = categorical_df[
-                                (categorical_df['variable'] == target_variable) & 
-                                (categorical_df['value'] != 'nan')
-                            ]
-                            if not target_data.empty:
-                                sample_size = target_data['count'].sum()
-                                found_target = True
-                        except (json.JSONDecodeError, KeyError):
-                            pass
-                    
-                    # Check numerical data for ncit:C164339 if not found in categorical
-                    if not found_target and 'numerical' in data:
-                        try:
-                            numerical_df = pd.DataFrame(json.loads(data['numerical']))
-                            target_data = numerical_df[
-                                (numerical_df['variable'] == target_variable) & 
-                                (numerical_df['statistic'] == 'count')
-                            ]
-                            if not target_data.empty:
-                                sample_size = target_data['value'].sum()
-                                found_target = True
-                        except (json.JSONDecodeError, KeyError):
-                            pass
-                    
-                    # If ncit:C164339 not found, fall back to highest available count
-                    if not found_target:
-                        max_count = 0
-                        
-                        # Check categorical data for highest count
-                        if 'categorical' in data:
-                            try:
-                                categorical_df = pd.DataFrame(json.loads(data['categorical']))
-                                for variable in categorical_df['variable'].unique():
-                                    var_data = categorical_df[
-                                        (categorical_df['variable'] == variable) & 
-                                        (categorical_df['value'] != 'nan')
-                                    ]
-                                    var_count = var_data['count'].sum()
-                                    max_count = max(max_count, var_count)
-                            except (json.JSONDecodeError, KeyError):
-                                pass
-                        
-                        # Check numerical data for highest count
-                        if 'numerical' in data:
-                            try:
-                                numerical_df = pd.DataFrame(json.loads(data['numerical']))
-                                for variable in numerical_df['variable'].unique():
-                                    var_data = numerical_df[
-                                        (numerical_df['variable'] == variable) & 
-                                        (numerical_df['statistic'] == 'count')
-                                    ]
-                                    var_count = var_data['value'].sum()
-                                    max_count = max(max_count, var_count)
-                            except (json.JSONDecodeError, KeyError):
-                                pass
-                        
-                        sample_size = max_count
-                    
-                    sample_sizes.append(int(sample_size))
+                    sample_size = _get_organization_sample_size(latest_data[org])
+                    sample_sizes.append(sample_size)
                 
                 title = f'{text}s per organisation'
             elif chart_type == "country":
                 country_data = defaultdict(int)
                 
                 for data in latest_data.values():
-                    sample_size = 0
-                    
-                    # First, try to find ncit:C164339 variable (preferred sample size variable)
-                    target_variable = "ncit:C164339"
-                    found_target = False
-                    
-                    # Check categorical data for ncit:C164339
-                    if 'categorical' in data:
-                        try:
-                            categorical_df = pd.DataFrame(json.loads(data['categorical']))
-                            target_data = categorical_df[
-                                (categorical_df['variable'] == target_variable) & 
-                                (categorical_df['value'] != 'nan')
-                            ]
-                            if not target_data.empty:
-                                sample_size = target_data['count'].sum()
-                                found_target = True
-                        except (json.JSONDecodeError, KeyError):
-                            pass
-                    
-                    # Check numerical data for ncit:C164339 if not found in categorical
-                    if not found_target and 'numerical' in data:
-                        try:
-                            numerical_df = pd.DataFrame(json.loads(data['numerical']))
-                            target_data = numerical_df[
-                                (numerical_df['variable'] == target_variable) & 
-                                (numerical_df['statistic'] == 'count')
-                            ]
-                            if not target_data.empty:
-                                sample_size = target_data['value'].sum()
-                                found_target = True
-                        except (json.JSONDecodeError, KeyError):
-                            pass
-                    
-                    # If ncit:C164339 not found, fall back to highest available count
-                    if not found_target:
-                        max_count = 0
-                        
-                        # Check categorical data for highest count
-                        if 'categorical' in data:
-                            try:
-                                categorical_df = pd.DataFrame(json.loads(data['categorical']))
-                                for variable in categorical_df['variable'].unique():
-                                    var_data = categorical_df[
-                                        (categorical_df['variable'] == variable) & 
-                                        (categorical_df['value'] != 'nan')
-                                    ]
-                                    var_count = var_data['count'].sum()
-                                    max_count = max(max_count, var_count)
-                            except (json.JSONDecodeError, KeyError):
-                                pass
-                        
-                        # Check numerical data for highest count
-                        if 'numerical' in data:
-                            try:
-                                numerical_df = pd.DataFrame(json.loads(data['numerical']))
-                                for variable in numerical_df['variable'].unique():
-                                    var_data = numerical_df[
-                                        (numerical_df['variable'] == variable) & 
-                                        (numerical_df['statistic'] == 'count')
-                                    ]
-                                    var_count = var_data['value'].sum()
-                                    max_count = max(max_count, var_count)
-                            except (json.JSONDecodeError, KeyError):
-                                pass
-                        
-                        sample_size = max_count
-                    
-                    country_data[data["country"]] += int(sample_size)
+                    sample_size = _get_organization_sample_size(data)
+                    country_data[data["country"]] += sample_size
                 
                 labels, sample_sizes = zip(*sorted(country_data.items()))
                 title = f'{text}s per country'
