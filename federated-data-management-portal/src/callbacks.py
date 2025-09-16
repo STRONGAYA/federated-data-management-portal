@@ -535,56 +535,35 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             categorical_df['variable'] == variable
                         ]['value'].unique()
                         
-                        # Check each value mapping term to see if its target class is represented
+                        # Check each value mapping term to see if its target class is directly present
                         for term_key, value_info in value_mapping.get('terms', {}).items():
                             if term_key == 'missing_or_unspecified':
                                 continue
                                 
                             target_class = value_info.get('target_class', '')
-                            # Replace prefixes with URIs for comparison if needed
-                            for prefix, uri in prefixes.items():
-                                if prefix + ":" in target_class:
-                                    target_class = target_class.replace(prefix + ":", uri)
-                                    break
                             
-                            # Check if this target class is represented in the actual data
-                            # by looking for data values that map to this concept
+                            # Check if the target class ontology code is directly present in the data
+                            # Look for both prefixed (ncit:C20197) and full URI versions
                             target_class_found = False
                             
-                            # Map actual data values to this target class concept
-                            # Check for direct term matches first
-                            if term_key in actual_values:
+                            # Check for prefixed version (e.g., ncit:C20197)
+                            if target_class in actual_values:
                                 target_class_found = True
                             else:
-                                # Check for common mapping patterns between data values and schema terms
-                                term_lower = term_key.lower()
-                                for actual_val in actual_values:
-                                    # Skip nan and outliers
-                                    if actual_val in ['nan', 'outliers']:
-                                        continue
-                                        
-                                    # Case-insensitive match
-                                    if actual_val.lower() == term_lower:
-                                        target_class_found = True
+                                # Check for full URI version by expanding prefixes
+                                expanded_target_class = target_class
+                                for prefix, uri in prefixes.items():
+                                    if prefix + ":" in expanded_target_class:
+                                        expanded_target_class = expanded_target_class.replace(prefix + ":", uri)
                                         break
-                                    # Abbreviation match (e.g., M matches male)
-                                    elif len(actual_val) == 1 and actual_val.upper() == term_lower[0].upper():
-                                        target_class_found = True
-                                        break
-                                    # Other common abbreviations
-                                    elif (term_lower == 'male' and actual_val.upper() == 'M') or \
-                                         (term_lower == 'female' and actual_val.upper() == 'F'):
-                                        target_class_found = True
-                                        break
+                                
+                                if expanded_target_class in actual_values:
+                                    target_class_found = True
                             
-                            # Show whether this target class is represented
+                            # Show whether this target class is present in the data
                             value_status = '✓' if target_class_found else '✗'
                             # Display the target class (ontology code) with prefix for readability
                             display_target = target_class
-                            for prefix, uri in prefixes.items():
-                                if uri in display_target:
-                                    display_target = display_target.replace(uri, prefix + ":")
-                                    break
                             tooltip_text += f'  \n{value_status} {term_key.replace("_", " ").title()} ({display_target})'
                             
                     except (json.JSONDecodeError, KeyError):
