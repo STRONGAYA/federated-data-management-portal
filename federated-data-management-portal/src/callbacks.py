@@ -530,16 +530,53 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                 if 'categorical' in org_data:
                     try:
                         categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
-                        for value, value_info in value_mapping.get('terms', {}).items():
-                            if value == 'missing_or_unspecified':
+                        # Get all actual values in the data for this variable
+                        actual_values = categorical_df[
+                            categorical_df['variable'] == variable
+                        ]['value'].unique()
+                        
+                        # Check each value mapping term
+                        for term_key, value_info in value_mapping.get('terms', {}).items():
+                            if term_key == 'missing_or_unspecified':
                                 continue
-                            # Check if this organization has data for this specific value
-                            value_count = categorical_df[
-                                (categorical_df['variable'] == variable) & 
-                                (categorical_df['value'] == value)
-                            ]['count'].sum()
-                            value_status = '✓' if value_count > 0 else '✗'
-                            tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
+                                
+                            target_class = value_info.get('target_class', '')
+                            # Replace prefixes with URIs for comparison if needed
+                            for prefix, uri in prefixes.items():
+                                if prefix + ":" in target_class:
+                                    target_class = target_class.replace(prefix + ":", uri)
+                                    break
+                            
+                            # Check if any actual data values map to this concept
+                            # This could be direct matches or abbreviation matches
+                            concept_found = False
+                            
+                            # First, check for direct term matches
+                            if term_key in actual_values:
+                                concept_found = True
+                            else:
+                                # Check for common abbreviation patterns
+                                # For example: male->M, female->F
+                                term_lower = term_key.lower()
+                                for actual_val in actual_values:
+                                    if actual_val.lower() == term_lower:
+                                        concept_found = True
+                                        break
+                                    # Check if actual value is first letter of term
+                                    elif len(actual_val) == 1 and actual_val.upper() == term_lower[0].upper():
+                                        concept_found = True
+                                        break
+                            
+                            # Show the concept with its ontology code
+                            value_status = '✓' if concept_found else '✗'
+                            # Display the target class (ontology code) with prefix for readability
+                            display_target = target_class
+                            for prefix, uri in prefixes.items():
+                                if uri in display_target:
+                                    display_target = display_target.replace(uri, prefix + ":")
+                                    break
+                            tooltip_text += f'  \n{value_status} {term_key.replace("_", " ").title()} ({display_target})'
+                            
                     except (json.JSONDecodeError, KeyError):
                         pass
             
