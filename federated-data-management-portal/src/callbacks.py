@@ -496,7 +496,50 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         # Add organization-specific data to the row and tooltip
         for organisation in organizations:
             count = org_variable_counts[organisation]
+            
+            # Check if any expected value classes are found for this organization
+            any_expected_value_class_found = False
+            
+            # Check categorical data for expected value classes
+            value_mapping = _variable_info[variable].get('value_mapping', {})
+            if value_mapping and value_mapping.get('terms') and count > 0:
+                org_data = descriptive_data_most_recent[organisation]
+                if 'categorical' in org_data:
+                    try:
+                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        actual_values = categorical_df[
+                            categorical_df['variable'] == variable_class
+                        ]['value'].unique()
+                        
+                        # Check each expected value class
+                        for term_key, value_info in value_mapping.get('terms', {}).items():
+                            if term_key == 'missing_or_unspecified':
+                                continue
+                                
+                            target_class = value_info.get('target_class', '')
+                            
+                            # Check if this target class is present
+                            if target_class in actual_values:
+                                any_expected_value_class_found = True
+                                break
+                            else:
+                                # Check for full URI version
+                                expanded_target_class = target_class
+                                for prefix, uri in prefixes.items():
+                                    if prefix + ":" in expanded_target_class:
+                                        expanded_target_class = expanded_target_class.replace(prefix + ":", uri)
+                                        break
+                                
+                                if expanded_target_class in actual_values:
+                                    any_expected_value_class_found = True
+                                    break
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+            
+            # Store the count and the status for later symbol determination
             row[organisation] = count
+            # Store additional info for symbol logic (using a tuple: (count, has_expected_classes))
+            row[f'{organisation}_status'] = (count, any_expected_value_class_found)
             
             # Build tooltip with availability information
             main_status = '✓' if count > 0 else '✗'
@@ -506,8 +549,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             if count > 0:
                 tooltip_text += f'  \nTotal records: {count}'
             
-            # Add value mapping concepts if they exist
-            value_mapping = _variable_info[variable].get('value_mapping', {})
+            # Add value mapping concepts if they exist (keep existing tooltip logic unchanged)
             if value_mapping and value_mapping.get('terms') and count > 0:
                 tooltip_text += f'  \n  \nDetected value concepts:'
                 org_data = descriptive_data_most_recent[organisation]
@@ -549,11 +591,11 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                                 if expanded_target_class in actual_values:
                                     target_class_found = True
                             
-                            # Determine the status symbol
+                            # Determine the status symbol (keep existing tooltip logic - no warning symbol here)
                             if target_class_found:
                                 value_status = '✓'  # Target class is present
                             elif variable_exists:
-                                value_status = '!'  # Variable exists but this target class not found
+                                value_status = '✗'  # Variable exists but this target class not found
                             else:
                                 value_status = '✗'  # Variable doesn't exist at all
                             
@@ -573,10 +615,31 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
 
-    # Create a new DataFrame for display purposes
+    # Create a new DataFrame for display purposes with enhanced symbol logic
     display_df = df.copy()
-    for col in display_df.columns[2:]:
-        display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
+    
+    # Extract organization columns (skip 'Variables' and 'Total {text}s' columns)
+    org_columns = [col for col in display_df.columns[2:] if not col.endswith('_status')]
+    
+    for col in org_columns:
+        status_col = f'{col}_status'
+        if status_col in display_df.columns:
+            # Apply the enhanced symbol logic
+            def get_symbol(row):
+                count, has_expected_classes = row[status_col]
+                if count == 0:
+                    return '✖'  # No data
+                elif has_expected_classes:
+                    return '✔'  # Has data and expected value classes found
+                else:
+                    return '!'  # Has data but no expected value classes found
+            
+            display_df[col] = display_df.apply(get_symbol, axis=1)
+            # Remove the temporary status column
+            display_df = display_df.drop(columns=[status_col])
+        else:
+            # Fallback to original logic for columns without status info
+            display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
 
     return df, create_data_table(display_df, tooltips)
 
@@ -614,7 +677,7 @@ def create_data_table(df, tooltips):
         style_header=_style_header,
         style_data_conditional=[
             {'if': {'column_id': col, 'filter_query': '{' + col + '} eq "' + symbol + '"'}, 'color': color}
-            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
+            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red'), ('!', 'orange')]
         ],
         style_cell_conditional=[
             {'if': {'column_id': 'Variables'}, 'width': '20px'},
