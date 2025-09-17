@@ -141,9 +141,9 @@ layout = html.Div([
                            "possible values between variables with "
                            "semantic relationships between them.",
                            html.Br(), html.Br(),
-                           'Availability and semantic consistency is based on the '
-                           '"Triplestore collaboration descriptives" Vantage6 algorithm. '
-                           'For reference https://github.com/STRONGAYA/v6-triplestore-collaboration-descriptives'])
+                           'Availability and semantic consistency is the "Descriptive statistics" Vantage6 algorithm ',
+                           html.Br(),
+                           '(see https://github.com/STRONGAYA/v6-descriptive-statistics)'])
     ]),
     html.Div(id='footer', className='footer')
 ])
