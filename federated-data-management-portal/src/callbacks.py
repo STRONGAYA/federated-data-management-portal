@@ -422,21 +422,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     organizations = list(descriptive_data_most_recent.keys())
 
     _variable_info = copy.deepcopy(variable_info)
-    for key, info in _variable_info.items():
-        # Replace the prefix in the 'class' field
-        for prefix, uri in prefixes.items():
-            if prefix + ":" in info['class']:
-                info['class'] = info['class'].replace(prefix + ":", uri)
-                break
 
-        # Replace the prefix in the 'value_mapping' field
-        value_mapping = info.get('value_mapping', {})
-        if value_mapping:
-            for mapping, target_info in value_mapping.get('terms', {}).items():
-                for prefix, uri in prefixes.items():
-                    if prefix + ":" in target_info['target_class']:
-                        target_info['target_class'] = target_info['target_class'].replace(prefix + ":", uri)
-                        break
 
     # For each variable in the semantic map, create a row using categorical and numerical statistics
     for variable in variable_info.keys():
@@ -454,7 +440,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     # Find rows for this variable (excluding nan values)
                     # The variable names should be already mapped from class codes in misc.py
                     var_data = categorical_df[
-                        (categorical_df['variable'] == variable) & 
+                        (categorical_df['variable'] == variable_class) &
                         (categorical_df['value'] != 'nan')
                     ]
                     total_available += var_data['count'].sum()
@@ -467,7 +453,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
                     # Find rows for this variable with 'count' statistic
                     var_data = numerical_df[
-                        (numerical_df['variable'] == variable) & 
+                        (numerical_df['variable'] == variable_class) &
                         (numerical_df['statistic'] == 'count')
                     ]
                     total_available += var_data['value'].sum()
@@ -532,7 +518,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                         categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
                         # Get all actual values in the data for this variable
                         actual_values = categorical_df[
-                            categorical_df['variable'] == variable
+                            categorical_df['variable'] == variable_class
                         ]['value'].unique()
                         
                         # Check each value mapping term to see if its target class is directly present
