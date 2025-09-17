@@ -521,6 +521,9 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             categorical_df['variable'] == variable_class
                         ]['value'].unique()
                         
+                        # Check if the variable itself exists in the data
+                        variable_exists = len(actual_values) > 0
+                        
                         # Check each value mapping term to see if its target class is directly present
                         for term_key, value_info in value_mapping.get('terms', {}).items():
                             if term_key == 'missing_or_unspecified':
@@ -546,8 +549,14 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                                 if expanded_target_class in actual_values:
                                     target_class_found = True
                             
-                            # Show whether this target class is present in the data
-                            value_status = '✓' if target_class_found else '✗'
+                            # Determine the status symbol
+                            if target_class_found:
+                                value_status = '✓'  # Target class is present
+                            elif variable_exists:
+                                value_status = '!'  # Variable exists but this target class not found
+                            else:
+                                value_status = '✗'  # Variable doesn't exist at all
+                            
                             # Display the target class (ontology code) with prefix for readability
                             display_target = target_class
                             tooltip_text += f'  \n{value_status} {term_key.replace("_", " ").title()} ({display_target})'
@@ -831,7 +840,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
         return figure
 
 
-def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA"):
+def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
     """
     Function to generate a bar chart for data completeness or plausibility.
 
@@ -844,6 +853,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
     descriptive_data (dict): The descriptive data to generate the chart from.
     domain (str, optional): The domain to generate the chart for. Can be 'completeness' or 'plausibility'. Defaults to 'completeness'.
     text (str, optional): The text to use in the chart title and hovertemplate. Defaults to "AYA".
+    semantic_map_data (dict, optional): The semantic map data to convert ontology codes to human-readable names.
 
     Returns:
     dict: A dictionary representing the figure for the chart.
@@ -852,6 +862,38 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
     if descriptive_data:
         # Get the latest data entry based on the keys
         latest_data = descriptive_data[max(descriptive_data.keys())]
+        
+        # Helper function to convert ontology codes to human-readable names
+        def get_readable_variable_name(ontology_code):
+            if semantic_map_data and 'variable_info' in semantic_map_data:
+                variable_info = semantic_map_data['variable_info']
+                # Expand prefixes in ontology code if needed
+                expanded_code = ontology_code
+                if 'prefixes' in semantic_map_data:
+                    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', semantic_map_data.get('prefixes', '')))
+                    prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+                    for prefix, uri in prefixes.items():
+                        if prefix + ":" in expanded_code:
+                            expanded_code = expanded_code.replace(prefix + ":", uri)
+                            break
+                
+                # Find the variable key that matches this ontology code
+                for var_key, var_data in variable_info.items():
+                    var_class = var_data.get('class', '')
+                    # Expand prefixes in variable class too
+                    expanded_var_class = var_class
+                    if 'prefixes' in semantic_map_data:
+                        for prefix, uri in prefixes.items():
+                            if prefix + ":" in expanded_var_class:
+                                expanded_var_class = expanded_var_class.replace(prefix + ":", uri)
+                                break
+                    
+                    if expanded_var_class == expanded_code or var_class == ontology_code:
+                        # Return the human-readable variable key name
+                        return var_key.replace('_', ' ').upper() if any(name in var_key for name in names_to_capitalise) else var_key.replace('_', ' ').title()
+            
+            # Fallback: use the ontology code with some formatting
+            return ontology_code.replace('_', ' ').upper() if any(name in ontology_code for name in names_to_capitalise) else ontology_code.replace('_', ' ').title()
 
         if domain == 'completeness':
             # Initialize dictionaries to store total available and unavailable data points
@@ -903,12 +945,15 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, missing_count)})
 
-            # Create DataFrame for visualization
+            # Create DataFrame for visualization with human-readable variable names
+            readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
             visualisation_df = pd.DataFrame({
-                'Variables': list(total_available.keys()),
+                'Variables': readable_variables,
                 f'Total available {text}s': list(total_available.values()),
                 f'Total unavailable {text}s': list(total_unavailable.values())
             })
+            # Keep a mapping of readable names to original codes for tooltip lookup
+            var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
             # Calculate percentages
             visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
@@ -933,27 +978,27 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Incomplete data points"
             pattern_shape = "\\"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage complete points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[0] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% complete data points)"
-                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
-                        completeness_info[org].get(row['Variables'], (0, 0))[
-                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0]}</b> ({(completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] / (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% complete data points)"
+                    if (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[1] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% incomplete data points)"
-                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
-                        completeness_info[org].get(row['Variables'], (0, 0))[
-                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1]}</b> ({(completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1] / (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% incomplete data points)"
+                    if (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
@@ -1012,12 +1057,15 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, implausible_count)})
 
-            # Create DataFrame for visualization
+            # Create DataFrame for visualization with human-readable variable names
+            readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
             visualisation_df = pd.DataFrame({
-                'Variables': list(total_available.keys()),
+                'Variables': readable_variables,
                 f'Total available {text}s': list(total_available.values()),
                 f'Total unavailable {text}s': list(total_unavailable.values())
             })
+            # Keep a mapping of readable names to original codes for tooltip lookup
+            var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
             # Calculate percentages
             visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
@@ -1042,36 +1090,32 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Implausible data points"
             pattern_shape = "/"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage plausible data points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% plausible data points)"
-                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
-                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
-                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0]}</b> ({(completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] / (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% plausible data points)"
+                    if (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
 
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% implausible data points)"
-                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
-                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
-                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]}</b> ({(completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1] / (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% implausible data points)"
+                    if (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
-
-        visualisation_df['Variables'] = visualisation_df['Variables'].apply(
-            lambda x: x.replace('_', ' ').upper() if any(s in x for s in names_to_capitalise) else x.replace('_',
-                                                                                                             ' ').title())
 
         # Create the bar chart figure
         fig = go.Figure(data=[

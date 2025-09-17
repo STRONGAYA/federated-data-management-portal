@@ -547,7 +547,7 @@ class Dashboard:
                 # Filter data based on selected prefixes
                 _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness')
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness', semantic_map_data=self.global_semantic_map_data)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
 
@@ -585,7 +585,7 @@ class Dashboard:
                 # Filter data based on selected prefixes
                 _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility')
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility', semantic_map_data=self.global_semantic_map_data)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
 
