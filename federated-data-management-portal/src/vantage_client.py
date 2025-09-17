@@ -85,7 +85,7 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
         name="Data management descriptive statistics",
         image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.1",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
-        input_={'method': 'partial_descriptive_statistics',
+        input_={'method': 'descriptive_statistics',
                 'kwargs': {
                     'variables_to_describe': variables_to_describe
                 }},
