@@ -6,5 +6,22 @@
   "server_api": "/api",
   "username": "org_1-admin",
   "password": "password",
-  "organization_key": ""
+  "organization_key": "",
+  "organizations": [
+    {
+      "organisation": "Mare Moscoviense",
+      "country": "Far side of the Moon",
+      "sample_size": 75
+    },
+    {
+      "organisation": "Mare Imbrium",
+      "country": "Near side of the Moon",
+      "sample_size": 75
+    },
+    {
+      "organisation": "Mare Serenitatis",
+      "country": "Near side of the Moon",
+      "sample_size": 100000
+    }
+  ]
 }

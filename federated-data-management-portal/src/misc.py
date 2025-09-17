@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from datetime import datetime
-from .vantage_client import retrieve_triplestore_collaboration_descriptives, retrieve_descriptive_statistics
+from .vantage_client import retrieve_descriptive_statistics
 
 
 def fetch_data(vantage6_config, descriptive_data, semantic_map):
@@ -51,9 +51,21 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
 
     if config is not None:
-        # Fetch the new data from your task
-        _new_data = json.loads(retrieve_triplestore_collaboration_descriptives(config))
+        # Fetch the descriptive statistics from your task
         _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, variables_to_describe))
+        
+        # Use hardcoded organization information from config
+        if 'organizations' in config:
+            _new_data = config['organizations']
+        else:
+            # Fallback to default organization data if not provided in config
+            _new_data = [
+                {
+                    "organisation": "Not available",
+                    "country": "Not available",
+                    "sample_size": 0
+                }
+            ]
 
         # Clear the config; keep Docker's secrets, secret
         del config
