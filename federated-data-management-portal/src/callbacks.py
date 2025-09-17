@@ -15,6 +15,93 @@ from datetime import datetime
 names_to_capitalise = ["eortc", "hads"]
 
 
+def _get_organization_sample_size(org_data):
+    """
+    Helper function to get the sample size for a single organization.
+    
+    Priority:
+    1. Look for ncit:C164339 variable (explicit sample size variable)
+    2. Use the highest count from numerical data (count statistic)
+    3. Use the highest total count from categorical data (excluding nan)
+    
+    Parameters:
+    org_data (dict): The organization data containing categorical and numerical statistics
+    
+    Returns:
+    int: The calculated sample size for the organization
+    """
+    sample_size = 0
+    
+    # First, try to find ncit:C164339 variable (preferred sample size variable)
+    target_variable = "ncit:C164339"
+    found_target = False
+    
+    # Check categorical data for ncit:C164339
+    if 'categorical' in org_data:
+        try:
+            categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+            target_data = categorical_df[
+                (categorical_df['variable'] == target_variable) & 
+                (categorical_df['value'] != 'nan')
+            ]
+            if not target_data.empty:
+                sample_size = target_data['count'].sum()
+                found_target = True
+        except (json.JSONDecodeError, KeyError):
+            pass
+    
+    # Check numerical data for ncit:C164339 if not found in categorical
+    if not found_target and 'numerical' in org_data:
+        try:
+            numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+            target_data = numerical_df[
+                (numerical_df['variable'] == target_variable) & 
+                (numerical_df['statistic'] == 'count')
+            ]
+            if not target_data.empty:
+                sample_size = target_data['value'].sum()
+                found_target = True
+        except (json.JSONDecodeError, KeyError):
+            pass
+    
+    # If ncit:C164339 not found, use highest count from numerical data first
+    if not found_target:
+        max_count = 0
+        
+        # Check numerical data for highest count (preferred fallback)
+        if 'numerical' in org_data:
+            try:
+                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                for variable in numerical_df['variable'].unique():
+                    var_data = numerical_df[
+                        (numerical_df['variable'] == variable) & 
+                        (numerical_df['statistic'] == 'count')
+                    ]
+                    if not var_data.empty:
+                        var_count = var_data['value'].sum()
+                        max_count = max(max_count, var_count)
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        # Check categorical data for highest count (last fallback)
+        if max_count == 0 and 'categorical' in org_data:
+            try:
+                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                for variable in categorical_df['variable'].unique():
+                    var_data = categorical_df[
+                        (categorical_df['variable'] == variable) & 
+                        (categorical_df['value'] != 'nan')
+                    ]
+                    var_count = var_data['count'].sum()
+                    max_count = max(max_count, var_count)
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        sample_size = max_count
+    
+    return int(sample_size)
+
+
 def fetch_field_count(descriptive_data, field_name="country", text='countr'):
     """
     Function to fetch the count of unique fields from the descriptive data.
@@ -67,7 +154,8 @@ def fetch_total_sample_size(descriptive_data, text="AYA"):
 
     This function takes in a dictionary of descriptive data,
     finds the latest data entry based on the keys (assumed to be timestamps),
-    and sums up the "sample_size" field from each data entry in the latest data.
+    and calculates the sample size using categorical and numerical statistics.
+    Priority: 1) ncit:C164339 variable, 2) highest count from numerical data, 3) highest count from categorical data.
     It then returns a list containing the total sample size, a line break,
     and the provided text (default is "AYA") with an 's' added if the total sample size is more than 1.
 
@@ -82,8 +170,13 @@ def fetch_total_sample_size(descriptive_data, text="AYA"):
     """
     if descriptive_data:
         latest_data = descriptive_data[max(descriptive_data.keys())]
-        num_patients = sum(int(data["sample_size"]) for data in latest_data.values())
-        return [f"{num_patients}", html.Br(), f"{text}{'s' if num_patients > 1 else ''}"]
+        total_sample_size = 0
+        
+        for data in latest_data.values():
+            sample_size = _get_organization_sample_size(data)
+            total_sample_size += sample_size
+            
+        return [f"{total_sample_size}", html.Br(), f"{text}{'s' if total_sample_size > 1 else ''}"]
 
 
 def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
@@ -223,13 +316,16 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         # Get the latest data
         latest_data = descriptive_data[max(descriptive_data.keys())]
 
-        # Calculate the sample sizes and their proportions
-        sample_sizes = [int(data["sample_size"]) for data in latest_data.values()]
-        total_sample_size = sum(sample_sizes)
-        proportions = [round((size / total_sample_size), ndigits=2) for size in sample_sizes]
-
-        # Get the sorted list of organisations
+        # Calculate the sample sizes using the consistent approach
+        sample_sizes = []
         organisations = sorted(latest_data.keys())
+        
+        for org in organisations:
+            sample_size = _get_organization_sample_size(latest_data[org])
+            sample_sizes.append(sample_size)
+        
+        total_sample_size = sum(sample_sizes)
+        proportions = [round((size / total_sample_size), ndigits=2) if total_sample_size > 0 else 0 for size in sample_sizes]
 
         # Create the data for the bar chart
         data = [
@@ -293,6 +389,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
     This function takes in a dictionary of global semantic_map data, a dictionary of descriptive data, and a string text.
     It processes the data to generate a DataFrame and a list of tooltips, which are then used to create a Dash DataTable.
+    Updated to use categorical and numerical statistics instead of variable_info for determining variable availability.
 
     Parameters:
     global_semantic_map_data (dict): The global semantic_map data to process. Each key is a variable name,
@@ -325,44 +422,48 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     organizations = list(descriptive_data_most_recent.keys())
 
     _variable_info = copy.deepcopy(variable_info)
-    for key, info in _variable_info.items():
-        # Replace the prefix in the 'class' field
-        for prefix, uri in prefixes.items():
-            if prefix + ":" in info['class']:
-                info['class'] = info['class'].replace(prefix + ":", uri)
-                break
 
-        # Replace the prefix in the 'value_mapping' field
-        value_mapping = info.get('value_mapping', {})
-        if value_mapping:
-            for mapping, target_info in value_mapping.get('terms', {}).items():
-                for prefix, uri in prefixes.items():
-                    if prefix + ":" in target_info['target_class']:
-                        target_info['target_class'] = target_info['target_class'].replace(prefix + ":", uri)
-                        break
 
-    # For each key and class in the 'variable_info' field, create a row
+    # For each variable in the semantic map, create a row using categorical and numerical statistics
     for variable in variable_info.keys():
-        org_variable_info = {}
+        org_variable_counts = {}
+        variable_class = _variable_info[variable].get("class")
 
         for organisation in organizations:
-            try:
-                _org_variable_info = [local_variable_info for local_variable_info in
-                                      descriptive_data_most_recent[organisation]['variable_info'] if
-                                      local_variable_info.get('main_class') == _variable_info[variable].get("class")]
-            except KeyError:
-                _org_variable_info = [{'main_class': '', 'main_class_count': 0,
-                                       'sub_class': '', 'sub_class_count': 0}]
+            org_data = descriptive_data_most_recent[organisation]
+            total_available = 0
+            
+            # Process categorical data for this variable
+            if 'categorical' in org_data:
+                try:
+                    categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                    # Find rows for this variable (excluding nan values)
+                    # The variable names should be already mapped from class codes in misc.py
+                    var_data = categorical_df[
+                        (categorical_df['variable'] == variable_class) &
+                        (categorical_df['value'] != 'nan')
+                    ]
+                    total_available += var_data['count'].sum()
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            
+            # Process numerical data for this variable  
+            if 'numerical' in org_data:
+                try:
+                    numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                    # Find rows for this variable with 'count' statistic
+                    var_data = numerical_df[
+                        (numerical_df['variable'] == variable_class) &
+                        (numerical_df['statistic'] == 'count')
+                    ]
+                    total_available += var_data['value'].sum()
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            
+            org_variable_counts[organisation] = int(total_available)
 
-            org_variable_info[organisation] = _org_variable_info
-
-        # Compute the total count
-        total_count = 0
-        for info_list in org_variable_info.values():
-            for info in info_list:
-                if info.get('main_class') == _variable_info[variable].get("class") and (
-                        info.get('sub_class') == _variable_info[variable].get("class") or info.get('sub_class') == ''):
-                    total_count += info.get('main_class_count', 0)
+        # Compute the total count across all organizations
+        total_count = sum(org_variable_counts.values())
 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
@@ -372,10 +473,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
         # Create a tooltip row for each row - simplified to show only checkmarks/crosses
         org_data_list = []
-        for org, info_list in org_variable_info.items():
-            has_data = any(info.get('main_class') == _variable_info[variable].get("class") and (
-                    info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                'sub_class') == '') and info.get('main_class_count', 0) > 0 for info in info_list)
+        for org, count in org_variable_counts.items():
+            has_data = count > 0
             org_data_list.append(f'{org}: ✓' if has_data else f'{org}: ✗')
 
         org_data = (
@@ -384,7 +483,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
         tooltip_row = {
             'Variables': f'__{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ").title()}__  \n'
-                         f'Associated class: {_variable_info[variable].get("class")}',
+                         f'Associated class: {variable_class}',
             f'Total {text}s': org_data
         }
 
@@ -394,58 +493,164 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                 tooltip_row['Variables'] = tooltip_row['Variables'].replace(uri, prefix + ":")
                 break
 
-        for organisation, info_list in org_variable_info.items():
-            if info_list:
-                for info in info_list:
-                    if info.get('main_class') == _variable_info[variable].get("class") and (
-                            info.get('sub_class') == _variable_info[variable].get("class") or info.get(
-                        'sub_class') == ''):
-                        row[organisation] = int(info.get('main_class_count', 0))
+        # Add organization-specific data to the row and tooltip
+        for organisation in organizations:
+            count = org_variable_counts[organisation]
+            
+            # Check if any expected value classes are found for this organization
+            any_expected_value_class_found = False
+            
+            # Check categorical data for expected value classes
+            value_mapping = _variable_info[variable].get('value_mapping', {})
+            
+            # Determine if this variable should be subject to value class checking
+            should_check_value_classes = False
+            if value_mapping and value_mapping.get('terms') and count > 0:
+                # Check if there are any terms other than 'missing_or_unspecified'
+                non_missing_terms = [term for term in value_mapping.get('terms', {}).keys() 
+                                   if term != 'missing_or_unspecified']
+                should_check_value_classes = len(non_missing_terms) > 0
+            
+            if should_check_value_classes:
+                org_data = descriptive_data_most_recent[organisation]
+                if 'categorical' in org_data:
+                    try:
+                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        actual_values = categorical_df[
+                            categorical_df['variable'] == variable_class
+                        ]['value'].unique()
                         
-                        # Build tooltip with primary concept availability and value mapping concepts
-                        main_status = '✓' if info.get("main_class_count", 0) > 0 else '✗'
-                        main_text = "available" if info.get("main_class_count", 0) > 0 else "unavailable"
-                        tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
+                        # Check each expected value class
+                        for term_key, value_info in value_mapping.get('terms', {}).items():
+                            if term_key == 'missing_or_unspecified':
+                                continue
+                                
+                            target_class = value_info.get('target_class', '')
+                            
+                            # Check if this target class is present
+                            if target_class in actual_values:
+                                any_expected_value_class_found = True
+                                break
+                            else:
+                                # Check for full URI version
+                                expanded_target_class = target_class
+                                for prefix, uri in prefixes.items():
+                                    if prefix + ":" in expanded_target_class:
+                                        expanded_target_class = expanded_target_class.replace(prefix + ":", uri)
+                                        break
+                                
+                                if expanded_target_class in actual_values:
+                                    any_expected_value_class_found = True
+                                    break
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+            
+            # Store the count and the status for later symbol determination
+            row[organisation] = count
+            # Store additional info for symbol logic: (count, has_expected_classes, should_check_classes)
+            row[f'{organisation}_status'] = (count, any_expected_value_class_found, should_check_value_classes)
+            
+            # Build tooltip with availability information
+            main_status = '✓' if count > 0 else '✗'
+            main_text = "available" if count > 0 else "unavailable"
+            tooltip_text = f'{main_status} Data for __{variable.replace("_", " ")}__ {main_text} in {organisation}.'
+            
+            if count > 0:
+                tooltip_text += f'  \nTotal records: {count}'
+            
+            # Add value mapping concepts if they exist (keep existing tooltip logic unchanged)
+            if value_mapping and value_mapping.get('terms') and count > 0:
+                tooltip_text += f'  \n  \nDetected value concepts:'
+                org_data = descriptive_data_most_recent[organisation]
+                
+                # Check categorical data for value mappings
+                if 'categorical' in org_data:
+                    try:
+                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        # Get all actual values in the data for this variable
+                        actual_values = categorical_df[
+                            categorical_df['variable'] == variable_class
+                        ]['value'].unique()
                         
-                        # Add value mapping concepts if they exist
-                        value_mapping = _variable_info[variable].get('value_mapping', {})
-                        if value_mapping and value_mapping.get('terms'):
-                            tooltip_text += f'  \n  \nDetected value concepts:'
-                            for value, value_info in value_mapping.get('terms', {}).items():
-                                if value == 'missing_or_unspecified':
-                                    continue
-                                # Check if this organization has data for this value mapping
-                                has_value_data = any(
-                                    org_info.get('main_class') == _variable_info[variable].get("class") and 
-                                    org_info.get('sub_class') == value_info.get("target_class") and
-                                    org_info.get('sub_class_count', 0) > 0
-                                    for org_info in info_list
-                                )
-                                value_status = '✓' if has_value_data else '✗'
-                                tooltip_text += f'  \n{value_status} {value.replace("_", " ").title()}'
+                        # Check if the variable itself exists in the data
+                        variable_exists = len(actual_values) > 0
                         
-                        tooltip_row[organisation] = tooltip_text
-                        break
-                    else:
-                        row[organisation] = 0
-                        tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
-            else:
-                row[organisation] = 0
-                tooltip_row[organisation] = f'✗ Data for __{variable.replace("_", " ").upper() if any(name in variable for name in names_to_capitalise) else variable.replace("_", " ")}__ unavailable in {organisation}.'
+                        # Check each value mapping term to see if its target class is directly present
+                        for term_key, value_info in value_mapping.get('terms', {}).items():
+                            if term_key == 'missing_or_unspecified':
+                                continue
+                                
+                            target_class = value_info.get('target_class', '')
+                            
+                            # Check if the target class ontology code is directly present in the data
+                            # Look for both prefixed (ncit:C20197) and full URI versions
+                            target_class_found = False
+                            
+                            # Check for prefixed version (e.g., ncit:C20197)
+                            if target_class in actual_values:
+                                target_class_found = True
+                            else:
+                                # Check for full URI version by expanding prefixes
+                                expanded_target_class = target_class
+                                for prefix, uri in prefixes.items():
+                                    if prefix + ":" in expanded_target_class:
+                                        expanded_target_class = expanded_target_class.replace(prefix + ":", uri)
+                                        break
+                                
+                                if expanded_target_class in actual_values:
+                                    target_class_found = True
+                            
+                            # Determine the status symbol (keep existing tooltip logic - no warning symbol here)
+                            if target_class_found:
+                                value_status = '✓'  # Target class is present
+                            elif variable_exists:
+                                value_status = '✗'  # Variable exists but this target class not found
+                            else:
+                                value_status = '✗'  # Variable doesn't exist at all
+                            
+                            # Display the target class (ontology code) with prefix for readability
+                            display_target = target_class
+                            tooltip_text += f'  \n{value_status} {term_key.replace("_", " ").title()} ({display_target})'
+                            
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+            
+            tooltip_row[organisation] = tooltip_text
 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
         tooltips.append(tooltip_row)
 
-        # Remove value mapping processing to show only primary concepts
-
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
 
-    # Create a new DataFrame for display purposes
+    # Create a new DataFrame for display purposes with enhanced symbol logic
     display_df = df.copy()
-    for col in display_df.columns[2:]:
-        display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
+    
+    # Extract organization columns (skip 'Variables' and 'Total {text}s' columns)
+    org_columns = [col for col in display_df.columns[2:] if not col.endswith('_status')]
+    
+    for col in org_columns:
+        status_col = f'{col}_status'
+        if status_col in display_df.columns:
+            # Apply the enhanced symbol logic
+            def get_symbol(row):
+                count, has_expected_classes, should_check_classes = row[status_col]
+                if count == 0:
+                    return '✖'  # No data
+                elif not should_check_classes:
+                    return '✔'  # Has data and no value class checking needed (continuous variables, etc.)
+                elif has_expected_classes:
+                    return '✔'  # Has data and expected value classes found
+                else:
+                    return '!'  # Has data but no expected value classes found
+            
+            display_df[col] = display_df.apply(get_symbol, axis=1)
+            # Remove the temporary status column
+            display_df = display_df.drop(columns=[status_col])
+        else:
+            # Fallback to original logic for columns without status info
+            display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
 
     return df, create_data_table(display_df, tooltips)
 
@@ -483,7 +688,7 @@ def create_data_table(df, tooltips):
         style_header=_style_header,
         style_data_conditional=[
             {'if': {'column_id': col, 'filter_query': '{' + col + '} eq "' + symbol + '"'}, 'color': color}
-            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red')]
+            for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red'), ('!', 'orange')]
         ],
         style_cell_conditional=[
             {'if': {'column_id': 'Variables'}, 'width': '20px'},
@@ -532,12 +737,20 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
         if chart_domain == "availability":
             if chart_type == "organisation":
                 labels = sorted(latest_data.keys())
-                sample_sizes = [int(data["sample_size"]) for data in latest_data.values()]
+                sample_sizes = []
+                
+                for org in labels:
+                    sample_size = _get_organization_sample_size(latest_data[org])
+                    sample_sizes.append(sample_size)
+                
                 title = f'{text}s per organisation'
             elif chart_type == "country":
                 country_data = defaultdict(int)
+                
                 for data in latest_data.values():
-                    country_data[data["country"]] += int(data["sample_size"])
+                    sample_size = _get_organization_sample_size(data)
+                    country_data[data["country"]] += sample_size
+                
                 labels, sample_sizes = zip(*sorted(country_data.items()))
                 title = f'{text}s per country'
             _custom_data = None
@@ -701,7 +914,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
         return figure
 
 
-def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA"):
+def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
     """
     Function to generate a bar chart for data completeness or plausibility.
 
@@ -714,6 +927,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
     descriptive_data (dict): The descriptive data to generate the chart from.
     domain (str, optional): The domain to generate the chart for. Can be 'completeness' or 'plausibility'. Defaults to 'completeness'.
     text (str, optional): The text to use in the chart title and hovertemplate. Defaults to "AYA".
+    semantic_map_data (dict, optional): The semantic map data to convert ontology codes to human-readable names.
 
     Returns:
     dict: A dictionary representing the figure for the chart.
@@ -722,6 +936,38 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
     if descriptive_data:
         # Get the latest data entry based on the keys
         latest_data = descriptive_data[max(descriptive_data.keys())]
+        
+        # Helper function to convert ontology codes to human-readable names
+        def get_readable_variable_name(ontology_code):
+            if semantic_map_data and 'variable_info' in semantic_map_data:
+                variable_info = semantic_map_data['variable_info']
+                # Expand prefixes in ontology code if needed
+                expanded_code = ontology_code
+                if 'prefixes' in semantic_map_data:
+                    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', semantic_map_data.get('prefixes', '')))
+                    prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+                    for prefix, uri in prefixes.items():
+                        if prefix + ":" in expanded_code:
+                            expanded_code = expanded_code.replace(prefix + ":", uri)
+                            break
+                
+                # Find the variable key that matches this ontology code
+                for var_key, var_data in variable_info.items():
+                    var_class = var_data.get('class', '')
+                    # Expand prefixes in variable class too
+                    expanded_var_class = var_class
+                    if 'prefixes' in semantic_map_data:
+                        for prefix, uri in prefixes.items():
+                            if prefix + ":" in expanded_var_class:
+                                expanded_var_class = expanded_var_class.replace(prefix + ":", uri)
+                                break
+                    
+                    if expanded_var_class == expanded_code or var_class == ontology_code:
+                        # Return the human-readable variable key name
+                        return var_key.replace('_', ' ').upper() if any(name in var_key for name in names_to_capitalise) else var_key.replace('_', ' ').title()
+            
+            # Fallback: use the ontology code with some formatting
+            return ontology_code.replace('_', ' ').upper() if any(name in ontology_code for name in names_to_capitalise) else ontology_code.replace('_', ' ').title()
 
         if domain == 'completeness':
             # Initialize dictionaries to store total available and unavailable data points
@@ -773,12 +1019,15 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, missing_count)})
 
-            # Create DataFrame for visualization
+            # Create DataFrame for visualization with human-readable variable names
+            readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
             visualisation_df = pd.DataFrame({
-                'Variables': list(total_available.keys()),
+                'Variables': readable_variables,
                 f'Total available {text}s': list(total_available.values()),
                 f'Total unavailable {text}s': list(total_unavailable.values())
             })
+            # Keep a mapping of readable names to original codes for tooltip lookup
+            var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
             # Calculate percentages
             visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
@@ -803,27 +1052,27 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Incomplete data points"
             pattern_shape = "\\"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total complete data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage complete points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[0] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% complete data points)"
-                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
-                        completeness_info[org].get(row['Variables'], (0, 0))[
-                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0]}</b> ({(completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] / (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% complete data points)"
+                    if (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total incomplete data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage incomplete data points: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info[org].get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info[org].get(row['Variables'], (0, 0))[1] / (completeness_info[org].get(row['Variables'], (0, 0))[0] + completeness_info[org].get(row['Variables'], (0, 0))[1])) * 100:.1f}% incomplete data points)"
-                    if (completeness_info[org].get(row['Variables'], (0, 0))[0] +
-                        completeness_info[org].get(row['Variables'], (0, 0))[
-                            1]) != 0 else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1]}</b> ({(completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1] / (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% incomplete data points)"
+                    if (completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info[org].get(var_name_mapping[row['Variables']], (0, 0))[
+                            1]) != 0 else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
@@ -882,12 +1131,15 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
 
                     completeness_info[org].update({var: (total_count, implausible_count)})
 
-            # Create DataFrame for visualization
+            # Create DataFrame for visualization with human-readable variable names
+            readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
             visualisation_df = pd.DataFrame({
-                'Variables': list(total_available.keys()),
+                'Variables': readable_variables,
                 f'Total available {text}s': list(total_available.values()),
                 f'Total unavailable {text}s': list(total_unavailable.values())
             })
+            # Keep a mapping of readable names to original codes for tooltip lookup
+            var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
             # Calculate percentages
             visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
@@ -912,36 +1164,32 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             bar_name_unavailable = "Implausible data points"
             pattern_shape = "/"
             hovertemplate_available = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total plausible data points: <b>{int(row[f'Total available {text}s'])}</b><br>"
                 f"Percentage plausible data points: <b>{row[f'Percentage available {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% plausible data points)"
-                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
-                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
-                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0]}</b> ({(completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] / (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% plausible data points)"
+                    if (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
 
             hovertemplate_unavailable = [
-                f"<extra></extra><b>{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}</b><br>"
+                f"<extra></extra><b>{row['Variables']}</b><br>"
                 f"Total implausible data points: <b>{int(row[f'Total unavailable {text}s'])}</b><br>"
                 f"Percentage implausible: <b>{row[f'Percentage unavailable {text}s'] * 100:.1f}%</b><br><br>"
                 f"Share per organisation<br>" + "<br>".join(
-                    f"{org}: <b>{completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]}</b> ({(completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1] / (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] + completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1])) * 100:.1f}% implausible data points)"
-                    if (completeness_info.get(org, {}).get(row['Variables'], (0, 0))[0] +
-                        completeness_info.get(org, {}).get(row['Variables'], (0, 0))[1]) != 0
-                    else f"{org} has no '{row['Variables'].replace('_', ' ').upper() if any(name in row['Variables'] for name in names_to_capitalise) else row['Variables'].replace('_', ' ').title()}' information available."
+                    f"{org}: <b>{completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]}</b> ({(completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1] / (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] + completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1])) * 100:.1f}% implausible data points)"
+                    if (completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[0] +
+                        completeness_info.get(org, {}).get(var_name_mapping[row['Variables']], (0, 0))[1]) != 0
+                    else f"{org} has no '{row['Variables']}' information available."
                     for org in labels
                 )
                 for index, row in visualisation_df.iterrows()
             ]
-
-        visualisation_df['Variables'] = visualisation_df['Variables'].apply(
-            lambda x: x.replace('_', ' ').upper() if any(s in x for s in names_to_capitalise) else x.replace('_',
-                                                                                                             ' ').title())
 
         # Create the bar chart figure
         fig = go.Figure(data=[
