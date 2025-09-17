@@ -502,7 +502,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             
             # Check categorical data for expected value classes
             value_mapping = _variable_info[variable].get('value_mapping', {})
+            
+            # Determine if this variable should be subject to value class checking
+            should_check_value_classes = False
             if value_mapping and value_mapping.get('terms') and count > 0:
+                # Check if there are any terms other than 'missing_or_unspecified'
+                non_missing_terms = [term for term in value_mapping.get('terms', {}).keys() 
+                                   if term != 'missing_or_unspecified']
+                should_check_value_classes = len(non_missing_terms) > 0
+            
+            if should_check_value_classes:
                 org_data = descriptive_data_most_recent[organisation]
                 if 'categorical' in org_data:
                     try:
@@ -538,8 +547,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             
             # Store the count and the status for later symbol determination
             row[organisation] = count
-            # Store additional info for symbol logic (using a tuple: (count, has_expected_classes))
-            row[f'{organisation}_status'] = (count, any_expected_value_class_found)
+            # Store additional info for symbol logic: (count, has_expected_classes, should_check_classes)
+            row[f'{organisation}_status'] = (count, any_expected_value_class_found, should_check_value_classes)
             
             # Build tooltip with availability information
             main_status = '✓' if count > 0 else '✗'
@@ -626,9 +635,11 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         if status_col in display_df.columns:
             # Apply the enhanced symbol logic
             def get_symbol(row):
-                count, has_expected_classes = row[status_col]
+                count, has_expected_classes, should_check_classes = row[status_col]
                 if count == 0:
                     return '✖'  # No data
+                elif not should_check_classes:
+                    return '✔'  # Has data and no value class checking needed (continuous variables, etc.)
                 elif has_expected_classes:
                     return '✔'  # Has data and expected value classes found
                 else:
