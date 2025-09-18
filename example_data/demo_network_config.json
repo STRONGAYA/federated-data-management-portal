@@ -1,6 +1,5 @@
 {
   "collaboration": 1,
-  "aggregating_organisation": 1,
   "server_url": "http://host.docker.internal",
   "server_port": 5000,
   "server_api": "/api",
@@ -11,17 +10,17 @@
     {
       "organisation": "Mare Moscoviense",
       "country": "Far side of the Moon",
-      "sample_size": 75
+      "identifier": 1
     },
     {
       "organisation": "Mare Imbrium",
       "country": "Near side of the Moon",
-      "sample_size": 75
+      "identifier": 2
     },
     {
       "organisation": "Mare Serenitatis",
       "country": "Near side of the Moon",
-      "sample_size": 100000
+      "identifier": 3
     }
   ]
 }
