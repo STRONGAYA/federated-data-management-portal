@@ -4,7 +4,7 @@ from vantage6.client import UserClient as Client
 
 
 
-def retrieve_descriptive_statistics(config, variables_to_describe):
+def retrieve_descriptive_statistics(config, organisation_id, variables_to_describe):
     """
     This function retrieves descriptive statistics the triplestore database(s).
 
@@ -22,6 +22,7 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
         - username: The username for authentication.
         - password: The password for authentication.
         - organization_key: The private key of the user's organisation to set up end-to-end encryption.
+    organisation_id (int): The ID of the organisation for which to retrieve the descriptive statistics.
     variables_to_describe (dict): A dictionary containing the variables to describe.
     It should at least have the following structure:
         {
@@ -46,19 +47,6 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
               f"error: {e}")
         return """[
         {
-          "partial_results": [
-            {
-              "organisation_name": "",
-              "categorical": "{},\"count\":{}}",
-              "numerical": "{\"variable\":{},\"statistic\":{}}",
-              "excluded_variables": []
-            },
-            {
-              "organisation_name": "",
-              "categorical": "{\"variable\":{},\"value\":{}}",
-              "numerical": "{\"variable\":{},\"statistic\":{}}",
-              "excluded_variables": []
-            },
             {
               "organisation_name": "",
               "categorical": "{\"variable\":{}, \"value\":{}}",
@@ -72,6 +60,8 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
     # When passed as Docker secrets, the values might be passed as strings
     if isinstance(config.get('collaboration'), str):
         config['collaboration'] = int(config.get('collaboration'))
+
+    # TODO adapt to new organisation structure in config and use a single organisation id
     if isinstance(config.get('aggregating_organisation'), str):
         config['aggregating_organisation'] = [int(config.get('aggregating_organisation'))]
 
@@ -81,11 +71,11 @@ def retrieve_descriptive_statistics(config, variables_to_describe):
     # Create a task for the client to retrieve the descriptive data
     task = client.task.create(
         collaboration=config.get('collaboration'),
-        organizations=config.get('aggregating_organisation'),
+        organizations=[organisation_id],
         name="Data management descriptive statistics",
         image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.1",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
-        input_={'method': 'descriptive_statistics',
+        input_={'method': 'partial_descriptive_statistics',
                 'kwargs': {
                     'variables_to_describe': variables_to_describe
                 }},

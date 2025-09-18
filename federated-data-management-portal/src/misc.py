@@ -51,9 +51,12 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
 
     if config is not None:
-        # Fetch the descriptive statistics from your task
-        _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, variables_to_describe))
-        
+        for org_id in config["organizations"].get("identifiers", []):  #TODO handle properly
+
+            # Fetch the descriptive statistics from your task
+            _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
+
+            # TODO Match result to organisation info in config by identifier
         # Use hardcoded organization information from config
         if 'organizations' in config:
             _new_data = config['organizations']
@@ -63,7 +66,6 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 {
                     "organisation": "Not available",
                     "country": "Not available",
-                    "sample_size": 0
                 }
             ]
 
