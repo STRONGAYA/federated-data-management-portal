@@ -61,17 +61,13 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
     if isinstance(config.get('collaboration'), str):
         config['collaboration'] = int(config.get('collaboration'))
 
-    # TODO adapt to new organisation structure in config and use a single organisation id
-    if isinstance(config.get('aggregating_organisation'), str):
-        config['aggregating_organisation'] = [int(config.get('aggregating_organisation'))]
-
-    if isinstance(config.get('aggregating_organisation'), int):
-        config['aggregating_organisation'] = [config.get('aggregating_organisation')]
+    # Use the specific organization ID for this request
+    organization_ids = [organisation_id]
 
     # Create a task for the client to retrieve the descriptive data
     task = client.task.create(
         collaboration=config.get('collaboration'),
-        organizations=[organisation_id],
+        organizations=organization_ids,
         name="Data management descriptive statistics",
         image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.1",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',

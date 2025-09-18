@@ -38,7 +38,32 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             'password': read_docker_secret('vantage6_service_password'),
             'organization_key': read_docker_secret('vantage6_private_key_path')
         }
-        if all(value is None for value in config.values()):
+        
+        # Try to read organization information from Docker secrets
+        organizations_secret = read_docker_secret('vantage6_organizations')
+        if organizations_secret:
+            try:
+                config['organizations'] = json.loads(organizations_secret)
+            except json.JSONDecodeError:
+                print("Warning: Could not parse organizations from Docker secret, using fallback")
+                config['organizations'] = [
+                    {
+                        "organisation": "Default Organization",
+                        "country": "Unknown",
+                        "identifier": 1
+                    }
+                ]
+        else:
+            # Fallback organization structure if no secret is provided
+            config['organizations'] = [
+                {
+                    "organisation": "Default Organization", 
+                    "country": "Unknown",
+                    "identifier": 1
+                }
+            ]
+        
+        if all(value is None for key, value in config.items() if key != 'organizations'):
             config = None
     else:
         config = vantage6_config
@@ -51,12 +76,6 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
 
     if config is not None:
-        for org_id in config["organizations"].get("identifiers", []):  #TODO handle properly
-
-            # Fetch the descriptive statistics from your task
-            _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
-
-            # TODO Match result to organisation info in config by identifier
         # Use hardcoded organization information from config
         if 'organizations' in config:
             _new_data = config['organizations']
@@ -66,8 +85,24 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 {
                     "organisation": "Not available",
                     "country": "Not available",
+                    "identifier": 1
                 }
             ]
+
+        # Collect results from each organization
+        all_partial_results = []
+        
+        for org_info in _new_data:
+            org_id = org_info.get('identifier')
+            if org_id:
+                # Fetch the descriptive statistics from each organization
+                org_stats = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
+                # Add organization name to the result for matching
+                org_stats['organisation'] = org_info['organisation']
+                all_partial_results.append(org_stats)
+
+        # Combine all partial results into the expected format
+        _new_descriptive_stats = {'partial_results': all_partial_results}
 
         # Clear the config; keep Docker's secrets, secret
         del config
