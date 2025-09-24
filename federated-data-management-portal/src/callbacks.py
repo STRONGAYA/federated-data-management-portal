@@ -441,7 +441,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     # The variable names should be already mapped from class codes in misc.py
                     var_data = categorical_df[
                         (categorical_df['variable'] == variable_class) &
-                        (categorical_df['value'] != 'nan')
+                        (categorical_df['value'] != 'na')
                     ]
                     total_available += var_data['count'].sum()
                 except (json.JSONDecodeError, KeyError):
