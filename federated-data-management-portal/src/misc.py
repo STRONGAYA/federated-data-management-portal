@@ -147,9 +147,8 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 numerical_json = numerical_json.replace(ncit_uri_unescaped, 'ncit:')
 
                 new_data[org].update({
-                    'categorical': pd.DataFrame(json.loads(_new_stats[org]['categorical'])),
-                    'numerical': pd.DataFrame(json.loads(_new_stats[org]['numerical'])),
-                    'excluded_variables': _new_stats[org]['excluded_variables']
+                    'categorical': categorical_json,
+                    'numerical': numerical_json,
                 })
 
 
