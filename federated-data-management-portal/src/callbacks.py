@@ -245,7 +245,8 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     category_mapping = {}
     for cat in selected_categories:
         # Convert back from value format to aesthetic label with proper spacing
-        category_mapping[cat] = cat.replace('_', ' ').title()
+        # Remove leading underscore and capitalize properly
+        category_mapping[cat] = cat.lstrip('_').replace('_', ' ').title()
 
     print(f"DEBUG: Category mapping: {category_mapping}")
 
