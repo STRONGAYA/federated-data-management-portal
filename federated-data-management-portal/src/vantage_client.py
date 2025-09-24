@@ -51,7 +51,6 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
               "organisation_name": "",
               "categorical": "{\"variable\":{}, \"value\":{}}",
               "numerical": "{\"variable\":{},\"statistic\":{}}",
-              "excluded_variables": []
             }
           ]
         }
@@ -69,9 +68,9 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
         collaboration=config.get('collaboration'),
         organizations=organization_ids,
         name="Data management descriptive statistics",
-        image="ghcr.io/strongaya/v6-descriptive-statistics:v1.0.1",
+        image="ghcr.io/strongaya/v6-descriptive-statistics:v2.0.0-pre",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
-        input_={'method': 'partial_descriptive_statistics',
+        input_={'method': 'partial_general_statistics',
                 'kwargs': {
                     'variables_to_describe': variables_to_describe
                 }},
