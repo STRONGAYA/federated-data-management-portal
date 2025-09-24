@@ -97,9 +97,14 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             org_id = org_info.get('identifier')
             if org_id:
                 # Fetch the descriptive statistics from each organization
-                org_stats = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
-                # Add organization name to the result for matching
-                org_stats['organisation'] = org_info['organisation']
+                org_stats_raw = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
+                
+                # Convert the new format to the expected format
+                org_stats = {
+                    'organisation': org_info['organisation'],
+                    'categorical': org_stats_raw.get('categorical_general_partial_statistics', '{}'),
+                    'numerical': org_stats_raw.get('numerical_general_partial_statistics', '{}')
+                }
                 all_partial_results.append(org_stats)
 
         # Combine all partial results into the expected format
@@ -132,9 +137,9 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
-                # Replace full URIs with prefixes directly in the JSON strings
-                categorical_json = _new_stats[org]['categorical_general_partial_statistics']
-                numerical_json = _new_stats[org]['numerical_general_partial_statistics']
+                # Get the categorical and numerical data (already in the expected format)
+                categorical_json = _new_stats[org]['categorical']
+                numerical_json = _new_stats[org]['numerical']
 
                 # Replace NCIT URIs with ncit: prefix (accounting for escaped and unescaped slashes in JSON)
                 ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
