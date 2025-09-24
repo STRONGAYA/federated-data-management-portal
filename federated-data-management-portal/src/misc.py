@@ -28,6 +28,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
     dict: The updated descriptive data with the fetched data appended.
     """
     if vantage6_config is None:
+        # TODO correct this with new config setup; aggregating organisation doesnt exist anymore
         config = {
             'collaboration': read_docker_secret('vantage6_collaboration'),
             'aggregating_organisation': read_docker_secret('vantage6_aggregating_organisation'),
@@ -131,24 +132,27 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
+                # Replace full URIs with prefixes directly in the JSON strings
+                categorical_json = _new_stats[org]['categorical_general_partial_statistics']
+                numerical_json = _new_stats[org]['numerical_general_partial_statistics']
+
+                # Replace NCIT URIs with ncit: prefix (accounting for escaped and unescaped slashes in JSON)
+                ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
+                ncit_uri_unescaped = 'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+
+                categorical_json = categorical_json.replace(ncit_uri_escaped, 'ncit:')
+                categorical_json = categorical_json.replace(ncit_uri_unescaped, 'ncit:')
+
+                numerical_json = numerical_json.replace(ncit_uri_escaped, 'ncit:')
+                numerical_json = numerical_json.replace(ncit_uri_unescaped, 'ncit:')
+
                 new_data[org].update({
                     'categorical': pd.DataFrame(json.loads(_new_stats[org]['categorical'])),
                     'numerical': pd.DataFrame(json.loads(_new_stats[org]['numerical'])),
                     'excluded_variables': _new_stats[org]['excluded_variables']
                 })
 
-                # TODO remove when ready
-                #new_data[org]['categorical']['variable'] = new_data[org]['categorical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
 
-                # new_data[org]['categorical']['value'] = new_data[org]['categorical']['value'].apply(
-                #     lambda x: value_class_code_to_name.get(x, x))
-
-                #new_data[org]['numerical']['variable'] = new_data[org]['numerical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
-
-                new_data[org]['categorical'] = new_data[org]['categorical'].to_json()
-                new_data[org]['numerical'] = new_data[org]['numerical'].to_json()
 
     except TypeError:
         new_data = {}
