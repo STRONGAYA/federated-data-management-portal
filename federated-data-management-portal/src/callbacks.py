@@ -533,8 +533,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         total_count = sum(org_variable_counts.values())
         print(f"DEBUG: Variable '{variable}' total count: {total_count}")
         
-        if total_count == 0:
-            print(f"DEBUG: Variable '{variable}' has zero count - will not appear in table")
+        # ALL variables should appear in the table, regardless of count
+        # Variables with zero count will show crosses, variables with data will show appropriate symbols
 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
@@ -691,6 +691,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
         tooltips.append(tooltip_row)
+        print(f"DEBUG: Added variable '{variable}' to table with total count {total_count}")
 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
