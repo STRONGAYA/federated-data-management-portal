@@ -703,18 +703,24 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         print(f"DEBUG: First few rows:")
         for i, row in df.head().iterrows():
             print(f"DEBUG:   Row {i}: {dict(row)}")
+        print(f"DEBUG: DataFrame has data - proceeding with table creation")
     else:
         print("DEBUG: DataFrame is empty - this will cause the table to show 'No data available'")
 
     # Create a new DataFrame for display purposes with enhanced symbol logic
     display_df = df.copy()
     
+    print(f"DEBUG: Display DataFrame shape before symbol processing: {display_df.shape}")
+    
     # Extract organization columns (skip 'Variables' and 'Total {text}s' columns)
     org_columns = [col for col in display_df.columns[2:] if not col.endswith('_status')]
+    
+    print(f"DEBUG: Organization columns found: {org_columns}")
     
     for col in org_columns:
         status_col = f'{col}_status'
         if status_col in display_df.columns:
+            print(f"DEBUG: Processing column '{col}' with status column '{status_col}'")
             # Apply the enhanced symbol logic
             def get_symbol(row):
                 count, has_expected_classes, should_check_classes = row[status_col]
@@ -731,8 +737,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             # Remove the temporary status column
             display_df = display_df.drop(columns=[status_col])
         else:
+            print(f"DEBUG: No status column for '{col}', using fallback logic")
             # Fallback to original logic for columns without status info
             display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
+
+    print(f"DEBUG: Display DataFrame shape after symbol processing: {display_df.shape}")
+    print(f"DEBUG: Display DataFrame columns: {list(display_df.columns)}")
+    if len(display_df) > 0:
+        print(f"DEBUG: First few display rows:")
+        for i, row in display_df.head().iterrows():
+            print(f"DEBUG:   Display Row {i}: {dict(row)}")
 
     return df, create_data_table(display_df, tooltips)
 
@@ -754,6 +768,10 @@ def create_data_table(df, tooltips):
     Returns:
     dash_table.DataTable: The created Dash DataTable.
     """
+    print(f"DEBUG: create_data_table called with DataFrame shape: {df.shape}")
+    print(f"DEBUG: create_data_table DataFrame columns: {list(df.columns)}")
+    print(f"DEBUG: create_data_table tooltips count: {len(tooltips)}")
+    
     _style_table = {'height': '450px', 'overflowY': 'auto', 'max-width': '100%', 'width': '100%', 'overflowX': 'auto'}
     _style_cell = {'fontSize': '14px', 'border': 'none', 'padding': '0px 0px 0px 0px', 'textOverflow': 'ellipsis',
                    'overflow': 'hidden'}
@@ -762,6 +780,7 @@ def create_data_table(df, tooltips):
 
     # Guard against empty DataFrame
     if df.empty or len(df.columns) == 0:
+        print("DEBUG: create_data_table detected empty DataFrame - returning 'No data available' message")
         # Return an empty table with a message
         empty_df = pd.DataFrame({'Message': ['No data available']})
         data_table = dash_table.DataTable(
@@ -774,6 +793,11 @@ def create_data_table(df, tooltips):
             style_header=_style_header,
         )
         return data_table
+
+    print(f"DEBUG: create_data_table creating table with {len(df)} rows and {len(df.columns)} columns")
+    print(f"DEBUG: create_data_table DataFrame data preview:")
+    for i, row in df.head().iterrows():
+        print(f"DEBUG:   Table Row {i}: {dict(row)}")
 
     data_table = dash_table.DataTable(
         id='table-data-availability',
