@@ -244,8 +244,8 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         # Convert back from value format to aesthetic label with proper spacing
         category_mapping[cat] = cat.replace('_', ' ').title()
 
-    # Get variables that belong to selected categories
-    selected_variables = set()
+    # Get variable classes (not names) that belong to selected categories
+    selected_variable_classes = set()
     if 'variable_info' in semantic_map_data:
         for variable_name, variable_data in semantic_map_data['variable_info'].items():
             if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
@@ -263,10 +263,13 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
                         # Check if this variable belongs to any selected category
                         for cat_value, cat_label in category_mapping.items():
                             if aesthetic_label.lower() == cat_label.lower():
-                                selected_variables.add(variable_name)
+                                # Add the class code instead of variable name
+                                variable_class = variable_data.get('class')
+                                if variable_class:
+                                    selected_variable_classes.add(variable_class)
                                 break
 
-    if not selected_variables:
+    if not selected_variable_classes:
         return descriptive_data
 
     filtered_data = {}
@@ -277,17 +280,17 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         for org, org_data in data.items():
             filtered_data[timestamp][org] = org_data.copy()
 
-            # Filter categorical data
+            # Filter categorical data by class codes
             if 'categorical' in org_data:
                 categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
-                mask = categorical_df['variable'].isin(selected_variables)
+                mask = categorical_df['variable'].isin(selected_variable_classes)
                 filtered_categorical = categorical_df[mask]
                 filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
 
-            # Filter numerical data
+            # Filter numerical data by class codes
             if 'numerical' in org_data:
                 numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
-                mask = numerical_df['variable'].isin(selected_variables)
+                mask = numerical_df['variable'].isin(selected_variable_classes)
                 filtered_numerical = numerical_df[mask]
                 filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
 
@@ -677,6 +680,21 @@ def create_data_table(df, tooltips):
                    'overflow': 'hidden'}
     _style_data = {'border': 'none'}
     _style_header = {'position': 'sticky', 'top': 0, 'backgroundColor': '#ffffff', 'fontWeight': 'bold'}
+
+    # Guard against empty DataFrame
+    if df.empty or len(df.columns) == 0:
+        # Return an empty table with a message
+        empty_df = pd.DataFrame({'Message': ['No data available']})
+        data_table = dash_table.DataTable(
+            id='table-data-availability',
+            columns=[{"name": i, "id": i} for i in empty_df.columns],
+            data=empty_df.to_dict('records'),
+            style_table=_style_table,
+            style_cell=_style_cell,
+            style_data=_style_data,
+            style_header=_style_header,
+        )
+        return data_table
 
     data_table = dash_table.DataTable(
         id='table-data-availability',
