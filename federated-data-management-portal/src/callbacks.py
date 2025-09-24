@@ -235,10 +235,7 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     Returns:
     dict: Filtered descriptive data containing only variables with matching categories
     """
-    print(f"DEBUG: filter_descriptive_data_by_semantic_map_categories called with categories: {selected_categories}")
-    
     if not descriptive_data or not selected_categories or not semantic_map_data:
-        print("DEBUG: Early return - missing required data")
         return descriptive_data
 
     # Create mapping from category values to aesthetic labels
@@ -247,8 +244,6 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         # Convert back from value format to aesthetic label with proper spacing
         # Remove leading underscore and capitalize properly
         category_mapping[cat] = cat.lstrip('_').replace('_', ' ').title()
-
-    print(f"DEBUG: Category mapping: {category_mapping}")
 
     # Get variable classes (not names) that belong to selected categories
     selected_variable_classes = set()
@@ -273,13 +268,9 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
                                 variable_class = variable_data.get('class')
                                 if variable_class:
                                     selected_variable_classes.add(variable_class)
-                                    print(f"DEBUG: Added variable class {variable_class} for variable {variable_name} (category: {cat_label})")
                                 break
 
-    print(f"DEBUG: Selected variable classes: {selected_variable_classes}")
-
     if not selected_variable_classes:
-        print("DEBUG: No variable classes selected - returning original data")
         return descriptive_data
 
     filtered_data = {}
