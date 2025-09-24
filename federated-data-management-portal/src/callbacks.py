@@ -235,7 +235,10 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     Returns:
     dict: Filtered descriptive data containing only variables with matching categories
     """
+    print(f"DEBUG: filter_descriptive_data_by_semantic_map_categories called with categories: {selected_categories}")
+    
     if not descriptive_data or not selected_categories or not semantic_map_data:
+        print("DEBUG: Early return - missing required data")
         return descriptive_data
 
     # Create mapping from category values to aesthetic labels
@@ -243,6 +246,8 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     for cat in selected_categories:
         # Convert back from value format to aesthetic label with proper spacing
         category_mapping[cat] = cat.replace('_', ' ').title()
+
+    print(f"DEBUG: Category mapping: {category_mapping}")
 
     # Get variable classes (not names) that belong to selected categories
     selected_variable_classes = set()
@@ -267,9 +272,13 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
                                 variable_class = variable_data.get('class')
                                 if variable_class:
                                     selected_variable_classes.add(variable_class)
+                                    print(f"DEBUG: Added variable class {variable_class} for variable {variable_name} (category: {cat_label})")
                                 break
 
+    print(f"DEBUG: Selected variable classes: {selected_variable_classes}")
+
     if not selected_variable_classes:
+        print("DEBUG: No variable classes selected - returning original data")
         return descriptive_data
 
     filtered_data = {}
@@ -282,17 +291,29 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
 
             # Filter categorical data by class codes
             if 'categorical' in org_data:
-                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
-                mask = categorical_df['variable'].isin(selected_variable_classes)
-                filtered_categorical = categorical_df[mask]
-                filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
+                try:
+                    categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                    original_count = len(categorical_df)
+                    mask = categorical_df['variable'].isin(selected_variable_classes)
+                    filtered_categorical = categorical_df[mask]
+                    filtered_count = len(filtered_categorical)
+                    filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
+                    print(f"DEBUG: {org} categorical: {original_count} -> {filtered_count} rows")
+                except Exception as e:
+                    print(f"DEBUG: Error filtering categorical data for {org}: {e}")
 
             # Filter numerical data by class codes
             if 'numerical' in org_data:
-                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
-                mask = numerical_df['variable'].isin(selected_variable_classes)
-                filtered_numerical = numerical_df[mask]
-                filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
+                try:
+                    numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                    original_count = len(numerical_df)
+                    mask = numerical_df['variable'].isin(selected_variable_classes)
+                    filtered_numerical = numerical_df[mask]
+                    filtered_count = len(filtered_numerical)
+                    filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
+                    print(f"DEBUG: {org} numerical: {original_count} -> {filtered_count} rows")
+                except Exception as e:
+                    print(f"DEBUG: Error filtering numerical data for {org}: {e}")
 
     return filtered_data
 
@@ -414,15 +435,48 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     variable_info = global_semantic_map_data.get('variable_info')
     if variable_info is None:
         variable_info = {}
+    
+    # Debug: Add logging to understand what's happening
+    print(f"DEBUG: generate_fair_data_availability called")
+    print(f"DEBUG: variable_info has {len(variable_info)} variables: {list(variable_info.keys())}")
+    print(f"DEBUG: descriptive_data has {len(descriptive_data)} timestamps")
 
     # Find the most recent timestamp
     most_recent_timestamp = max(descriptive_data.keys(), key=lambda x: datetime.fromisoformat(x))
 
     # Select the data associated with the most recent timestamp
     descriptive_data_most_recent = descriptive_data[most_recent_timestamp]
+    
+    print(f"DEBUG: descriptive_data_most_recent has {len(descriptive_data_most_recent)} organizations: {list(descriptive_data_most_recent.keys())}")
 
     # Get the list of organizations from the descriptive data
     organizations = list(descriptive_data_most_recent.keys())
+    
+    # Debug: Check if we have data in the expected format
+    if organizations:
+        sample_org = organizations[0]
+        sample_data = descriptive_data_most_recent[sample_org]
+        print(f"DEBUG: Sample organization '{sample_org}' has keys: {list(sample_data.keys())}")
+        if 'categorical' in sample_data:
+            try:
+                cat_data = json.loads(sample_data['categorical'])
+                if 'variable' in cat_data:
+                    unique_vars = list(set(cat_data['variable'].values()))
+                    print(f"DEBUG: Categorical variables in data: {unique_vars[:5]}...")  # Show first 5
+                else:
+                    print(f"DEBUG: Categorical data keys: {list(cat_data.keys())}")
+            except:
+                print("DEBUG: Failed to parse categorical data")
+        if 'numerical' in sample_data:
+            try:
+                num_data = json.loads(sample_data['numerical'])
+                if 'variable' in num_data:
+                    unique_vars = list(set(num_data['variable'].values()))
+                    print(f"DEBUG: Numerical variables in data: {unique_vars[:5]}...")  # Show first 5
+                else:
+                    print(f"DEBUG: Numerical data keys: {list(num_data.keys())}")
+            except:
+                print("DEBUG: Failed to parse numerical data")
 
     _variable_info = copy.deepcopy(variable_info)
 
@@ -431,6 +485,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     for variable in variable_info.keys():
         org_variable_counts = {}
         variable_class = _variable_info[variable].get("class")
+        
+        print(f"DEBUG: Processing variable '{variable}' with class '{variable_class}'")
 
         for organisation in organizations:
             org_data = descriptive_data_most_recent[organisation]
@@ -446,8 +502,12 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                         (categorical_df['variable'] == variable_class) &
                         (categorical_df['value'] != 'na')
                     ]
-                    total_available += var_data['count'].sum()
-                except (json.JSONDecodeError, KeyError):
+                    cat_count = var_data['count'].sum()
+                    total_available += cat_count
+                    if cat_count > 0:
+                        print(f"DEBUG:   {organisation} categorical count for {variable_class}: {cat_count}")
+                except (json.JSONDecodeError, KeyError) as e:
+                    print(f"DEBUG:   Error processing categorical data for {organisation}: {e}")
                     pass
             
             # Process numerical data for this variable  
@@ -459,14 +519,22 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                         (numerical_df['variable'] == variable_class) &
                         (numerical_df['statistic'] == 'count')
                     ]
-                    total_available += var_data['value'].sum()
-                except (json.JSONDecodeError, KeyError):
+                    num_count = var_data['value'].sum()
+                    total_available += num_count
+                    if num_count > 0:
+                        print(f"DEBUG:   {organisation} numerical count for {variable_class}: {num_count}")
+                except (json.JSONDecodeError, KeyError) as e:
+                    print(f"DEBUG:   Error processing numerical data for {organisation}: {e}")
                     pass
             
             org_variable_counts[organisation] = int(total_available)
 
         # Compute the total count across all organizations
         total_count = sum(org_variable_counts.values())
+        print(f"DEBUG: Variable '{variable}' total count: {total_count}")
+        
+        if total_count == 0:
+            print(f"DEBUG: Variable '{variable}' has zero count - will not appear in table")
 
         row = {
             'Variables': variable.replace('_', ' ').upper() if
@@ -626,6 +694,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
+    
+    print(f"DEBUG: Created DataFrame with {len(df)} rows and {len(df.columns)} columns")
+    if len(df) > 0:
+        print(f"DEBUG: DataFrame columns: {list(df.columns)}")
+        print(f"DEBUG: DataFrame shape: {df.shape}")
+        print(f"DEBUG: First few rows:")
+        for i, row in df.head().iterrows():
+            print(f"DEBUG:   Row {i}: {dict(row)}")
+    else:
+        print("DEBUG: DataFrame is empty - this will cause the table to show 'No data available'")
 
     # Create a new DataFrame for display purposes with enhanced symbol logic
     display_df = df.copy()
