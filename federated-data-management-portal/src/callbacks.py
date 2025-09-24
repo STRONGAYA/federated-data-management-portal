@@ -772,6 +772,11 @@ def create_data_table(df, tooltips):
     print(f"DEBUG: create_data_table DataFrame columns: {list(df.columns)}")
     print(f"DEBUG: create_data_table tooltips count: {len(tooltips)}")
     
+    # Debug tooltip structure
+    if len(tooltips) > 0:
+        print(f"DEBUG: First tooltip keys: {list(tooltips[0].keys()) if tooltips[0] else 'None'}")
+        print(f"DEBUG: Tooltip structure matches DataFrame columns: {set(tooltips[0].keys() if tooltips[0] else []) == set(df.columns)}")
+    
     _style_table = {'height': '450px', 'overflowY': 'auto', 'max-width': '100%', 'width': '100%', 'overflowX': 'auto'}
     _style_cell = {'fontSize': '14px', 'border': 'none', 'padding': '0px 0px 0px 0px', 'textOverflow': 'ellipsis',
                    'overflow': 'hidden'}
@@ -799,6 +804,23 @@ def create_data_table(df, tooltips):
     for i, row in df.head().iterrows():
         print(f"DEBUG:   Table Row {i}: {dict(row)}")
 
+    # Create tooltip data - fix potential mismatch between tooltips and DataFrame rows
+    tooltip_data = []
+    for i in range(len(df)):
+        if i < len(tooltips) and tooltips[i] is not None:
+            row_tooltip = {}
+            for column in df.columns:
+                if column in tooltips[i]:
+                    row_tooltip[column] = {'value': str(tooltips[i][column]), 'type': 'markdown'}
+                else:
+                    row_tooltip[column] = None
+            tooltip_data.append(row_tooltip)
+        else:
+            # Create empty tooltip for this row
+            tooltip_data.append({column: None for column in df.columns})
+    
+    print(f"DEBUG: Created {len(tooltip_data)} tooltip rows for {len(df)} data rows")
+
     data_table = dash_table.DataTable(
         id='table-data-availability',
         columns=[{"name": i, "id": i} for i in df.columns],
@@ -818,17 +840,18 @@ def create_data_table(df, tooltips):
                 for col in df.columns[1:]
             ]
         ],
-        tooltip_data=[
-            {column: {'value': str(tooltip[column]), 'type': 'markdown'}
-            if column in tooltip else None for column in df.columns}
-            for tooltip in tooltips
-        ],
+        tooltip_data=tooltip_data,
         fixed_columns={'headers': True, 'data': 2},
         tooltip_duration=None,
         filter_action="native",  # Enable search functionality
         sort_action="native",
         page_action="native",
     )
+    
+    print(f"DEBUG: create_data_table successfully created DataTable with id='{data_table.id}'")
+    print(f"DEBUG: DataTable has {len(data_table.data)} data records")
+    print(f"DEBUG: DataTable columns: {[col['name'] for col in data_table.columns]}")
+    
     return data_table
 
 
