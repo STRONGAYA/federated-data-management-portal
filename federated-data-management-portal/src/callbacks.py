@@ -488,11 +488,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             if 'categorical' in org_data:
                 try:
                     categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                    # DEBUG: Show what variable identifiers are actually present in the data
+                    available_variables = categorical_df['variable'].unique().tolist()
+                    print(f"DEBUG:   {organisation} categorical variables available: {available_variables}")
+                    print(f"DEBUG:   {organisation} looking for variable class: '{variable_class}'")
+                    
                     # Find rows for this variable (excluding nan values)
                     # The variable names should be already mapped from class codes in misc.py
                     var_data = categorical_df[
                         (categorical_df['variable'] == variable_class) &
-                        (categorical_df['value'] != 'na')
+                        (categorical_df['value'] != 'nan')
                     ]
                     cat_count = var_data['count'].sum()
                     total_available += cat_count
@@ -506,6 +511,11 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             if 'numerical' in org_data:
                 try:
                     numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                    # DEBUG: Show what variable identifiers are actually present in the data
+                    available_variables = numerical_df['variable'].unique().tolist()
+                    print(f"DEBUG:   {organisation} numerical variables available: {available_variables}")
+                    print(f"DEBUG:   {organisation} looking for variable class: '{variable_class}'")
+                    
                     # Find rows for this variable with 'count' statistic
                     var_data = numerical_df[
                         (numerical_df['variable'] == variable_class) &
