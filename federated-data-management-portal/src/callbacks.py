@@ -428,10 +428,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     if variable_info is None:
         variable_info = {}
     
-    # Debug: Add logging to understand what's happening
-    print(f"DEBUG: generate_fair_data_availability called")
-    print(f"DEBUG: variable_info has {len(variable_info)} variables: {list(variable_info.keys())}")
-    print(f"DEBUG: descriptive_data has {len(descriptive_data)} timestamps")
+    # Debug: Add logging to understand what's happening (can be removed in production)
+    print(f"DEBUG: generate_fair_data_availability called with {len(variable_info)} variables")
     
     # Debug: Show the mapping between variable names and their class codes
     print(f"DEBUG: Variable to class mapping:")
@@ -445,7 +443,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     # Select the data associated with the most recent timestamp
     descriptive_data_most_recent = descriptive_data[most_recent_timestamp]
     
-    print(f"DEBUG: descriptive_data_most_recent has {len(descriptive_data_most_recent)} organizations: {list(descriptive_data_most_recent.keys())}")
+    print(f"DEBUG: Loaded {len(descriptive_data_most_recent)} organizations with data")
 
     # Get the list of organizations from the descriptive data
     organizations = list(descriptive_data_most_recent.keys())
@@ -454,23 +452,20 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     if organizations:
         sample_org = organizations[0]
         sample_data = descriptive_data_most_recent[sample_org]
-        print(f"DEBUG: Sample organization '{sample_org}' has keys: {list(sample_data.keys())}")
         if 'categorical' in sample_data:
             try:
                 cat_df = pd.DataFrame(json.loads(sample_data['categorical']))
-                print(f"DEBUG: Categorical shape: {cat_df.shape}, columns: {list(cat_df.columns)}")
                 if 'variable' in cat_df.columns:
                     unique_vars = cat_df['variable'].unique().tolist()
-                    print(f"DEBUG: Categorical variables in data: {unique_vars}")
+                    print(f"DEBUG: Categorical variables available: {unique_vars}")
             except Exception as e:
                 print(f"DEBUG: Failed to parse categorical data: {e}")
         if 'numerical' in sample_data:
             try:
                 num_df = pd.DataFrame(json.loads(sample_data['numerical']))
-                print(f"DEBUG: Numerical shape: {num_df.shape}, columns: {list(num_df.columns)}")
                 if 'variable' in num_df.columns:
-                    unique_vars = num_df['variable'].unique().tolist()
-                    print(f"DEBUG: Numerical variables in data: {unique_vars}")
+                    unique_vars = num_df['variable'].unique().tolist()  
+                    print(f"DEBUG: Numerical variables available: {unique_vars}")
             except Exception as e:
                 print(f"DEBUG: Failed to parse numerical data: {e}")
 
@@ -594,7 +589,10 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
 
         # Compute the total count across all organizations
         total_count = sum(org_variable_counts.values())
-        print(f"DEBUG: Variable '{variable}' total count: {total_count}")
+        if total_count > 0:
+            print(f"DEBUG: Variable '{variable}' total count: {total_count}")
+        elif variable in ['biological_sex', 'age_at_diagnosis', 'identifier']:  # Show key variables even if 0
+            print(f"DEBUG: Variable '{variable}' total count: {total_count}")
         
         # ALL variables should appear in the table, regardless of count
         # Variables with zero count will show crosses, variables with data will show appropriate symbols
