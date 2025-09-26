@@ -82,11 +82,27 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
-                new_data[org].update({
-                    'categorical': pd.DataFrame(json.loads(_new_stats[org]['categorical'])),
-                    'numerical': pd.DataFrame(json.loads(_new_stats[org]['numerical'])),
-                    'excluded_variables': _new_stats[org]['excluded_variables']
-                })
+                # Support both new and old format for backwards compatibility
+                org_stats = _new_stats[org]
+                update_dict = {'excluded_variables': org_stats['excluded_variables']}
+                
+                # Handle categorical data - check for new format first, then old format
+                if 'categorical_general_partial_statistics' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical_general_partial_statistics']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                elif 'categorical' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                
+                # Handle numerical data - check for new format first, then old format  
+                if 'numerical_general_partial_statistics' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical_general_partial_statistics']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                elif 'numerical' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                
+                new_data[org].update(update_dict)
 
                 # TODO remove when ready
                 #new_data[org]['categorical']['variable'] = new_data[org]['categorical']['variable'].apply(
@@ -97,9 +113,6 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
                 #new_data[org]['numerical']['variable'] = new_data[org]['numerical']['variable'].apply(
                  #   lambda x: variable_class_code_to_name.get(x, x))
-
-                new_data[org]['categorical'] = new_data[org]['categorical'].to_json()
-                new_data[org]['numerical'] = new_data[org]['numerical'].to_json()
 
     except TypeError:
         new_data = {}

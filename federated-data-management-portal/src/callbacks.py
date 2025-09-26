@@ -37,9 +37,16 @@ def _get_organization_sample_size(org_data):
     found_target = False
     
     # Check categorical data for ncit:C164339
-    if 'categorical' in org_data:
+    # Check for new format first, then fall back to old format
+    categorical_key = None
+    if 'categorical_general_partial_statistics' in org_data:
+        categorical_key = 'categorical_general_partial_statistics'
+    elif 'categorical' in org_data:
+        categorical_key = 'categorical'
+    
+    if categorical_key:
         try:
-            categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+            categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
             target_data = categorical_df[
                 (categorical_df['variable'] == target_variable) & 
                 (categorical_df['value'] != 'nan')
@@ -51,27 +58,42 @@ def _get_organization_sample_size(org_data):
             pass
     
     # Check numerical data for ncit:C164339 if not found in categorical
-    if not found_target and 'numerical' in org_data:
-        try:
-            numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
-            target_data = numerical_df[
-                (numerical_df['variable'] == target_variable) & 
-                (numerical_df['statistic'] == 'count')
-            ]
-            if not target_data.empty:
-                sample_size = target_data['value'].sum()
-                found_target = True
-        except (json.JSONDecodeError, KeyError):
-            pass
+    if not found_target:
+        # Check for new format first, then fall back to old format
+        numerical_key = None
+        if 'numerical_general_partial_statistics' in org_data:
+            numerical_key = 'numerical_general_partial_statistics'
+        elif 'numerical' in org_data:
+            numerical_key = 'numerical'
+        
+        if numerical_key:
+            try:
+                numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
+                target_data = numerical_df[
+                    (numerical_df['variable'] == target_variable) & 
+                    (numerical_df['statistic'] == 'count')
+                ]
+                if not target_data.empty:
+                    sample_size = target_data['value'].sum()
+                    found_target = True
+            except (json.JSONDecodeError, KeyError):
+                pass
     
     # If ncit:C164339 not found, use highest count from numerical data first
     if not found_target:
         max_count = 0
         
         # Check numerical data for highest count (preferred fallback)
-        if 'numerical' in org_data:
+        # Check for new format first, then fall back to old format
+        numerical_key = None
+        if 'numerical_general_partial_statistics' in org_data:
+            numerical_key = 'numerical_general_partial_statistics'
+        elif 'numerical' in org_data:
+            numerical_key = 'numerical'
+        
+        if numerical_key:
             try:
-                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
                 for variable in numerical_df['variable'].unique():
                     var_data = numerical_df[
                         (numerical_df['variable'] == variable) & 
@@ -84,15 +106,23 @@ def _get_organization_sample_size(org_data):
                 pass
         
         # Check categorical data for highest count (last fallback)
-        if max_count == 0 and 'categorical' in org_data:
-            try:
-                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
-                for variable in categorical_df['variable'].unique():
-                    var_data = categorical_df[
-                        (categorical_df['variable'] == variable) & 
-                        (categorical_df['value'] != 'nan')
-                    ]
-                    var_count = var_data['count'].sum()
+        if max_count == 0:
+            # Check for new format first, then fall back to old format
+            categorical_key = None
+            if 'categorical_general_partial_statistics' in org_data:
+                categorical_key = 'categorical_general_partial_statistics'
+            elif 'categorical' in org_data:
+                categorical_key = 'categorical'
+            
+            if categorical_key:
+                try:
+                    categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
+                    for variable in categorical_df['variable'].unique():
+                        var_data = categorical_df[
+                            (categorical_df['variable'] == variable) & 
+                            (categorical_df['value'] != 'nan')
+                        ]
+                        var_count = var_data['count'].sum()
                     max_count = max(max_count, var_count)
             except (json.JSONDecodeError, KeyError):
                 pass
@@ -202,8 +232,15 @@ def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
             filtered_data[timestamp][org] = org_data.copy()
 
             # Filter categorical data
-            if 'categorical' in org_data:
-                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+            # Check for new format first, then fall back to old format
+            categorical_key = None
+            if 'categorical_general_partial_statistics' in org_data:
+                categorical_key = 'categorical_general_partial_statistics'
+            elif 'categorical' in org_data:
+                categorical_key = 'categorical'
+            
+            if categorical_key:
+                categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
                 mask = categorical_df['variable'].apply(
                     lambda x: any(x.startswith(prefix) for prefix in selected_prefixes)
                 )
@@ -211,8 +248,15 @@ def filter_descriptive_data_by_prefix(descriptive_data, selected_prefixes):
                 filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
 
             # Filter numerical data
-            if 'numerical' in org_data:
-                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+            # Check for new format first, then fall back to old format
+            numerical_key = None
+            if 'numerical_general_partial_statistics' in org_data:
+                numerical_key = 'numerical_general_partial_statistics'
+            elif 'numerical' in org_data:
+                numerical_key = 'numerical'
+            
+            if numerical_key:
+                numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
                 mask = numerical_df['variable'].apply(
                     lambda x: any(x.startswith(prefix) for prefix in selected_prefixes)
                 )
@@ -278,15 +322,29 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
             filtered_data[timestamp][org] = org_data.copy()
 
             # Filter categorical data
-            if 'categorical' in org_data:
-                categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+            # Check for new format first, then fall back to old format
+            categorical_key = None
+            if 'categorical_general_partial_statistics' in org_data:
+                categorical_key = 'categorical_general_partial_statistics'
+            elif 'categorical' in org_data:
+                categorical_key = 'categorical'
+            
+            if categorical_key:
+                categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
                 mask = categorical_df['variable'].isin(selected_variables)
                 filtered_categorical = categorical_df[mask]
                 filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
 
             # Filter numerical data
-            if 'numerical' in org_data:
-                numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+            # Check for new format first, then fall back to old format
+            numerical_key = None
+            if 'numerical_general_partial_statistics' in org_data:
+                numerical_key = 'numerical_general_partial_statistics'
+            elif 'numerical' in org_data:
+                numerical_key = 'numerical'
+            
+            if numerical_key:
+                numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
                 mask = numerical_df['variable'].isin(selected_variables)
                 filtered_numerical = numerical_df[mask]
                 filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
@@ -434,9 +492,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             total_available = 0
             
             # Process categorical data for this variable
-            if 'categorical' in org_data:
+            # Check for new format first, then fall back to old format
+            categorical_key = None
+            if 'categorical_general_partial_statistics' in org_data:
+                categorical_key = 'categorical_general_partial_statistics'
+            elif 'categorical' in org_data:
+                categorical_key = 'categorical'
+            
+            if categorical_key:
                 try:
-                    categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                    categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
                     # Find rows for this variable (excluding nan values)
                     # The variable names should be already mapped from class codes in misc.py
                     var_data = categorical_df[
@@ -447,10 +512,17 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                 except (json.JSONDecodeError, KeyError):
                     pass
             
-            # Process numerical data for this variable  
-            if 'numerical' in org_data:
+            # Process numerical data for this variable
+            # Check for new format first, then fall back to old format
+            numerical_key = None
+            if 'numerical_general_partial_statistics' in org_data:
+                numerical_key = 'numerical_general_partial_statistics'
+            elif 'numerical' in org_data:
+                numerical_key = 'numerical'
+            
+            if numerical_key:
                 try:
-                    numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
+                    numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
                     # Find rows for this variable with 'count' statistic
                     var_data = numerical_df[
                         (numerical_df['variable'] == variable_class) &
@@ -513,9 +585,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             
             if should_check_value_classes:
                 org_data = descriptive_data_most_recent[organisation]
-                if 'categorical' in org_data:
+                # Check for new format first, then fall back to old format
+                categorical_key = None
+                if 'categorical_general_partial_statistics' in org_data:
+                    categorical_key = 'categorical_general_partial_statistics'
+                elif 'categorical' in org_data:
+                    categorical_key = 'categorical'
+                
+                if categorical_key:
                     try:
-                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
                         actual_values = categorical_df[
                             categorical_df['variable'] == variable_class
                         ]['value'].unique()
@@ -564,9 +643,16 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                 org_data = descriptive_data_most_recent[organisation]
                 
                 # Check categorical data for value mappings
-                if 'categorical' in org_data:
+                # Check for new format first, then fall back to old format
+                categorical_key = None
+                if 'categorical_general_partial_statistics' in org_data:
+                    categorical_key = 'categorical_general_partial_statistics'
+                elif 'categorical' in org_data:
+                    categorical_key = 'categorical'
+                
+                if categorical_key:
                     try:
-                        categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
+                        categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
                         # Get all actual values in the data for this variable
                         actual_values = categorical_df[
                             categorical_df['variable'] == variable_class
