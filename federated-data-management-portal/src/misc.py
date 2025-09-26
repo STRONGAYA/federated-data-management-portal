@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from datetime import datetime
-from .vantage_client import retrieve_triplestore_collaboration_descriptives, retrieve_descriptive_statistics
+from .vantage_client import retrieve_descriptive_statistics
 
 
 def fetch_data(vantage6_config, descriptive_data, semantic_map):
@@ -28,6 +28,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
     dict: The updated descriptive data with the fetched data appended.
     """
     if vantage6_config is None:
+        # TODO correct this with new config setup; aggregating organisation doesnt exist anymore
         config = {
             'collaboration': read_docker_secret('vantage6_collaboration'),
             'aggregating_organisation': read_docker_secret('vantage6_aggregating_organisation'),
@@ -38,7 +39,32 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             'password': read_docker_secret('vantage6_service_password'),
             'organization_key': read_docker_secret('vantage6_private_key_path')
         }
-        if all(value is None for value in config.values()):
+        
+        # Try to read organization information from Docker secrets
+        organizations_secret = read_docker_secret('vantage6_organizations')
+        if organizations_secret:
+            try:
+                config['organizations'] = json.loads(organizations_secret)
+            except json.JSONDecodeError:
+                print("Warning: Could not parse organizations from Docker secret, using fallback")
+                config['organizations'] = [
+                    {
+                        "organisation": "Default Organization",
+                        "country": "Unknown",
+                        "identifier": 1
+                    }
+                ]
+        else:
+            # Fallback organization structure if no secret is provided
+            config['organizations'] = [
+                {
+                    "organisation": "Default Organization", 
+                    "country": "Unknown",
+                    "identifier": 1
+                }
+            ]
+        
+        if all(value is None for key, value in config.items() if key != 'organizations'):
             config = None
     else:
         config = vantage6_config
@@ -51,9 +77,38 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
 
     if config is not None:
-        # Fetch the new data from your task
-        _new_data = json.loads(retrieve_triplestore_collaboration_descriptives(config))
-        _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, variables_to_describe))
+        # Use hardcoded organization information from config
+        if 'organizations' in config:
+            _new_data = config['organizations']
+        else:
+            # Fallback to default organization data if not provided in config
+            _new_data = [
+                {
+                    "organisation": "Not available",
+                    "country": "Not available",
+                    "identifier": 1
+                }
+            ]
+
+        # Collect results from each organization
+        all_partial_results = []
+        
+        for org_info in _new_data:
+            org_id = org_info.get('identifier')
+            if org_id:
+                # Fetch the descriptive statistics from each organization
+                org_stats_raw = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
+                
+                # Convert the new format to the expected format
+                org_stats = {
+                    'organisation': org_info['organisation'],
+                    'categorical': org_stats_raw.get('categorical_general_partial_statistics', '{}'),
+                    'numerical': org_stats_raw.get('numerical_general_partial_statistics', '{}')
+                }
+                all_partial_results.append(org_stats)
+
+        # Combine all partial results into the expected format
+        _new_descriptive_stats = {'partial_results': all_partial_results}
 
         # Clear the config; keep Docker's secrets, secret
         del config
@@ -82,6 +137,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
+
                 # Support both new and old format for backwards compatibility
                 org_stats = _new_stats[org]
                 update_dict = {'excluded_variables': org_stats['excluded_variables']}
@@ -104,15 +160,21 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 
                 new_data[org].update(update_dict)
 
-                # TODO remove when ready
-                #new_data[org]['categorical']['variable'] = new_data[org]['categorical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
 
-                # new_data[org]['categorical']['value'] = new_data[org]['categorical']['value'].apply(
-                #     lambda x: value_class_code_to_name.get(x, x))
+                # Replace NCIT URIs with ncit: prefix (accounting for escaped and unescaped slashes in JSON)
+                ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
+                ncit_uri_unescaped = 'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
 
-                #new_data[org]['numerical']['variable'] = new_data[org]['numerical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
+                categorical_json = categorical_json.replace(ncit_uri_escaped, 'ncit:')
+                categorical_json = categorical_json.replace(ncit_uri_unescaped, 'ncit:')
+
+                numerical_json = numerical_json.replace(ncit_uri_escaped, 'ncit:')
+                numerical_json = numerical_json.replace(ncit_uri_unescaped, 'ncit:')
+
+                new_data[org].update({
+                    'categorical': categorical_json,
+                    'numerical': numerical_json,
+                })
 
     except TypeError:
         new_data = {}

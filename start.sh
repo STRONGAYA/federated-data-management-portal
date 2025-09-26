@@ -42,6 +42,15 @@ echo "Please enter the id of the aggregating organisation:"
 read aggregator_id
 echo "$aggregator_id" | docker secret create vantage6_aggregating_organisation -
 
+echo "Please enter the organization information as JSON (or press enter to skip):"
+echo "Example format: [{\"organisation\":\"Org1\",\"country\":\"Country1\",\"identifier\":1},{\"organisation\":\"Org2\",\"country\":\"Country2\",\"identifier\":2}]"
+read -r organizations_json
+if [ -n "$organizations_json" ]; then
+    echo "$organizations_json" | docker secret create vantage6_organizations -
+else
+    echo "No organization information provided, using defaults"
+fi
+
 echo "Please enter the path to the schema JSON file:"
 read -r json_file_path
 export JSON_FILE_PATH=$json_file_path
