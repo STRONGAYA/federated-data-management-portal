@@ -140,8 +140,8 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
                 # Support both new and old format for backwards compatibility
                 org_stats = _new_stats[org]
-                update_dict = {'excluded_variables': org_stats['excluded_variables']}
-                
+                update_dict = {}
+
                 # Handle categorical data - check for new format first, then old format
                 if 'categorical_general_partial_statistics' in org_stats:
                     categorical_data = pd.DataFrame(json.loads(org_stats['categorical_general_partial_statistics']))
@@ -165,16 +165,11 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
                 ncit_uri_unescaped = 'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
 
-                categorical_json = categorical_json.replace(ncit_uri_escaped, 'ncit:')
-                categorical_json = categorical_json.replace(ncit_uri_unescaped, 'ncit:')
+                update_dict['categorical'] = update_dict['categorical'].replace(ncit_uri_escaped, 'ncit:')
+                update_dict['categorical'] = update_dict['categorical'].replace(ncit_uri_unescaped, 'ncit:')
 
-                numerical_json = numerical_json.replace(ncit_uri_escaped, 'ncit:')
-                numerical_json = numerical_json.replace(ncit_uri_unescaped, 'ncit:')
-
-                new_data[org].update({
-                    'categorical': categorical_json,
-                    'numerical': numerical_json,
-                })
+                update_dict['numerical'] = update_dict['numerical'].replace(ncit_uri_escaped, 'ncit:')
+                update_dict['numerical'] = update_dict['numerical'].replace(ncit_uri_unescaped, 'ncit:')
 
     except TypeError:
         new_data = {}
