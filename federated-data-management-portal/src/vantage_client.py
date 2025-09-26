@@ -49,8 +49,8 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
         {
             {
               "organisation_name": "",
-              "categorical": "{\"variable\":{}, \"value\":{}}",
-              "numerical": "{\"variable\":{},\"statistic\":{}}",
+              "categorical_general_partial_statistics": "{\"variable\":{}, \"value\":{}}",
+              "numerical_general_partial_statistics": "{\"variable\":{},\"statistic\":{}}",
             }
           ]
         }
@@ -74,7 +74,7 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
                 'kwargs': {
                     'variables_to_describe': variables_to_describe
                 }},
-        databases=[{'label': 'default'}]
+        databases=[{'label': 'triplestore'}]
     )
 
     # Wait for results to be ready
@@ -111,7 +111,7 @@ def _authenticate(config):
     client = Client(config.get('server_url'), config.get('server_port'), config.get('server_api'),
                     log_level='debug')
     # Authenticate the client
-    client.authenticate(config.get('username'), config.get('password'))
+    client.authenticate(config.get('username'), config.get('password'), mfa_code=config.get('mfa_token', None))
 
     # Set up encryption for the client
     if config.get('organization_key') == '':
