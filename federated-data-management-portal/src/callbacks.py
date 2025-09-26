@@ -432,6 +432,12 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     print(f"DEBUG: generate_fair_data_availability called")
     print(f"DEBUG: variable_info has {len(variable_info)} variables: {list(variable_info.keys())}")
     print(f"DEBUG: descriptive_data has {len(descriptive_data)} timestamps")
+    
+    # Debug: Show the mapping between variable names and their class codes
+    print(f"DEBUG: Variable to class mapping:")
+    for var_name, var_info in variable_info.items():
+        var_class = var_info.get("class", "No class")
+        print(f"DEBUG:   '{var_name}' -> '{var_class}'")
 
     # Find the most recent timestamp
     most_recent_timestamp = max(descriptive_data.keys(), key=lambda x: datetime.fromisoformat(x))
@@ -451,24 +457,22 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         print(f"DEBUG: Sample organization '{sample_org}' has keys: {list(sample_data.keys())}")
         if 'categorical' in sample_data:
             try:
-                cat_data = json.loads(sample_data['categorical'])
-                if 'variable' in cat_data:
-                    unique_vars = list(set(cat_data['variable'].values()))
-                    print(f"DEBUG: Categorical variables in data: {unique_vars[:5]}...")  # Show first 5
-                else:
-                    print(f"DEBUG: Categorical data keys: {list(cat_data.keys())}")
-            except:
-                print("DEBUG: Failed to parse categorical data")
+                cat_df = pd.DataFrame(json.loads(sample_data['categorical']))
+                print(f"DEBUG: Categorical shape: {cat_df.shape}, columns: {list(cat_df.columns)}")
+                if 'variable' in cat_df.columns:
+                    unique_vars = cat_df['variable'].unique().tolist()
+                    print(f"DEBUG: Categorical variables in data: {unique_vars}")
+            except Exception as e:
+                print(f"DEBUG: Failed to parse categorical data: {e}")
         if 'numerical' in sample_data:
             try:
-                num_data = json.loads(sample_data['numerical'])
-                if 'variable' in num_data:
-                    unique_vars = list(set(num_data['variable'].values()))
-                    print(f"DEBUG: Numerical variables in data: {unique_vars[:5]}...")  # Show first 5
-                else:
-                    print(f"DEBUG: Numerical data keys: {list(num_data.keys())}")
-            except:
-                print("DEBUG: Failed to parse numerical data")
+                num_df = pd.DataFrame(json.loads(sample_data['numerical']))
+                print(f"DEBUG: Numerical shape: {num_df.shape}, columns: {list(num_df.columns)}")
+                if 'variable' in num_df.columns:
+                    unique_vars = num_df['variable'].unique().tolist()
+                    print(f"DEBUG: Numerical variables in data: {unique_vars}")
+            except Exception as e:
+                print(f"DEBUG: Failed to parse numerical data: {e}")
 
     _variable_info = copy.deepcopy(variable_info)
 
@@ -490,19 +494,47 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     categorical_df = pd.DataFrame(json.loads(org_data['categorical']))
                     # DEBUG: Show what variable identifiers are actually present in the data
                     available_variables = categorical_df['variable'].unique().tolist()
-                    print(f"DEBUG:   {organisation} categorical variables available: {available_variables}")
-                    print(f"DEBUG:   {organisation} looking for variable class: '{variable_class}'")
+                    if variable_class not in available_variables:
+                        print(f"DEBUG:   {organisation} categorical: '{variable_class}' not found in {available_variables}")
                     
                     # Find rows for this variable (excluding nan values)
-                    # The variable names should be already mapped from class codes in misc.py
+                    # Try exact match first
                     var_data = categorical_df[
                         (categorical_df['variable'] == variable_class) &
                         (categorical_df['value'] != 'nan')
                     ]
                     cat_count = var_data['count'].sum()
+                    
+                    # If no exact match found, try fallback strategies
+                    if cat_count == 0:
+                        # Fallback 1: Try matching by variable name directly
+                        var_data_fallback = categorical_df[
+                            (categorical_df['variable'] == variable) &
+                            (categorical_df['value'] != 'nan')
+                        ]
+                        fallback_count = var_data_fallback['count'].sum()
+                        if fallback_count > 0:
+                            print(f"DEBUG:   {organisation} categorical fallback: found match using variable name '{variable}': {fallback_count}")
+                            cat_count = fallback_count
+                        else:
+                            # Fallback 2: Check if any available variables contain the class or variable name
+                            for available_var in available_variables:
+                                if (variable_class in available_var or 
+                                    variable in available_var or 
+                                    available_var in variable_class):
+                                    var_data_partial = categorical_df[
+                                        (categorical_df['variable'] == available_var) &
+                                        (categorical_df['value'] != 'nan')
+                                    ]
+                                    partial_count = var_data_partial['count'].sum()
+                                    if partial_count > 0:
+                                        print(f"DEBUG:   {organisation} categorical partial match: '{available_var}': {partial_count}")
+                                        cat_count = partial_count
+                                        break
+                    
                     total_available += cat_count
                     if cat_count > 0:
-                        print(f"DEBUG:   {organisation} categorical count for {variable_class}: {cat_count}")
+                        print(f"DEBUG:   {organisation} categorical SUCCESS: {variable} ({variable_class}): {cat_count}")
                 except (json.JSONDecodeError, KeyError) as e:
                     print(f"DEBUG:   Error processing categorical data for {organisation}: {e}")
                     pass
@@ -513,18 +545,47 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     numerical_df = pd.DataFrame(json.loads(org_data['numerical']))
                     # DEBUG: Show what variable identifiers are actually present in the data
                     available_variables = numerical_df['variable'].unique().tolist()
-                    print(f"DEBUG:   {organisation} numerical variables available: {available_variables}")
-                    print(f"DEBUG:   {organisation} looking for variable class: '{variable_class}'")
+                    if variable_class not in available_variables:
+                        print(f"DEBUG:   {organisation} numerical: '{variable_class}' not found in {available_variables}")
                     
                     # Find rows for this variable with 'count' statistic
+                    # Try exact match first
                     var_data = numerical_df[
                         (numerical_df['variable'] == variable_class) &
                         (numerical_df['statistic'] == 'count')
                     ]
                     num_count = var_data['value'].sum()
+                    
+                    # If no exact match found, try fallback strategies
+                    if num_count == 0:
+                        # Fallback 1: Try matching by variable name directly
+                        var_data_fallback = numerical_df[
+                            (numerical_df['variable'] == variable) &
+                            (numerical_df['statistic'] == 'count')
+                        ]
+                        fallback_count = var_data_fallback['value'].sum()
+                        if fallback_count > 0:
+                            print(f"DEBUG:   {organisation} numerical fallback: found match using variable name '{variable}': {fallback_count}")
+                            num_count = fallback_count
+                        else:
+                            # Fallback 2: Check if any available variables contain the class or variable name
+                            for available_var in available_variables:
+                                if (variable_class in available_var or 
+                                    variable in available_var or 
+                                    available_var in variable_class):
+                                    var_data_partial = numerical_df[
+                                        (numerical_df['variable'] == available_var) &
+                                        (numerical_df['statistic'] == 'count')
+                                    ]
+                                    partial_count = var_data_partial['value'].sum()
+                                    if partial_count > 0:
+                                        print(f"DEBUG:   {organisation} numerical partial match: '{available_var}': {partial_count}")
+                                        num_count = partial_count
+                                        break
+                    
                     total_available += num_count
                     if num_count > 0:
-                        print(f"DEBUG:   {organisation} numerical count for {variable_class}: {num_count}")
+                        print(f"DEBUG:   {organisation} numerical SUCCESS: {variable} ({variable_class}): {num_count}")
                 except (json.JSONDecodeError, KeyError) as e:
                     print(f"DEBUG:   Error processing numerical data for {organisation}: {e}")
                     pass
