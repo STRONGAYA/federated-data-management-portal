@@ -137,9 +137,29 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
-                # Get the categorical and numerical data (already in the expected format)
-                categorical_json = _new_stats[org]['categorical']
-                numerical_json = _new_stats[org]['numerical']
+
+                # Support both new and old format for backwards compatibility
+                org_stats = _new_stats[org]
+                update_dict = {'excluded_variables': org_stats['excluded_variables']}
+                
+                # Handle categorical data - check for new format first, then old format
+                if 'categorical_general_partial_statistics' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical_general_partial_statistics']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                elif 'categorical' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                
+                # Handle numerical data - check for new format first, then old format  
+                if 'numerical_general_partial_statistics' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical_general_partial_statistics']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                elif 'numerical' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                
+                new_data[org].update(update_dict)
+
 
                 # Replace NCIT URIs with ncit: prefix (accounting for escaped and unescaped slashes in JSON)
                 ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
@@ -155,8 +175,6 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                     'categorical': categorical_json,
                     'numerical': numerical_json,
                 })
-
-
 
     except TypeError:
         new_data = {}
