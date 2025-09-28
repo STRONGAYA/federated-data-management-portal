@@ -279,8 +279,10 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     Returns:
     dict: Filtered descriptive data containing only variables with matching categories
     """
+    selected_variable_classes = set()
+
     if not descriptive_data or not selected_categories or not semantic_map_data:
-        return descriptive_data
+        return descriptive_data, selected_variable_classes
 
     # Create mapping from category values to aesthetic labels
     category_mapping = {}
@@ -290,7 +292,6 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         category_mapping[cat] = cat.lstrip('_').replace('_', ' ').title()
 
     # Get variable classes (not names) that belong to selected categories
-    selected_variable_classes = set()
     if 'variable_info' in semantic_map_data:
         for variable_name, variable_data in semantic_map_data['variable_info'].items():
             if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
@@ -315,7 +316,7 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
                                 break
 
     if not selected_variable_classes:
-        return descriptive_data
+        return descriptive_data, selected_variable_classes
 
     filtered_data = {}
 
@@ -335,7 +336,7 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
             
             if categorical_key:
                 categorical_df = pd.DataFrame(json.loads(org_data[categorical_key]))
-                mask = categorical_df['variable'].isin(selected_variables)
+                mask = categorical_df['variable'].isin(selected_variable_classes)
                 filtered_categorical = categorical_df[mask]
                 filtered_data[timestamp][org]['categorical'] = filtered_categorical.to_json()
 
@@ -349,12 +350,12 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
             
             if numerical_key:
                 numerical_df = pd.DataFrame(json.loads(org_data[numerical_key]))
-                mask = numerical_df['variable'].isin(selected_variables)
+                mask = numerical_df['variable'].isin(selected_variable_classes)
                 filtered_numerical = numerical_df[mask]
                 filtered_data[timestamp][org]['numerical'] = filtered_numerical.to_json()
 
 
-    return filtered_data
+    return filtered_data, selected_variable_classes
 
 
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):

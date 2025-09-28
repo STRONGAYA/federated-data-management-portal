@@ -411,37 +411,24 @@ class Dashboard:
             Returns:
             The result of the function from the `callbacks` module.
             """
-            # Create filtered copies to avoid modifying originals
-            _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(descriptive_data,
+            try:
+                # Create filtered copies to avoid modifying originals
+                _descriptive_data, selected_variables = callbacks.filter_descriptive_data_by_semantic_map_categories(descriptive_data,
                                                                   prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
+            except ValueError:
+                _descriptive_data = copy.deepcopy(descriptive_data)
+                selected_variables = set()
 
             # Filter global semantic_map data
             filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
-            if prefix_selection:
-                # Get variables that belong to selected categories
-                selected_variables = set()
-                category_mapping = {cat: cat.replace('_', ' ').title() for cat in prefix_selection}
-                
+            if prefix_selection and selected_variables:
+                variables_to_remove = []
                 for variable_name, variable_data in filtered_semantic_map['variable_info'].items():
-                    if 'schema_reconstruction' in variable_data:
-                        for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
-                            if level >= 2:  # max_depth
-                                break
-                            
-                            if (reconstruction_item.get('type') == 'class' and 
-                                'aesthetic_label' in reconstruction_item and
-                                reconstruction_item.get('placement') != 'after'):
-                                # Remove underscores from aesthetic label and normalize
-                                aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
-                                for cat_value, cat_label in category_mapping.items():
-                                    if aesthetic_label.lower() == cat_label.lower():
-                                        selected_variables.add(variable_name)
-                                        break
-                
-                filtered_semantic_map['variable_info'] = {
-                    var: info for var, info in filtered_semantic_map['variable_info'].items()
-                    if var in selected_variables
-                }
+                    if variable_data.get('class') not in selected_variables:
+                        variables_to_remove.append(variable_name)
+
+                for variable_name in variables_to_remove:
+                    filtered_semantic_map['variable_info'].pop(variable_name)
 
             # Generate table with filtered data
             df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)
@@ -545,7 +532,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness', semantic_map_data=self.global_semantic_map_data)
             else:
@@ -583,7 +570,7 @@ class Dashboard:
                             del _descriptive_data[timestamp][org]
 
                 # Filter data based on selected prefixes
-                _descriptive_data = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility', semantic_map_data=self.global_semantic_map_data)
             else:
