@@ -51,7 +51,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                     {
                         "organisation": "Default Organization",
                         "country": "Unknown",
-                        "identifier": 1
+                        "organisation_identifier": 1
                     }
                 ]
         else:
@@ -60,7 +60,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 {
                     "organisation": "Default Organization", 
                     "country": "Unknown",
-                    "identifier": 1
+                    "organisation_identifier": 1
                 }
             ]
         
@@ -86,7 +86,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                 {
                     "organisation": "Not available",
                     "country": "Not available",
-                    "identifier": 1
+                    "organisation_identifier": 1
                 }
             ]
 
@@ -94,16 +94,16 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
         all_partial_results = []
         
         for org_info in _new_data:
-            org_id = org_info.get('identifier')
+            org_id = org_info.get('organisation_identifier')
             if org_id:
                 # Fetch the descriptive statistics from each organization
                 org_stats_raw = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
-                
+
                 # Convert the new format to the expected format
                 org_stats = {
                     'organisation': org_info['organisation'],
-                    'categorical': org_stats_raw.get('categorical_general_partial_statistics', '{}'),
-                    'numerical': org_stats_raw.get('numerical_general_partial_statistics', '{}')
+                    'categorical': org_stats_raw.get('categorical_general_partial_statistics', '{}').replace("http:\/\/ncicb.nci.nih.gov\/xml\/owl\/EVS\/Thesaurus.owl#", "ncit:"),
+                    'numerical': org_stats_raw.get('numerical_general_partial_statistics', '{}').replace("http:\/\/ncicb.nci.nih.gov\/xml\/owl\/EVS\/Thesaurus.owl#", "ncit:"),
                 }
                 all_partial_results.append(org_stats)
 
@@ -122,7 +122,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
     try:
         new_data = {item['organisation']: {k: v for k, v in item.items() if k != 'organisation'} for item in _new_data}
 
-        # Create a mapping of class codes to names
+        # Create a mapping of class codes to names TODO, do we still need this?
         variable_class_code_to_name = {v['class']: k for k, v in semantic_map.items()}
         value_class_code_to_name = {}
         for variable in variable_class_code_to_name.values():
@@ -159,17 +159,6 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
                     update_dict['numerical'] = numerical_data.to_json()
                 
                 new_data[org].update(update_dict)
-
-
-                # Replace NCIT URIs with ncit: prefix (accounting for escaped and unescaped slashes in JSON)
-                ncit_uri_escaped = 'http:\\/\\/ncicb.nci.nih.gov\\/xml\\/owl\\/EVS\\/Thesaurus.owl#'
-                ncit_uri_unescaped = 'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
-
-                update_dict['categorical'] = update_dict['categorical'].replace(ncit_uri_escaped, 'ncit:')
-                update_dict['categorical'] = update_dict['categorical'].replace(ncit_uri_unescaped, 'ncit:')
-
-                update_dict['numerical'] = update_dict['numerical'].replace(ncit_uri_escaped, 'ncit:')
-                update_dict['numerical'] = update_dict['numerical'].replace(ncit_uri_unescaped, 'ncit:')
 
     except TypeError:
         new_data = {}

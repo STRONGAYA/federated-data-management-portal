@@ -124,8 +124,8 @@ def _get_organization_sample_size(org_data):
                         ]
                         var_count = var_data['count'].sum()
                     max_count = max(max_count, var_count)
-            except (json.JSONDecodeError, KeyError):
-                pass
+                except (json.JSONDecodeError, KeyError):
+                    pass
         
         sample_size = max_count
     
@@ -325,7 +325,6 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         for org, org_data in data.items():
             filtered_data[timestamp][org] = org_data.copy()
 
-
             # Filter categorical data
             # Check for new format first, then fall back to old format
             categorical_key = None
@@ -475,19 +474,12 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     variable_info = global_semantic_map_data.get('variable_info')
     if variable_info is None:
         variable_info = {}
-    
-    # Debug: Add logging to understand what's happening
-    print(f"DEBUG: generate_fair_data_availability called")
-    print(f"DEBUG: variable_info has {len(variable_info)} variables: {list(variable_info.keys())}")
-    print(f"DEBUG: descriptive_data has {len(descriptive_data)} timestamps")
 
     # Find the most recent timestamp
     most_recent_timestamp = max(descriptive_data.keys(), key=lambda x: datetime.fromisoformat(x))
 
     # Select the data associated with the most recent timestamp
     descriptive_data_most_recent = descriptive_data[most_recent_timestamp]
-    
-    print(f"DEBUG: descriptive_data_most_recent has {len(descriptive_data_most_recent)} organizations: {list(descriptive_data_most_recent.keys())}")
 
     # Get the list of organizations from the descriptive data
     organizations = list(descriptive_data_most_recent.keys())
@@ -496,27 +488,24 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     if organizations:
         sample_org = organizations[0]
         sample_data = descriptive_data_most_recent[sample_org]
-        print(f"DEBUG: Sample organization '{sample_org}' has keys: {list(sample_data.keys())}")
         if 'categorical' in sample_data:
             try:
                 cat_data = json.loads(sample_data['categorical'])
                 if 'variable' in cat_data:
                     unique_vars = list(set(cat_data['variable'].values()))
-                    print(f"DEBUG: Categorical variables in data: {unique_vars[:5]}...")  # Show first 5
                 else:
-                    print(f"DEBUG: Categorical data keys: {list(cat_data.keys())}")
+                    pass
             except:
-                print("DEBUG: Failed to parse categorical data")
+                pass
         if 'numerical' in sample_data:
             try:
                 num_data = json.loads(sample_data['numerical'])
                 if 'variable' in num_data:
                     unique_vars = list(set(num_data['variable'].values()))
-                    print(f"DEBUG: Numerical variables in data: {unique_vars[:5]}...")  # Show first 5
                 else:
-                    print(f"DEBUG: Numerical data keys: {list(num_data.keys())}")
+                    pass
             except:
-                print("DEBUG: Failed to parse numerical data")
+                pass
 
     _variable_info = copy.deepcopy(variable_info)
 
@@ -525,8 +514,6 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     for variable in variable_info.keys():
         org_variable_counts = {}
         variable_class = _variable_info[variable].get("class")
-        
-        print(f"DEBUG: Processing variable '{variable}' with class '{variable_class}'")
 
         for organisation in organizations:
             org_data = descriptive_data_most_recent[organisation]
@@ -553,10 +540,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     ]
                     cat_count = var_data['count'].sum()
                     total_available += cat_count
-                    if cat_count > 0:
-                        print(f"DEBUG:   {organisation} categorical count for {variable_class}: {cat_count}")
                 except (json.JSONDecodeError, KeyError) as e:
-                    print(f"DEBUG:   Error processing categorical data for {organisation}: {e}")
                     pass
             
             # Process numerical data for this variable
@@ -579,18 +563,14 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                     ]
                     num_count = var_data['value'].sum()
                     total_available += num_count
-                    if num_count > 0:
-                        print(f"DEBUG:   {organisation} numerical count for {variable_class}: {num_count}")
                 except (json.JSONDecodeError, KeyError) as e:
-                    print(f"DEBUG:   Error processing numerical data for {organisation}: {e}")
                     pass
             
             org_variable_counts[organisation] = int(total_available)
 
         # Compute the total count across all organizations
         total_count = sum(org_variable_counts.values())
-        print(f"DEBUG: Variable '{variable}' total count: {total_count}")
-        
+
         # ALL variables should appear in the table, regardless of count
         # Variables with zero count will show crosses, variables with data will show appropriate symbols
 
@@ -763,36 +743,19 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
         # Append the row and tooltip row to the list of rows and tooltips
         df_rows.append(row)
         tooltips.append(tooltip_row)
-        print(f"DEBUG: Added variable '{variable}' to table with total count {total_count}")
 
     # Convert the list of rows to a DataFrame
     df = pd.DataFrame(df_rows)
-    
-    print(f"DEBUG: Created DataFrame with {len(df)} rows and {len(df.columns)} columns")
-    if len(df) > 0:
-        print(f"DEBUG: DataFrame columns: {list(df.columns)}")
-        print(f"DEBUG: DataFrame shape: {df.shape}")
-        print(f"DEBUG: First few rows:")
-        for i, row in df.head().iterrows():
-            print(f"DEBUG:   Row {i}: {dict(row)}")
-        print(f"DEBUG: DataFrame has data - proceeding with table creation")
-    else:
-        print("DEBUG: DataFrame is empty - this will cause the table to show 'No data available'")
 
     # Create a new DataFrame for display purposes with enhanced symbol logic
     display_df = df.copy()
-    
-    print(f"DEBUG: Display DataFrame shape before symbol processing: {display_df.shape}")
-    
+
     # Extract organization columns (skip 'Variables' and 'Total {text}s' columns)
     org_columns = [col for col in display_df.columns[2:] if not col.endswith('_status')]
-    
-    print(f"DEBUG: Organization columns found: {org_columns}")
-    
+
     for col in org_columns:
         status_col = f'{col}_status'
         if status_col in display_df.columns:
-            print(f"DEBUG: Processing column '{col}' with status column '{status_col}'")
             # Apply the enhanced symbol logic
             def get_symbol(row):
                 count, has_expected_classes, should_check_classes = row[status_col]
@@ -809,16 +772,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             # Remove the temporary status column
             display_df = display_df.drop(columns=[status_col])
         else:
-            print(f"DEBUG: No status column for '{col}', using fallback logic")
             # Fallback to original logic for columns without status info
             display_df[col] = display_df[col].apply(lambda x: '✔' if x > 0 else '✖')
-
-    print(f"DEBUG: Display DataFrame shape after symbol processing: {display_df.shape}")
-    print(f"DEBUG: Display DataFrame columns: {list(display_df.columns)}")
-    if len(display_df) > 0:
-        print(f"DEBUG: First few display rows:")
-        for i, row in display_df.head().iterrows():
-            print(f"DEBUG:   Display Row {i}: {dict(row)}")
 
     return df, create_data_table(display_df, tooltips)
 
@@ -840,65 +795,23 @@ def create_data_table(df, tooltips):
     Returns:
     dash_table.DataTable: The created Dash DataTable.
     """
-    print(f"DEBUG: create_data_table called with DataFrame shape: {df.shape}")
-    print(f"DEBUG: create_data_table DataFrame columns: {list(df.columns)}")
-    print(f"DEBUG: create_data_table tooltips count: {len(tooltips)}")
-    
-    # Debug tooltip structure
-    if len(tooltips) > 0:
-        print(f"DEBUG: First tooltip keys: {list(tooltips[0].keys()) if tooltips[0] else 'None'}")
-        print(f"DEBUG: Tooltip structure matches DataFrame columns: {set(tooltips[0].keys() if tooltips[0] else []) == set(df.columns)}")
-    
     _style_table = {'height': '450px', 'overflowY': 'auto', 'max-width': '100%', 'width': '100%', 'overflowX': 'auto'}
-    _style_cell = {'fontSize': '14px', 'border': 'none', 'padding': '0px 0px 0px 0px', 'textOverflow': 'ellipsis',
-                   'overflow': 'hidden'}
+    _style_cell = {
+        'fontSize': '14px',
+        'border': 'none',
+        'padding': '0px 0px 0px 0px',
+        'textOverflow': 'ellipsis',
+        'overflow': 'hidden'
+    }
     _style_data = {'border': 'none'}
     _style_header = {'position': 'sticky', 'top': 0, 'backgroundColor': '#ffffff', 'fontWeight': 'bold'}
-
-    # Guard against empty DataFrame
-    if df.empty or len(df.columns) == 0:
-        print("DEBUG: create_data_table detected empty DataFrame - returning 'No data available' message")
-        # Return an empty table with a message
-        empty_df = pd.DataFrame({'Message': ['No data available']})
-        data_table = dash_table.DataTable(
-            id='table-data-availability',
-            columns=[{"name": i, "id": i} for i in empty_df.columns],
-            data=empty_df.to_dict('records'),
-            style_table=_style_table,
-            style_cell=_style_cell,
-            style_data=_style_data,
-            style_header=_style_header,
-        )
-        return data_table
-
-    print(f"DEBUG: create_data_table creating table with {len(df)} rows and {len(df.columns)} columns")
-    print(f"DEBUG: create_data_table DataFrame data preview:")
-    for i, row in df.head().iterrows():
-        print(f"DEBUG:   Table Row {i}: {dict(row)}")
-
-    # Create tooltip data - fix potential mismatch between tooltips and DataFrame rows
-    tooltip_data = []
-    for i in range(len(df)):
-        if i < len(tooltips) and tooltips[i] is not None:
-            row_tooltip = {}
-            for column in df.columns:
-                if column in tooltips[i]:
-                    row_tooltip[column] = {'value': str(tooltips[i][column]), 'type': 'markdown'}
-                else:
-                    row_tooltip[column] = None
-            tooltip_data.append(row_tooltip)
-        else:
-            # Create empty tooltip for this row
-            tooltip_data.append({column: None for column in df.columns})
-    
-    print(f"DEBUG: Created {len(tooltip_data)} tooltip rows for {len(df)} data rows")
 
     data_table = dash_table.DataTable(
         id='table-data-availability',
         columns=[{"name": i, "id": i} for i in df.columns],
         data=df.to_dict('records'),
         style_table=_style_table,
-        style_cell={**_style_cell, 'width': '{}%'.format(100 / len(df.columns))},
+        style_cell=_style_cell,
         style_data=_style_data,
         style_header=_style_header,
         style_data_conditional=[
@@ -906,24 +819,24 @@ def create_data_table(df, tooltips):
             for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red'), ('!', 'orange')]
         ],
         style_cell_conditional=[
-            {'if': {'column_id': 'Variables'}, 'width': '20px'},
+            {'if': {'column_id': 'Variables'}, 'width': '10%', 'minWidth': '150px', 'maxWidth': '300px'},
+            {'if': {'column_id': 'Total AYAs'}, 'width': '5%', 'minWidth': '100px', 'maxWidth': '150px'},
             *[
-                {'if': {'column_id': col}, 'width': '10px'}
-                for col in df.columns[1:]
+                {'if': {'column_id': col}, 'width': '{}%'.format(45 / (len(df.columns) - 2)), 'minWidth': '60px'}
+                for col in df.columns[2:]
             ]
         ],
-        tooltip_data=tooltip_data,
+        tooltip_data=[
+            {column: {'value': str(tooltip[column]), 'type': 'markdown'}
+            if column in tooltip else None for column in df.columns}
+            for tooltip in tooltips
+        ],
         fixed_columns={'headers': True, 'data': 2},
         tooltip_duration=None,
-        filter_action="native",  # Enable search functionality
+        filter_action="native",
         sort_action="native",
         page_action="native",
     )
-    
-    print(f"DEBUG: create_data_table successfully created DataTable with id='{data_table.id}'")
-    print(f"DEBUG: DataTable has {len(data_table.data)} data records")
-    print(f"DEBUG: DataTable columns: {[col['name'] for col in data_table.columns]}")
-    
     return data_table
 
 
