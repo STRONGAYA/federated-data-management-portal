@@ -68,13 +68,13 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
         collaboration=config.get('collaboration'),
         organizations=organization_ids,
         name="Data management descriptive statistics",
-        image="ghcr.io/strongaya/v6-descriptive-statistics:v2.0.0-pre",
+        image="ghcr.io/strongaya/v6-descriptive-statistics@sha256:b3f86469fc339a77cbc5edac139912243db8e1051d0dfcbd508321a0100dd975",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
         input_={'method': 'partial_general_statistics',
                 'kwargs': {
                     'variables_to_describe': variables_to_describe
                 }},
-        databases=[{'label': 'triplestore'}]
+        databases=[{'label': 'rdf_store'}]
     )
 
     # Wait for results to be ready
