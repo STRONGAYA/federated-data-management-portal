@@ -5,6 +5,7 @@
   "server_api": "/api",
   "username": "org_1-admin",
   "password": "password",
+  "mfa_token": null,
   "organization_key": "",
   "organizations": [
     {
