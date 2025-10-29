@@ -71,10 +71,13 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
     variables_to_describe = {}
     for value in semantic_map.values():
-        if any(reconstruction.get('type') == 'node' for reconstruction in value.get('schema_reconstruction', [])):
+        data_type = value.get('data_type', None)
+        if data_type == 'continuous':
             variables_to_describe[value['class']] = {'datatype': 'numerical'}
-        else:
+        elif data_type == 'categorical':
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
+        else:
+            print(f"Warning: Variable {value['class']} has unknown data type {data_type}, skipping.")
 
     if config is not None:
         # Use hardcoded organization information from config

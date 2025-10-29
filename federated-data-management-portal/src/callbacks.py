@@ -31,7 +31,13 @@ def _get_organization_sample_size(org_data):
     int: The calculated sample size for the organization
     """
     sample_size = 0
-    
+
+    # Get pre-set sample size
+    _sample_size = org_data.get('sample_size', None)
+    if _sample_size:
+        sample_size = int(_sample_size)
+        return sample_size
+
     # First, try to find ncit:C164339 variable (preferred sample size variable)
     target_variable = "ncit:C164339"
     found_target = False
