@@ -585,7 +585,7 @@ class Dashboard:
         if isinstance(debug, bool) is False:
             debug = False
 
-        self.App.run_server(debug=debug, dev_tools_ui=False, host='0.0.0.0')
+        self.App.run(debug=debug, dev_tools_ui=False, host='0.0.0.0')
 
 
 if __name__ == '__main__':

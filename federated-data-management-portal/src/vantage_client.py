@@ -68,7 +68,7 @@ def retrieve_descriptive_statistics(config, organisation_id, variables_to_descri
         collaboration=config.get('collaboration'),
         organizations=organization_ids,
         name="Data management descriptive statistics",
-        image="ghcr.io/strongaya/v6-descriptive-statistics@sha256:b3f86469fc339a77cbc5edac139912243db8e1051d0dfcbd508321a0100dd975",
+        image="ghcr.io/strongaya/v6-descriptive-statistics@sha256:f97f3f1e4497193b87bb0ad669e2da166fd83a48132dbc12fba0b5c4fa442857",
         description='Task to retrieve the descriptive statistics in light of a data management portal.',
         input_={'method': 'partial_general_statistics',
                 'kwargs': {
