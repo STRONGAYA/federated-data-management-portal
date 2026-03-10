@@ -3,9 +3,9 @@ services:
     image: fdmp_image
     volumes:
       - ./federated-data-management-portal:/app
-      - ${JSON_FILE_PATH}:/app/schema.json
+      - ${JSON_FILE_PATH}:/app/schema.jsonld
     environment:
-      - JSON_FILE_PATH=/app/schema.json
+      - JSON_FILE_PATH=/app/schema.jsonld
     secrets:
       - vantage6_service_username
       - vantage6_service_password

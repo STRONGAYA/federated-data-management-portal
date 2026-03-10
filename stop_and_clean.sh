@@ -4,7 +4,7 @@
 docker stack rm federated-data-management
 
 # Remove the schema
-rm -f federated-data-management-portal/schema.json
+rm -f federated-data-management-portal/schema.jsonld
 
 # Remove the Docker secrets
 echo "Removing the following Docker secrets"
