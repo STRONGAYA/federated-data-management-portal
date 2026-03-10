@@ -1,10 +1,27 @@
 {
   "collaboration": 1,
-  "aggregating_organisation": 1,
   "server_url": "http://host.docker.internal",
   "server_port": 5000,
   "server_api": "/api",
   "username": "org_1-admin",
   "password": "password",
-  "organization_key": ""
+  "mfa_token": null,
+  "organization_key": "",
+  "organizations": [
+    {
+      "organisation": "Mare Moscoviense",
+      "country": "Far side of the Moon",
+      "identifier": 1
+    },
+    {
+      "organisation": "Mare Imbrium",
+      "country": "Near side of the Moon",
+      "identifier": 2
+    },
+    {
+      "organisation": "Mare Serenitatis",
+      "country": "Near side of the Moon",
+      "identifier": 3
+    }
+  ]
 }

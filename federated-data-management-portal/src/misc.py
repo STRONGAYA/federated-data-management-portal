@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from datetime import datetime
-from .vantage_client import retrieve_triplestore_collaboration_descriptives, retrieve_descriptive_statistics
+from .vantage_client import retrieve_descriptive_statistics
 
 
 def fetch_data(vantage6_config, descriptive_data, semantic_map):
@@ -28,6 +28,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
     dict: The updated descriptive data with the fetched data appended.
     """
     if vantage6_config is None:
+        # TODO correct this with new config setup; aggregating organisation doesnt exist anymore
         config = {
             'collaboration': read_docker_secret('vantage6_collaboration'),
             'aggregating_organisation': read_docker_secret('vantage6_aggregating_organisation'),
@@ -38,22 +39,79 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
             'password': read_docker_secret('vantage6_service_password'),
             'organization_key': read_docker_secret('vantage6_private_key_path')
         }
-        if all(value is None for value in config.values()):
+        
+        # Try to read organization information from Docker secrets
+        organizations_secret = read_docker_secret('vantage6_organizations')
+        if organizations_secret:
+            try:
+                config['organizations'] = json.loads(organizations_secret)
+            except json.JSONDecodeError:
+                print("Warning: Could not parse organizations from Docker secret, using fallback")
+                config['organizations'] = [
+                    {
+                        "organisation": "Default Organization",
+                        "country": "Unknown",
+                        "organisation_identifier": 1
+                    }
+                ]
+        else:
+            # Fallback organization structure if no secret is provided
+            config['organizations'] = [
+                {
+                    "organisation": "Default Organization", 
+                    "country": "Unknown",
+                    "organisation_identifier": 1
+                }
+            ]
+        
+        if all(value is None for key, value in config.items() if key != 'organizations'):
             config = None
     else:
         config = vantage6_config
 
     variables_to_describe = {}
     for value in semantic_map.values():
-        if any(reconstruction.get('type') == 'node' for reconstruction in value.get('schema_reconstruction', [])):
+        data_type = value.get('data_type', None)
+        if data_type == 'continuous':
             variables_to_describe[value['class']] = {'datatype': 'numerical'}
-        else:
+        elif data_type == 'categorical':
             variables_to_describe[value['class']] = {'datatype': 'categorical'}
+        else:
+            print(f"Warning: Variable {value['class']} has unknown data type {data_type}, skipping.")
 
     if config is not None:
-        # Fetch the new data from your task
-        _new_data = json.loads(retrieve_triplestore_collaboration_descriptives(config))
-        _new_descriptive_stats = json.loads(retrieve_descriptive_statistics(config, variables_to_describe))
+        # Use hardcoded organization information from config
+        if 'organizations' in config:
+            _new_data = config['organizations']
+        else:
+            # Fallback to default organization data if not provided in config
+            _new_data = [
+                {
+                    "organisation": "Not available",
+                    "country": "Not available",
+                    "organisation_identifier": 1
+                }
+            ]
+
+        # Collect results from each organization
+        all_partial_results = []
+        
+        for org_info in _new_data:
+            org_id = org_info.get('organisation_identifier')
+            if org_id:
+                # Fetch the descriptive statistics from each organization
+                org_stats_raw = json.loads(retrieve_descriptive_statistics(config, org_id, variables_to_describe))
+
+                # Convert the new format to the expected format
+                org_stats = {
+                    'organisation': org_info['organisation'],
+                    'categorical': org_stats_raw.get('categorical_general_partial_statistics', '{}').replace("http:\/\/ncicb.nci.nih.gov\/xml\/owl\/EVS\/Thesaurus.owl#", "ncit:"),
+                    'numerical': org_stats_raw.get('numerical_general_partial_statistics', '{}').replace("http:\/\/ncicb.nci.nih.gov\/xml\/owl\/EVS\/Thesaurus.owl#", "ncit:"),
+                }
+                all_partial_results.append(org_stats)
+
+        # Combine all partial results into the expected format
+        _new_descriptive_stats = {'partial_results': all_partial_results}
 
         # Clear the config; keep Docker's secrets, secret
         del config
@@ -67,7 +125,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
     try:
         new_data = {item['organisation']: {k: v for k, v in item.items() if k != 'organisation'} for item in _new_data}
 
-        # Create a mapping of class codes to names
+        # Create a mapping of class codes to names TODO, do we still need this?
         variable_class_code_to_name = {v['class']: k for k, v in semantic_map.items()}
         value_class_code_to_name = {}
         for variable in variable_class_code_to_name.values():
@@ -82,24 +140,28 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
         for org in new_data:
             if org in _new_stats:
-                new_data[org].update({
-                    'categorical': pd.DataFrame(json.loads(_new_stats[org]['categorical'])),
-                    'numerical': pd.DataFrame(json.loads(_new_stats[org]['numerical'])),
-                    'excluded_variables': _new_stats[org]['excluded_variables']
-                })
 
-                # TODO remove when ready
-                #new_data[org]['categorical']['variable'] = new_data[org]['categorical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
+                # Support both new and old format for backwards compatibility
+                org_stats = _new_stats[org]
+                update_dict = {}
 
-                # new_data[org]['categorical']['value'] = new_data[org]['categorical']['value'].apply(
-                #     lambda x: value_class_code_to_name.get(x, x))
-
-                #new_data[org]['numerical']['variable'] = new_data[org]['numerical']['variable'].apply(
-                 #   lambda x: variable_class_code_to_name.get(x, x))
-
-                new_data[org]['categorical'] = new_data[org]['categorical'].to_json()
-                new_data[org]['numerical'] = new_data[org]['numerical'].to_json()
+                # Handle categorical data - check for new format first, then old format
+                if 'categorical_general_partial_statistics' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical_general_partial_statistics']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                elif 'categorical' in org_stats:
+                    categorical_data = pd.DataFrame(json.loads(org_stats['categorical']))
+                    update_dict['categorical'] = categorical_data.to_json()
+                
+                # Handle numerical data - check for new format first, then old format  
+                if 'numerical_general_partial_statistics' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical_general_partial_statistics']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                elif 'numerical' in org_stats:
+                    numerical_data = pd.DataFrame(json.loads(org_stats['numerical']))
+                    update_dict['numerical'] = numerical_data.to_json()
+                
+                new_data[org].update(update_dict)
 
     except TypeError:
         new_data = {}
