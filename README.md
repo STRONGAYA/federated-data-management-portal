@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
   - Annotated data using the SIO's has-attribute relation 
   (http://semanticscience.org/resource/SIO_000008)
   - GraphDB instances running and accessible on distributed data stations
-  - JSON file containing the expected schema (see `example_data/schema.json` for an example)
+  - JSON-LD file containing the expected schema (see `example_data/schema.jsonld` for an example)
   - Credentials to send a task to the Vantage6 server
 - ### In development mode
   - Python 3.10 environment with libraries in `requirements.txt` installed
@@ -66,8 +66,8 @@ bash start.sh
 # "Please enter the id of the aggregating organisation:"
 # 1
 
-# "Please enter the path to the schema JSON file:"
-# example_data/schema.json
+# "Please enter the path to the schema JSON-LD file:"
+# example_data/schema.jsonld
 ```
 The application should now be running and available on `http://localhost:8050`.
 
@@ -94,14 +94,14 @@ You can then start the application using the following command:
 python main.py
 ```
 
-On startup, the application will prompt for any available Vantage6 server credentials and a schema JSON file.  
+On startup, the application will prompt for any available Vantage6 server credentials and a schema JSON-LD file.  
 This will appear as follows:
 ```python
 # "Please provide the path to the Vantage6 configuration JSON file or press enter to use mock data."
 # example_data/demo_network_config.json
 
-# "Please provide the path to the global schema JSON file."
-# example_data/schema.json
+# "Please provide the path to the global schema JSON-LD file."
+# example_data/schema.jsonld
 ```
 
 The application should now be running and available on `http://localhost:8050`.
@@ -115,5 +115,5 @@ Example Vantage6 server credentials that can directly be used with Vantage6's de
 - `mockresult.json`: This file contains mock data retrieved through a task using the 
 described Vantage6 algorithm and Vantage6 developer network. 
 The annotated data shown in this example was created using the example data in https://github.com/MaastrichtU-CDS/Flyover.
-- `schema.json`: This file contains the expected schema of the data that is to be shown in the application. 
+- `schema.jsonld`: This file contains the expected schema of the data that is to be shown in the application in JSON-LD format. 
 This schema was extracted from the example data in https://github.com/MaastrichtU-CDS/Flyover.
