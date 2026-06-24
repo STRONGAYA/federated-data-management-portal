@@ -1,17 +1,20 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# Set the working directory in the container to /app
 WORKDIR /app
 
-# Add the current directory contents into the container at /app
-ADD . /app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# uv creates the project virtual environment at /app/.venv by default.
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy a pinned uv binary from Astral's image instead of installing it at build time.
+COPY --from=ghcr.io/astral-sh/uv:0.11.24 /uv /usr/local/bin/uv
 
-# Make port 8050 available to the world outside this container
+COPY pyproject.toml uv.lock README.md LICENSE /app/
+COPY src /app/src
+# Install exactly the locked dependencies and package the app as a normal wheel.
+RUN uv sync --locked --no-dev --no-editable
+
 EXPOSE 8050
 
-# Run main.py when the container launches
-CMD ["python", "main.py"]
+CMD ["python", "-m", "federated_data_management_portal.main"]

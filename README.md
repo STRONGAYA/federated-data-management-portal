@@ -66,7 +66,7 @@ source .venv/bin/activate
 uv sync --no-dev
 SCHEMA_FILE_PATH=/path/to/schema.json \
 DASHBOARD_DATA_FILE_PATH=/path/to/dashboard.json \
-uv run python federated-data-management-portal/main.py
+uv run python -m federated_data_management_portal.main
 ```
 
 Both `SCHEMA_FILE_PATH` and `DASHBOARD_DATA_FILE_PATH` are required.
