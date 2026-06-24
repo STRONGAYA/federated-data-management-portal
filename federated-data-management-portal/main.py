@@ -2,52 +2,106 @@ import copy
 import dash
 import json
 import os
+from datetime import datetime
+from pathlib import Path
 
 import dash_bootstrap_components as dbc
 import plotly.io as pio
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from dash.dependencies import MATCH
 from dash.dependencies import Input, Output
 from dash import html, dcc
 
 # internal dependencies
 import src.callbacks as callbacks
-from src.misc import fetch_data
 
 pio.templates.default = 'seaborn'
 page_title = 'STRONG-AYA | Data Management Portal'
+PACKAGE_ROOT = Path(__file__).resolve().parent
+
+
+def load_json_file(json_file_path):
+    """Load a JSON file and fail with a clear message when the path is invalid."""
+    if not json_file_path:
+        raise SystemExit('A JSON file path is required.')
+
+    path = Path(json_file_path).expanduser()
+    if path.suffix != '.json':
+        raise SystemExit(f'Expected a .json file, got: {path}')
+    if not path.exists():
+        raise SystemExit(f'JSON file does not exist: {path}')
+
+    with path.open('r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def is_timestamp_key(value):
+    """Return whether a JSON object key can be treated as a dashboard timestamp."""
+    try:
+        datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def load_static_dashboard_data(dashboard_data_file_path):
+    """
+    Load dashboard data in the shape expected by the Dash callbacks.
+
+    The required static format is:
+    {
+      "2026-01-01T00:00:00": {
+        "Organisation name": {
+          "country": "Country",
+          "sample_size": 123,
+          "categorical": "{...}",
+          "numerical": "{...}"
+        }
+      }
+    }
+
+    Top-level keys must be ISO timestamps so exported dashboard snapshots retain
+    when the data was generated.
+    """
+    dashboard_data = load_json_file(dashboard_data_file_path)
+
+    if not isinstance(dashboard_data, dict):
+        raise SystemExit('Dashboard data JSON must contain an object at the top level.')
+
+    invalid_timestamp_keys = [key for key in dashboard_data.keys() if not is_timestamp_key(key)]
+    if invalid_timestamp_keys:
+        keys = ', '.join(str(key) for key in invalid_timestamp_keys[:3])
+        raise SystemExit(f'Dashboard data top-level keys must be ISO timestamps. Invalid key(s): {keys}')
+
+    return dashboard_data
 
 
 class Dashboard:
-    def __init__(self, json_file_path):
+    def __init__(self, schema_file_path, dashboard_data_file_path):
         """
         Initialize the Dashboard class.
 
-        This constructor method initializes the Dashboard class with a given JSON file path.
-        It loads data from the JSON file, sets up the Dash app with a layout and title, and registers callbacks.
+        This constructor method initializes the Dashboard class with local JSON files.
+        It loads the schema and dashboard data, sets up the Dash app with a layout and title,
+        and registers callbacks.
 
         Parameters:
-        json_file_path (str): The path to the JSON file to load data from.
-
-        Raises:
-        SystemExit: If the provided file path does not end with '.json'.
+        schema_file_path (str): The path to the schema JSON file.
+        dashboard_data_file_path (str): The path to the static dashboard data JSON file.
         """
-        if json_file_path.endswith('.json'):
-            with open(json_file_path, 'r') as f:
-                self.global_semantic_map_data = json.load(f)
-        else:
-            exit('Invalid semantic_map file path')
+        self.global_semantic_map_data = load_json_file(schema_file_path)
+        self.dashboard_data = load_static_dashboard_data(dashboard_data_file_path)
 
         # Set default max_depth for semantic_map category extraction
         self.max_depth = 1
 
-        # refers to <folder_with_this_file>/assets/dashboard_aesthetics.css
-        self.App = dash.Dash(__name__, pages_folder="pages", use_pages=True,
-                             external_stylesheets=['dashboard_aesthetics.css', dbc.themes.BOOTSTRAP])
+        # Dash automatically loads CSS and other static files from the assets directory.
+        self.App = dash.Dash(__name__, pages_folder=str(PACKAGE_ROOT / "pages"),
+                             assets_folder=str(PACKAGE_ROOT / "assets"), use_pages=True,
+                             external_stylesheets=[dbc.themes.BOOTSTRAP])
 
         self.App.layout = self.define_layout()
-        self.App._favicon = f'..{os.path.sep}assets{os.path.sep}favicon.ico'
+        self.App._favicon = 'favicon.ico'
         self.register_callbacks()
 
     def extract_categories_from_semantic_map(self, max_depth=0):
@@ -85,7 +139,7 @@ class Dashboard:
     def define_layout(self):
         return html.Div([
             dcc.Location(id='url', refresh=False),
-            dcc.Store(id='store'),
+            dcc.Store(id='store', data=self.dashboard_data),
             dcc.Store(id='data-availability-store-1'),
             html.Div([
                 dcc.Link('Data availability', href='/data-availability'),
@@ -588,36 +642,13 @@ class Dashboard:
         self.App.run(debug=debug, dev_tools_ui=False, host='0.0.0.0')
 
 
-if __name__ == '__main__':
-    json_file_path = os.getenv('JSON_FILE_PATH')
-    if json_file_path:
-        dash_app = Dashboard(json_file_path)
-        vantage6_config = None
-    else:
-        # This allows the user to provide the path to the global semantic_map and Vantage6 config when not running in Docker
-        config_path = input("Please provide the path to the Vantage6 configuration JSON file "
-                            "or press enter to use mock data.\n")
-        if len(config_path) == 0:
-            json_file_path = os.path.join(os.getcwd(), 'example_data', 'schema.json')
-        else:
-            json_file_path = input("Please provide the path to the global semantic_map JSON file.\n")
-        dash_app = Dashboard(json_file_path)
+def main():
+    schema_file_path = os.getenv('SCHEMA_FILE_PATH') or os.getenv('JSON_FILE_PATH')
+    dashboard_data_file_path = os.getenv('DASHBOARD_DATA_FILE_PATH')
 
-        if config_path and config_path.endswith('.json'):
-            with open(config_path, 'r') as f:
-                vantage6_config = json.load(f)
-        else:
-            vantage6_config = None
-
-    # Call the fetch_data function immediately at startup
-    dash_app.App.layout['store'].data = fetch_data(vantage6_config, None,
-                                                   dash_app.global_semantic_map_data['variable_info'])
-
-    # Run the fetch_data function every six days
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(lambda: setattr(dash_app.App.layout['store'], 'data',
-                                      fetch_data(vantage6_config, dash_app.App.layout['store'].data)),
-                      'interval', seconds=518400)
-    scheduler.start()
-
+    dash_app = Dashboard(schema_file_path, dashboard_data_file_path)
     dash_app.run()
+
+
+if __name__ == '__main__':
+    main()
