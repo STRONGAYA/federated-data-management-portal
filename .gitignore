@@ -45,3 +45,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Local mounted dashboard data
+data/

@@ -1,119 +1,83 @@
 # Federated Data Management Portal
-This repository contains the code for the Federated Data Management Portal,
-a web application that allows users to inspect data from multiple sources in a single interface.
-The application has a Vantage6 integration that is automatically enabled when the application is started.
-This integration will hereafter periodically repeat the task after a set interval 
-(given the application is kept running).
 
-The portal is built using Dash and Vantage6.  
-The provided implementation has a large dependency on the collaboration descriptives algorithm,
-please refer to its respective repository for more information
-(https://github.com/STRONGAYA/triplestore-collaboration-descriptives).
+This repository contains a Dash/Plotly dashboard for federated data management summaries.
+
+The application is static: it reads local JSON files and does not contact external services.
+For a hosted deployment, provide the schema and dashboard data as a Docker volume and run the
+application with Docker Compose.
 
 A demo can be seen below or found in the form of an mp4 file in the `example_data/` directory.
 
 https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
 
+## Data files
 
-## Prequisites
-- ### When using the triplestore-collaboration-descriptives algorithm (default)
-  - Vantage6 server and collaboration with nodes running on version 4.x.x
-  - Distributed data in RDF-triple format 
-  (produced using the Triplifier tool e.g. through https://github.com/MaastrichtU-CDS/Flyover)
-  - Annotated data using the SIO's has-attribute relation 
-  (http://semanticscience.org/resource/SIO_000008)
-  - GraphDB instances running and accessible on distributed data stations
-  - JSON file containing the expected schema (see `example_data/schema.json` for an example)
-  - Credentials to send a task to the Vantage6 server
-- ### In development mode
-  - Python 3.10 environment with libraries in `requirements.txt` installed
-  - Access to example data in `example_data/` or alternative data in the same format
+The Compose setup expects two files outside the repository:
 
+```text
+data/
+  schema.json
+  dashboard.json
+```
 
-## Running the application
-### In Docker
-The application can be run in a Docker container using the provided `docker-compose.yml` and `Dockerfile`.
-However, the application uses Docker secrets to store Vantage6 server credentials, 
-and for that reason we strongly recommend to use the provided shell script `start.sh` to run the application 
-as the necessary secrets will then be prompted.  
-This will appear as follows:
+`schema.json` contains the semantic schema used by the dashboard. It must include the schema
+metadata consumed by the callbacks, including `prefixes` and `variable_info`.
+
+`dashboard.json` contains the dashboard data consumed by the Dash callbacks. Top-level keys must be
+ISO timestamps for the generated dashboard snapshot:
+
+```json
+{
+  "2026-01-01T00:00:00": {
+    "Organisation name": {
+      "country": "Country",
+      "sample_size": 123,
+      "categorical": "{\"variable\":{},\"value\":{},\"count\":{}}",
+      "numerical": "{\"variable\":{},\"statistic\":{},\"value\":{}}"
+    }
+  }
+}
+```
+
+## Running With Docker Compose
+
+Create or mount the external `data/` directory, then run:
+
 ```bash
-bash start.sh
-
-# These example credentials can be found in `example_data/demo_network_config.json`
-
-# "Please enter the username of the service account:"
-# org_1-admin
-
-# "Please enter the password of the service account:"
-# password
-
-# "Please enter the server URL:"
-# http://host.docker.internal
-
-# "Please enter the server port:"
-# 5000
-
-# "Please enter the server API path:"
-# /api
-
-# "Please enter the collaboration id:"
-# 1
-
-# "Please enter the path to the private key in case encryption is enabled for this collaboration:"
-# (leave blank if unencrypted)
-
-# "Please enter the id of the aggregating organisation:"
-# 1
-
-# "Please enter the path to the schema JSON file:"
-# example_data/schema.json
+docker compose up --build
 ```
-The application should now be running and available on `http://localhost:8050`.
 
-You can stop and remove the set Docker secrets using the provided shell script `stop_and_clean.sh`.  
-Which can be run as follows:
+The dashboard will be available at `http://localhost:8050`.
+
+The default Compose file mounts `./data` to `/data` and sets:
+
+```text
+SCHEMA_FILE_PATH=/data/schema.json
+DASHBOARD_DATA_FILE_PATH=/data/dashboard.json
+```
+
+## Running Locally
+
+Use Python 3.12:
+
 ```bash
-bash stop_and_clean.sh
+python -m venv .venv
+source .venv/bin/activate
+uv sync --no-dev
+SCHEMA_FILE_PATH=/path/to/schema.json \
+DASHBOARD_DATA_FILE_PATH=/path/to/dashboard.json \
+uv run python federated-data-management-portal/main.py
 ```
 
-### In Python
-The application can also be run directly in Python. 
-For this it is necessary to have a Python 3.10 environment with the libraries in `requirements.txt` installed.  
-This can be achieved as follows:
-```bash
-python3 -m venv fdmp_env
+Both `SCHEMA_FILE_PATH` and `DASHBOARD_DATA_FILE_PATH` are required.
 
-source fdmp_env/bin/activate
+## Dependencies
 
-pip install -r requirements.txt
-```
+Runtime dependencies are pinned in `pyproject.toml`.
 
-You can then start the application using the following command:
-```bash
-python main.py
-```
+The default install contains only the static dashboard stack:
 
-On startup, the application will prompt for any available Vantage6 server credentials and a schema JSON file.  
-This will appear as follows:
-```python
-# "Please provide the path to the Vantage6 configuration JSON file or press enter to use mock data."
-# example_data/demo_network_config.json
-
-# "Please provide the path to the global schema JSON file."
-# example_data/schema.json
-```
-
-The application should now be running and available on `http://localhost:8050`.
-
-## Example data
-The application comes with example data in the `example_data/` directory.
-This data consists of the following:
-- `demo_network_config.json`: 
-Example Vantage6 server credentials that can directly be used with Vantage6's developer network 
-(you can set this up through `v6 dev create-demo-network` and `v6 dev start-demo-network` respectively)
-- `mockresult.json`: This file contains mock data retrieved through a task using the 
-described Vantage6 algorithm and Vantage6 developer network. 
-The annotated data shown in this example was created using the example data in https://github.com/MaastrichtU-CDS/Flyover.
-- `schema.json`: This file contains the expected schema of the data that is to be shown in the application. 
-This schema was extracted from the example data in https://github.com/MaastrichtU-CDS/Flyover.
+- Dash
+- dash-bootstrap-components
+- pandas
+- Plotly
