@@ -404,9 +404,9 @@ class Dashboard:
              Input({'type': 'dynamic-donut-three', 'index': MATCH}, 'figure'),
              Input({'type': 'dynamic-donut-four', 'index': MATCH}, 'figure'),
              Input({'type': 'dynamic-donut-five', 'index': MATCH}, 'figure'),
-             Input({'type': 'dynamic-donut-sex', 'index': MATCH}, 'figure')]
+             Input({'type': 'dynamic-donut-six', 'index': MATCH}, 'figure')]
         )
-        def update_graph_style(figure_one, figure_two, figure_three, figure_four):
+        def update_graph_style(figure_one, figure_two, figure_three, figure_four, figure_five, figure_six):
             """
             Callback function to update the style of the donut charts.
 
@@ -431,16 +431,21 @@ class Dashboard:
             legend_length_two = len(figure_two['data'][0]['labels'])
             legend_length_three = len(figure_three['data'][0]['labels'])
             legend_length_four = len(figure_four['data'][0]['labels'])
+            legend_length_five = len(figure_five['data'][0]['labels'])
+            legend_length_six = len(figure_six['data'][0]['labels'])
 
             # Calculate the height of the dcc.Graph components based on the length of the legends
             height_one = max(400, legend_length_one * 20 + 200)
             height_two = max(400, legend_length_two * 20 + 200)
             height_three = max(400, legend_length_three * 20 + 200)
             height_four = max(400, legend_length_four * 20 + 200)
+            height_five = max(400, legend_length_five * 20 + 200)
+            height_six = max(400, legend_length_six * 20 + 200)
 
             # Return the new styles
             return ({'height': f'{height_one}px'}, {'height': f'{height_two}px'},
-                    {'height': f'{height_three}px'}, {'height': f'{height_four}px'})
+                    {'height': f'{height_three}px'}, {'height': f'{height_four}px'},
+                    {'height': f'{height_five}px'}, {'height': f'{height_six}px'})
 
         @self.App.callback(
             [Output('tile-content-6', 'children'),
