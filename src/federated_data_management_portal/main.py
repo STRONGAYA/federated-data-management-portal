@@ -12,8 +12,7 @@ from dash.dependencies import MATCH
 from dash.dependencies import Input, Output
 from dash import html, dcc
 
-# internal dependencies
-import src.callbacks as callbacks
+from federated_data_management_portal import callbacks
 
 pio.templates.default = 'seaborn'
 page_title = 'STRONG-AYA | Data Management Portal'
