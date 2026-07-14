@@ -72,6 +72,48 @@ body {
     z-index: 1;
 }
 
+.authenticated-user-container {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    gap: 1rem;
+    height: 4.35%;
+    justify-content: flex-end;
+    left: 0;
+    padding: 0 1rem;
+    position: absolute;
+    top: 0;
+    width: 80%;
+    z-index: 2;
+}
+
+.authenticated-user-email {
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1;
+    max-width: 35%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.authenticated-user-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.authenticated-user-action {
+    color: #ffffff;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.authenticated-user-action:hover,
+.authenticated-user-action:focus {
+    color: #ffffff;
+    text-decoration-thickness: 2px;
+}
+
 .text-container {
     width: 45%;
     background-color: transparent;
@@ -432,4 +474,3 @@ body {
     border-color: #007bff !important;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
 }
-

@@ -11,8 +11,10 @@ import plotly.io as pio
 from dash.dependencies import MATCH
 from dash.dependencies import Input, Output
 from dash import html, dcc
+from flask import request
 
 from federated_data_management_portal import callbacks
+from federated_data_management_portal.auth import authenticated_email_from_headers
 
 pio.templates.default = 'seaborn'
 page_title = 'STRONG-AYA | Data Management Portal'
@@ -138,6 +140,18 @@ class Dashboard:
     def define_layout(self):
         return html.Div([
             dcc.Location(id='url', refresh=False),
+            html.Div(id='authenticated-user-container', className='authenticated-user-container',
+                     hidden=True, children=[
+                html.Span(id='authenticated-user-email', className='authenticated-user-email',
+                          **{'aria-label': 'Signed-in user email'}),
+                html.Div(className='authenticated-user-actions', children=[
+                    html.A('Sign out (switch account)', href='/oauth2/sign_out',
+                           className='authenticated-user-action'),
+                    html.A('Manage Microsoft permissions ↗', href='https://myapps.microsoft.com/',
+                           target='_blank', rel='noopener noreferrer',
+                           className='authenticated-user-action')
+                ])
+            ]),
             dcc.Store(id='store', data=self.dashboard_data),
             dcc.Store(id='data-availability-store-1'),
             html.Div([
@@ -149,6 +163,22 @@ class Dashboard:
 
     def register_callbacks(self):
         """"""
+
+        @self.App.callback(
+            Output('authenticated-user-email', 'children'),
+            Input('url', 'pathname')
+        )
+        def show_authenticated_user(_pathname):
+            """Display identity metadata forwarded by the authentication proxy."""
+            return authenticated_email_from_headers(request.headers)
+
+        @self.App.callback(
+            Output('authenticated-user-container', 'hidden'),
+            Input('authenticated-user-email', 'children')
+        )
+        def show_authenticated_user_actions(email):
+            """Show account actions only when proxy identity metadata is present."""
+            return not bool(email)
 
         @self.App.callback(
             Output('url', 'pathname'),
