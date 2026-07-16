@@ -1,0 +1,60 @@
+name: Build and publish dashboard image
+
+on:
+  push:
+    # A tag such as release/v1.2.3 publishes image tag v1.2.3.
+    tags:
+      - "release/v*"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-push-and-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      # Checkout reads the repository and the built-in token publishes its GHCR
+      # package. No separately managed registry credentials are required.
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        # https://github.com/actions/checkout/releases/tag/v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Extract image name and version
+        shell: bash
+        run: |
+          echo "VERSION_TAG=${GITHUB_REF#refs/tags/release/}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        # https://github.com/docker/login-action/releases/tag/v3.3.0
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push dashboard image
+        id: docker_build
+        # https://github.com/docker/build-push-action/releases/tag/v6.15.0
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION_TAG }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION_TAG }}
+
+      - name: Print published image references
+        shell: bash
+        run: |
+          echo 'Version: ${{ env.VERSION_TAG }}'
+          echo 'Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION_TAG }}'
+          echo 'Digest: ${{ steps.docker_build.outputs.digest }}'
+          echo 'Pinned image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.docker_build.outputs.digest }}'
