@@ -71,6 +71,15 @@ uv run python -m federated_data_management_portal.main
 
 Both `SCHEMA_FILE_PATH` and `DASHBOARD_DATA_FILE_PATH` are required.
 
+## Tests
+
+Run the test suite with the dev dependencies:
+
+```bash
+uv sync
+uv run --group dev pytest tests/
+```
+
 ## Dependencies
 
 Runtime dependencies are pinned in `pyproject.toml`.
