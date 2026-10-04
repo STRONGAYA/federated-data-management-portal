@@ -1239,11 +1239,13 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             # Keep a mapping of readable names to original codes for tooltip lookup
             var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
-            # Calculate percentages
-            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
-            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            # Calculate percentages; variables without any data points count as 0%
+            totals = visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s']
+            nonzero_totals = totals.replace(0, np.nan)
+            visualisation_df[f'Percentage available {text}s'] = (
+                    visualisation_df[f'Total available {text}s'] / nonzero_totals).fillna(0)
+            visualisation_df[f'Percentage unavailable {text}s'] = (
+                    visualisation_df[f'Total unavailable {text}s'] / nonzero_totals).fillna(0)
 
             # Ensure minimum bar height
             min_bar_height = 0.01
@@ -1350,11 +1352,13 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             # Keep a mapping of readable names to original codes for tooltip lookup
             var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
-            # Calculate percentages
-            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
-            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            # Calculate percentages; variables without any data points count as 0%
+            totals = visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s']
+            nonzero_totals = totals.replace(0, np.nan)
+            visualisation_df[f'Percentage available {text}s'] = (
+                    visualisation_df[f'Total available {text}s'] / nonzero_totals).fillna(0)
+            visualisation_df[f'Percentage unavailable {text}s'] = (
+                    visualisation_df[f'Total unavailable {text}s'] / nonzero_totals).fillna(0)
 
             # Ensure minimum bar height
             min_bar_height = 0.01
