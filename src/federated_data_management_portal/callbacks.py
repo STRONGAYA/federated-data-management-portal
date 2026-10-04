@@ -73,6 +73,25 @@ def _load_organization_stats(org_data):
     return categorical, numerical
 
 
+def _safe_ratio(numerator, denominator):
+    """
+    Divide scalar counts, returning 0 when the denominator is zero.
+
+    An organisation without any data points has no relative missing data, so
+    its chart shows 0 instead of nan.
+
+    Parameters:
+    numerator (number): The numerator.
+    denominator (number): The denominator.
+
+    Returns:
+    float: The ratio, or 0 when the denominator is zero.
+    """
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
+
+
 def _get_organization_sample_size(org_data):
     """
     Helper function to get the sample size for a single organization.
@@ -968,9 +987,10 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
 
                     # Sum relative missing counts
-                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
-                            (total_categorical_count + missing_categorical_count) + (
-                            total_numerical_count + missing_numerical_count))
+                    relative_missing_count = _safe_ratio(
+                        missing_categorical_count + missing_numerical_count,
+                        (total_categorical_count + missing_categorical_count)
+                        + (total_numerical_count + missing_numerical_count))
                     missing_counts.append(total_categorical_count + total_numerical_count)
                     _custom_data.append((round((relative_missing_count * 100), 1)))
 
@@ -991,9 +1011,10 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
 
                     # Sum relative missing counts
-                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
-                            (total_categorical_count + missing_categorical_count) + (
-                            total_numerical_count + missing_numerical_count))
+                    relative_missing_count = _safe_ratio(
+                        missing_categorical_count + missing_numerical_count,
+                        (total_categorical_count + missing_categorical_count)
+                        + (total_numerical_count + missing_numerical_count))
                     country_data[data["country"]] += (total_categorical_count + total_numerical_count)
                     relative_country_data[data["country"]] += round((relative_missing_count * 100), 1)
 
