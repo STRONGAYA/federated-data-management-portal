@@ -64,6 +64,26 @@ class ExampleDataTests(unittest.TestCase):
 
         self.assertEqual(len(figure["data"]), 3)
 
+    def test_organisations_keep_their_colour_across_charts(self):
+        donut = callbacks.generate_donut_chart(
+            self.dashboard_data, chart_domain="availability", chart_type="organisation")
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        donut_colours = dict(zip(donut.data[0].labels, donut.data[0].marker.colors))
+        over_time_colours = {trace.name: trace.marker.color for trace in over_time.data}
+        horizontal_colours = {trace["name"]: trace["marker"]["color"] for trace in horizontal["data"]}
+
+        for org in donut_colours:
+            self.assertEqual(donut_colours[org], over_time_colours[org])
+            self.assertEqual(donut_colours[org], horizontal_colours[org])
+
+    def test_country_donuts_keep_default_sector_colours(self):
+        donut = callbacks.generate_donut_chart(
+            self.dashboard_data, chart_domain="availability", chart_type="country")
+
+        self.assertIsNone(donut.data[0].marker.colors)
+
     def test_charts_fill_their_container(self):
         donut = callbacks.generate_donut_chart(self.dashboard_data, chart_domain="availability")
         bar = callbacks.generate_variable_bar_chart(

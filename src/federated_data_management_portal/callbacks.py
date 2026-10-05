@@ -6,6 +6,7 @@ import re
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 
 from collections import defaultdict
 from dash import dash_table
@@ -90,6 +91,26 @@ def _safe_ratio(numerator, denominator):
     if denominator == 0:
         return 0.0
     return numerator / denominator
+
+
+def _organisation_color_map(descriptive_data):
+    """
+    Assign every organisation a fixed colour from the active template colourway.
+
+    The donut charts and the availability over time chart draw the same
+    organisations; both look up their colours here, so an organisation keeps
+    its colour across every chart on the page.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; every organisation in any
+                             snapshot receives a colour.
+
+    Returns:
+    dict: Organisation name mapped to a colour from the template colourway.
+    """
+    organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
+    colorway = pio.templates[pio.templates.default].layout.colorway
+    return {org: colorway[i % len(colorway)] for i, org in enumerate(organisations)}
 
 
 def _get_organization_sample_size(org_data):
@@ -486,6 +507,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     dates = [datetime.fromisoformat(timestamp) for timestamp in timestamps]
 
     figure = go.Figure()
+    organisation_colors = _organisation_color_map(descriptive_data)
     for org in organisations:
         sizes = [
             _get_organization_sample_size(descriptive_data[timestamp][org])
@@ -496,6 +518,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             x=dates,
             y=sizes,
             name=org,
+            marker=dict(color=organisation_colors[org]),
             hovertemplate=(f"<b>{org}</b><br>"
                            f"%{{x|%d %B %Y}}: <b>%{{y:,}}</b> {text}{'s' if text[-1:] != 's' else ''}<extra></extra>"),
         ))
@@ -566,7 +589,9 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         total_sample_size = sum(sample_sizes)
         proportions = [round((size / total_sample_size), ndigits=2) if total_sample_size > 0 else 0 for size in sample_sizes]
 
-        # Create the data for the bar chart
+        # Create the data for the bar chart, keeping every organisation on the
+        # colour it has in the donut charts and the availability over time chart.
+        organisation_colors = _organisation_color_map(descriptive_data)
         data = [
             dict(
                 x=[proportions[i]],
@@ -574,7 +599,7 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
                 name=org,
                 type='bar',
                 orientation='h',
-                marker=dict(line=dict(width=0)),
+                marker=dict(color=organisation_colors[org], line=dict(width=0)),
                 hovertemplate=(
                     f"{org} has made data of {sample_sizes[i]} {text}{'s' if sample_sizes[i] > 1 else ''} available, "
                     f"which is {proportions[i] * 100:.2f}% of all available {text} data."
@@ -1190,6 +1215,14 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     f"Plausible {text} data points: <b>%{{value}}</b><br>" \
                     f"Proportion of all plausible {text} data points: <b>%{{percent}}</b>"
 
+        # Keep every organisation on the colour it has in the availability over
+        # time chart; country charts keep plotly's default sector colours.
+        if chart_type == "organisation":
+            organisation_colors = _organisation_color_map(descriptive_data)
+            sector_colors = [organisation_colors.get(label) for label in labels]
+        else:
+            sector_colors = None
+
         data = [
             dict(
                 labels=labels,
@@ -1199,7 +1232,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 name='',
                 hovertemplate=(hover),
                 customdata=_custom_data,
-                textinfo='value'
+                textinfo='value',
+                marker=dict(colors=sector_colors)
             )
         ]
 
