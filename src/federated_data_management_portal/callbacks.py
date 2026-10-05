@@ -1005,11 +1005,13 @@ def create_data_table(df, tooltips):
         'fontSize': '14px',
         'border': 'none',
         'padding': '0px 0px 0px 0px',
+        'whiteSpace': 'normal',
         'textOverflow': 'ellipsis',
         'overflow': 'hidden'
     }
     _style_data = {'border': 'none'}
-    _style_header = {'position': 'sticky', 'top': 0, 'backgroundColor': '#ffffff', 'fontWeight': 'bold'}
+    _style_header = {'position': 'sticky', 'top': 0, 'backgroundColor': '#ffffff', 'fontWeight': 'bold',
+                     'whiteSpace': 'normal'}
 
     data_table = dash_table.DataTable(
         id='table-data-availability',
@@ -1024,10 +1026,14 @@ def create_data_table(df, tooltips):
             for col in df.columns[2:] for symbol, color in [('✔', 'green'), ('✖', 'red'), ('!', 'orange')]
         ],
         style_cell_conditional=[
-            {'if': {'column_id': 'Variables'}, 'width': '10%', 'minWidth': '150px', 'maxWidth': '300px'},
-            {'if': {'column_id': 'Total AYAs'}, 'width': '5%', 'minWidth': '100px', 'maxWidth': '150px'},
+            # Fixed columns require pixel widths; percentage widths are not
+            # applied and leave the organisation columns far too wide.
+            {'if': {'column_id': 'Variables'}, 'width': '160px'},
+            {'if': {'column_id': 'Total AYAs'}, 'width': '70px'},
             *[
-                {'if': {'column_id': col}, 'width': '{}%'.format(45 / (len(df.columns) - 2)), 'minWidth': '60px'}
+                # The organisation columns hold a single availability symbol;
+                # the header text wraps vertically to keep the columns narrow.
+                {'if': {'column_id': col}, 'width': '80px'}
                 for col in df.columns[2:]
             ]
         ],
