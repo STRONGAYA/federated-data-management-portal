@@ -57,6 +57,7 @@ class ChartModeBarTests(unittest.TestCase):
         self.assertGreater(len(graphs), 0)
         for graph in graphs:
             self.assertEqual(graph.config.get("modeBarButtons"), [["toImage"]], graph.id)
+            self.assertIs(graph.config.get("displayModeBar"), True, graph.id)
             self.assertIs(graph.config.get("displaylogo"), False, graph.id)
 
     def test_every_chart_has_a_download_filename(self):

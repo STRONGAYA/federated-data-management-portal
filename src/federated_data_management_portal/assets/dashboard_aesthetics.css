@@ -492,9 +492,3 @@ body {
     font-size: 0.75rem;
     color: #8a8a8a;
 }
-
-/* The mode bar holds a single control (the chart download); plotly hides it
-   until the chart is hovered. Show it permanently so users can find it. */
-.modebar--hover > :not(.watermark) {
-    opacity: 1 !important;
-}

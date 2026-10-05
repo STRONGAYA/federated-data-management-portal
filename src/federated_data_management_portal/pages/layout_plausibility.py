@@ -70,6 +70,8 @@ layout = html.Div([
                         dcc.Graph(
                             id={'type': 'dynamic-donut-five', 'index': 1},
                             config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+
                                 'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
@@ -87,6 +89,8 @@ layout = html.Div([
                         dcc.Graph(
                             id={'type': 'dynamic-donut-six', 'index': 2},
                             config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+
                                 'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
@@ -124,6 +128,8 @@ layout = html.Div([
                 dcc.Graph(
                     id={'type': 'dynamic-plausibility-bar', 'index': 3},
                     config={'modeBarButtons': [['toImage']],
+                        'displayModeBar': True,
+
                         'displaylogo': False,
                         'toImageButtonOptions': {
                             'format': 'svg',
