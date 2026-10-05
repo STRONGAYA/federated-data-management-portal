@@ -64,6 +64,30 @@ class ExampleDataTests(unittest.TestCase):
 
         self.assertEqual(len(figure["data"]), 3)
 
+    def test_charts_fill_their_container(self):
+        donut = callbacks.generate_donut_chart(self.dashboard_data, chart_domain="availability")
+        bar = callbacks.generate_variable_bar_chart(
+            self.dashboard_data, domain="completeness", semantic_map_data=self.schema)
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        for figure in (donut, bar, over_time):
+            self.assertIsNone(figure.layout.width)
+        self.assertNotIn("width", horizontal["layout"])
+
+    def test_charts_have_transparent_backgrounds(self):
+        donut = callbacks.generate_donut_chart(self.dashboard_data, chart_domain="availability")
+        bar = callbacks.generate_variable_bar_chart(
+            self.dashboard_data, domain="completeness", semantic_map_data=self.schema)
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        for figure in (donut, bar, over_time):
+            self.assertEqual(figure.layout.paper_bgcolor, "rgba(0,0,0,0)")
+            self.assertEqual(figure.layout.plot_bgcolor, "rgba(0,0,0,0)")
+        self.assertEqual(horizontal["layout"]["paper_bgcolor"], "rgba(0,0,0,0)")
+        self.assertEqual(horizontal["layout"]["plot_bgcolor"], "rgba(0,0,0,0)")
+
     def test_over_time_chart_renders_all_snapshots(self):
         figure = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
 
