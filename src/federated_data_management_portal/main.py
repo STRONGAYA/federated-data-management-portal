@@ -156,7 +156,7 @@ class Dashboard:
             dcc.Store(id='data-availability-store-1'),
             html.Div([
                 dcc.Link('Data availability', href='/data-availability'),
-                dcc.Link('Missing Data', href='/data-missingness')
+                dcc.Link('Missing Data', href='/data-completeness')
             ]),
             dash.page_container
         ])
