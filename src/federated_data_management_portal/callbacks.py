@@ -443,6 +443,95 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     return filtered_data, selected_variable_classes
 
 
+def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
+    """
+    Generate a stacked area chart of available sample sizes over time.
+
+    Each snapshot timestamp contributes a point on the horizontal axis. The areas
+    stack the sample sizes of the individual organisations, so the top of the stack
+    is the total number of available data points at that moment, and the width of
+    each band shows the contribution of a single organisation.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data to generate the chart from. Each key is a timestamp,
+                             and each value is a dictionary containing the data fetched at that timestamp.
+    text (str, optional): The text to use in the chart title and hovertemplate. Defaults to "AYA".
+
+    Returns:
+    go.Figure: The figure for the chart, or an annotation figure when no data is available.
+    """
+    if not descriptive_data:
+        figure = go.Figure()
+        figure.update_layout(
+            annotations=[dict(
+                text=f'No {text} data available',
+                font=dict(family='Poppins, sans-serif', size=20),
+                showarrow=False,
+                x=0.5, y=0.5, xref='paper', yref='paper',
+                xanchor='center', yanchor='middle',
+            )],
+            font=dict(family='Poppins, sans-serif'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            width=1100,
+            height=400,
+        )
+        return figure
+
+    timestamps = sorted(descriptive_data.keys())
+    organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
+
+    dates = [datetime.fromisoformat(timestamp) for timestamp in timestamps]
+
+    figure = go.Figure()
+    for org in organisations:
+        sizes = [
+            _get_organization_sample_size(descriptive_data[timestamp][org])
+            if org in descriptive_data[timestamp] else 0
+            for timestamp in timestamps
+        ]
+        figure.add_trace(go.Scatter(
+            x=dates,
+            y=sizes,
+            name=org,
+            mode='lines+markers',
+            stackgroup='organisations',
+            hoveron='points+fills',
+            hovertemplate=(f"<b>{org}</b><br>"
+                           f"%{{x|%d %B %Y}}: <b>%{{y:,}}</b> {text}{'s' if text[-1:] != 's' else ''}<extra></extra>"),
+        ))
+
+    # Annotate the running total above each snapshot so the headline numbers are readable at a glance.
+    totals = [0] * len(timestamps)
+    for timestamp_index, timestamp in enumerate(timestamps):
+        for org in descriptive_data[timestamp]:
+            totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
+    top = max(totals) if totals else 1
+    figure.update_layout(
+        annotations=[
+            dict(
+                text=f'{total:,}',
+                font=dict(family='Poppins, sans-serif', size=13, color='#484848'),
+                showarrow=False,
+                x=date, y=total, xref='x', yref='y',
+                xanchor='center', yanchor='bottom', yshift=8,
+            )
+            for date, total in zip(dates, totals)
+        ],
+        title=f'Available {text} data points over time',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        width=1100,
+        height=400,
+        margin=dict(l=60, r=20, t=60, b=20),
+        yaxis=dict(title=f'Number of {text} data points', rangemode='tozero'),
+        xaxis=dict(title=None, tickformat='%d %b %Y'),
+        legend=dict(orientation='h', yanchor='bottom', y=-0.35, xanchor='center', x=0.5),
+    )
+
+    return figure
+
+
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
     """
     Function to generate a horizontal bar chart of sample sizes per organisation.

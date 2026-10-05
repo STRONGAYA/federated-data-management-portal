@@ -111,6 +111,27 @@ layout = html.Div([
                     width=6)
             ])
         ]),
+        html.Div(id='tile-7', className='tile tile-7', children=[
+            html.H5('Data availability over time', className='tile-title'),
+            html.Div(id='tile-content-8', className='tile-content', children=[
+                dcc.Graph(
+                    id='availability-over-time',
+                    config={
+                        'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
+                                                   'zoomOut2d', 'autoScale2d', 'resetScale2d',
+                                                   'hoverClosestCartesian', 'hoverCompareCartesian',
+                                                   'toggleSpikelines'],
+                        'toImageButtonOptions': {
+                            'format': 'svg',
+                            'filename': 'availability-over-time',
+                            'height': 500,
+                            'width': 1100,
+                            'scale': 1
+                        }
+                    }
+                )
+            ])
+        ]),
         html.Div(id='tile-6', className='tile tile-6', children=[
             html.H5('Semantic consistency', className='tile-title'),
             html.Div(children=[

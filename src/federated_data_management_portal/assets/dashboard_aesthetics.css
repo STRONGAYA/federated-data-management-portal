@@ -390,6 +390,16 @@ body {
     margin-top: 2.5%;
 }
 
+.tile-7 {
+    padding: 10px;
+    margin-top: 2.5%;
+}
+
+.tile-7 .tile-content {
+    overflow: visible !important;
+    white-space: normal;
+}
+
 .tile-title {
     font-size: 24px;
     color: #484848;

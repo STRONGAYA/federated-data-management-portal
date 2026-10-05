@@ -64,6 +64,29 @@ class ExampleDataTests(unittest.TestCase):
 
         self.assertEqual(len(figure["data"]), 3)
 
+    def test_over_time_chart_renders_all_snapshots(self):
+        figure = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+
+        for trace in figure.data:
+            self.assertEqual(len(trace.x), 2)
+        self.assertEqual(
+            [annotation.text for annotation in figure.layout.annotations],
+            ["41,925", "100,150"],
+        )
+
+    def test_over_time_chart_handles_a_single_snapshot(self):
+        single = {"2026-01-01T00:00:00": self.dashboard_data["2026-01-01T00:00:00"]}
+
+        figure = callbacks.generate_sample_size_over_time_chart(single)
+
+        for trace in figure.data:
+            self.assertEqual(len(trace.x), 1)
+
+    def test_over_time_chart_handles_empty_data(self):
+        figure = callbacks.generate_sample_size_over_time_chart({})
+
+        self.assertEqual(len(figure.data), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

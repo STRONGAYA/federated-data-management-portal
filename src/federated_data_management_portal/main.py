@@ -666,6 +666,27 @@ class Dashboard:
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
 
+        @self.App.callback(
+            Output('availability-over-time', 'figure'),
+            [Input('store', 'data')]
+        )
+        def update_availability_over_time(descriptive_data):
+            """
+            Callback function to update the data availability over time chart.
+
+            This function is triggered whenever the data in the 'store' component changes.
+            It calls the `generate_sample_size_over_time_chart` function from the `callbacks`
+            module with the stored data, which stacks the sample sizes of all organisations
+            per snapshot timestamp.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated availability over time chart figure.
+            """
+            return callbacks.generate_sample_size_over_time_chart(descriptive_data)
+
     def run(self, debug=None):
         """
         Start the Plotly Dash dashboard
