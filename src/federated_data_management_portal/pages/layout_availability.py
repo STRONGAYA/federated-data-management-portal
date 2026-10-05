@@ -1,11 +1,17 @@
 import dash
 import os
+
 import dash_bootstrap_components as dbc
+
 from dash import html, dcc
 
+from federated_data_management_portal import portal_version
+
 page_title = 'STRONG-AYA | Data Management Portal'
+
 aesthetic_logo_alt_text = 'STRONG-AYA Logo'
 aesthetic_title = 'Data management portal'
+
 secondary_headers = {
     "HOME": "https://strongaya.eu/",
     "ABOUT US": "https://strongaya.eu/about-us",
@@ -14,9 +20,10 @@ secondary_headers = {
     "NEWS": "https://strongaya.eu/news/",
     "CONTACT <white-text>": "https://strongaya.eu/contact/"
 }
+
 tile_placeholders = ["0 countries", "0 institutions", "0 AYAs"]
 
-dash.register_page(__name__, path='/data-plausibility', title=page_title)
+dash.register_page(__name__, path='/data-availability', title=page_title)
 
 layout = html.Div([
     html.Header([
@@ -60,13 +67,12 @@ layout = html.Div([
             ])
         ]),
         html.Div([
-            html.H3(id='plausibility-title', className='page-title',
-                    children='Data plausibility'),
+            html.H3(id='availability-title', className='page-title', children='Data availability'),
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
                         dcc.Graph(
-                            id={'type': 'dynamic-donut-five', 'index': 1},
+                            id={'type': 'dynamic-donut-one', 'index': 1},
                             config={
                                 'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
                                                            'zoomOut2d', 'autoScale2d', 'resetScale2d',
@@ -74,7 +80,7 @@ layout = html.Div([
                                                            'toggleSpikelines'],
                                 'toImageButtonOptions': {
                                     'format': 'svg',
-                                    'filename': 'plausible-per-organisation',
+                                    'filename': 'proportions-per-organisation',
                                     'height': 500,
                                     'width': 700,
                                     'scale': 1
@@ -86,7 +92,7 @@ layout = html.Div([
                 dbc.Col(
                     html.Div(id='tile-5', className='tile tile-5', children=[
                         dcc.Graph(
-                            id={'type': 'dynamic-donut-six', 'index': 2},
+                            id={'type': 'dynamic-donut-two', 'index': 2},
                             config={
                                 'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
                                                            'zoomOut2d', 'autoScale2d', 'resetScale2d',
@@ -94,7 +100,7 @@ layout = html.Div([
                                                            'toggleSpikelines'],
                                 'toImageButtonOptions': {
                                     'format': 'svg',
-                                    'filename': 'plausible-per-country',
+                                    'filename': 'proportions-per-country',
                                     'height': 500,
                                     'width': 700,
                                     'scale': 1
@@ -105,9 +111,8 @@ layout = html.Div([
                     width=6)
             ])
         ]),
-
-        html.Div(id='tile-7', className='tile tile-6', children=[
-            html.H5('Atemporal plausibility', className='tile-title'),
+        html.Div(id='tile-6', className='tile tile-6', children=[
+            html.H5('Semantic consistency', className='tile-title'),
             html.Div(children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
@@ -116,70 +121,32 @@ layout = html.Div([
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
-            html.Div(children=[
-                "Select the organisation(s) you would like to visualise",
-                dcc.Checklist(
-                    id='subset-selection-checkboxes', className='subset-selection-checkboxes',
-                    options=[],
-                    value=[],
-                    labelStyle={'display': 'inline-block'}
-                )]),
-            html.Div(id='tile-content-7', className='tile-content', children=[
-                dcc.Graph(
-                    id={'type': 'dynamic-plausibility-bar', 'index': 3},
-                    config={
-                        'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                   'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                   'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                   'toggleSpikelines'],
-                        'toImageButtonOptions': {
-                            'format': 'svg',
-                            'filename': 'variable-atemporal-plausibility',
-                            'height': 500,
-                            'width': 700,
-                            'scale': 1
-                        }
-                    },
-                    figure={
-                        'layout': {
-                            'yaxis': {'fixedrange': True}
-                        }
-                    }
-                )
-            ]),
-            html.Div(children=[
-                html.Br(),
-                "This graphic contains information about the following countries:",
-                dcc.Checklist(
-                    id='country-selection-checkboxes', className='country-selection-checkboxes',
-                    options=[],
-                    value=[],
-                    labelStyle={'display': 'inline-block'}
-                )])
+            html.Div(id='tile-content-6', className='tile-content')
         ]),
         html.Div(id='btn-subject-a', className='btn-subject-a', children=[
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
                      alt='Arrowhead pointing left',
                      style={'width': '2.5rem',
                             'height': '2.5rem'}),
-            dcc.Link('Completeness', href='/data-completeness',
-                     className='no-decoration-link')
+            dcc.Link('Plausibility', href='/data-plausibility', className='no-decoration-link')
         ]),
-        html.Div(id='btn-subject-b', className='btn-subject-b', style={'margin-left': '73%'}, children=[
-            dcc.Link('Availability', href='/data-availability', className='no-decoration-link'),
+        html.Div(id='btn-subject-b', className='btn-subject-b', children=[
+            dcc.Link('Completeness', href='/data-completeness', className='no-decoration-link'),
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
                      alt='Arrowhead pointing right',
                      style={'width': '2.5rem',
                             'height': '2.5rem'})
         ]),
         html.Div(id='availability-explanation', className='explanation',
-                 children=['The shown graphics aim to portray the believability or truthfulness of data values '
-                           'by assessing the acceptable variable value range and '
-                           'distribution in both atemporal as temporal data fields.',
+                 children=["Graphics aim to visualise how much data is available per location and "
+                           "explore the existence of expected and "
+                           "possible values between variables with "
+                           "semantic relationships between them.",
                            html.Br(), html.Br(),
-                           'Data plausibility is based on the "Descriptive statistics" Vantage6 algorithm ',
+                           'Availability and semantic consistency is the "Descriptive statistics" Vantage6 algorithm ',
                            html.Br(),
                            '(see https://github.com/STRONGAYA/v6-descriptive-statistics)'])
     ]),
-    html.Div(id='footer', className='footer')
+    html.Div(id='footer', className='footer',
+         children=[html.Div(f'Version {portal_version()}', className='version-note')])
 ])

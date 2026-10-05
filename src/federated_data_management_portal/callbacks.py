@@ -15,6 +15,83 @@ from datetime import datetime
 names_to_capitalise = ["eortc", "hads"]
 
 
+def _load_stats_frame(raw_stats, expected_columns):
+    """
+    Load a JSON statistics string into a DataFrame with the expected columns.
+
+    Missing, empty, or malformed statistics yield an empty DataFrame with the
+    expected columns, so chart code can treat them as zero counts instead of
+    raising a KeyError on a column that does not exist.
+
+    Parameters:
+    raw_stats (str): JSON string containing the statistics.
+    expected_columns (list): Column names the chart code relies on.
+
+    Returns:
+    pd.DataFrame: The parsed statistics, or an empty DataFrame with the expected columns.
+    """
+    empty_frame = pd.DataFrame(columns=list(expected_columns))
+    if not raw_stats:
+        return empty_frame
+    try:
+        frame = pd.DataFrame(json.loads(raw_stats))
+    except (json.JSONDecodeError, TypeError):
+        return empty_frame
+    if any(column not in frame.columns for column in expected_columns):
+        return empty_frame
+    return frame
+
+
+def _load_organization_stats(org_data):
+    """
+    Load the categorical and numerical statistics of a single organisation.
+
+    Accepts both the 'categorical'/'numerical' keys used by the dashboard data
+    file and the vantage6-native 'categorical_general_partial_statistics'/
+    'numerical_general_partial_statistics' keys, so raw task exports also work.
+
+    Parameters:
+    org_data (dict): The data of a single organisation.
+
+    Returns:
+    tuple: The (categorical, numerical) DataFrames, empty when no valid statistics are present.
+    """
+    categorical_key = 'categorical'
+    if categorical_key not in org_data and 'categorical_general_partial_statistics' in org_data:
+        categorical_key = 'categorical_general_partial_statistics'
+    numerical_key = 'numerical'
+    if numerical_key not in org_data and 'numerical_general_partial_statistics' in org_data:
+        numerical_key = 'numerical_general_partial_statistics'
+
+    categorical = _load_stats_frame(org_data.get(categorical_key), ['variable', 'value', 'count'])
+    numerical = _load_stats_frame(org_data.get(numerical_key), ['variable', 'statistic', 'value'])
+
+    # Rows without a variable identifier cannot be matched to the schema; drop
+    # them so they neither crash the chart code nor inflate the counts.
+    categorical = categorical.dropna(subset=['variable'])
+    numerical = numerical.dropna(subset=['variable'])
+    return categorical, numerical
+
+
+def _safe_ratio(numerator, denominator):
+    """
+    Divide scalar counts, returning 0 when the denominator is zero.
+
+    An organisation without any data points has no relative missing data, so
+    its chart shows 0 instead of nan.
+
+    Parameters:
+    numerator (number): The numerator.
+    denominator (number): The denominator.
+
+    Returns:
+    float: The ratio, or 0 when the denominator is zero.
+    """
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
+
+
 def _get_organization_sample_size(org_data):
     """
     Helper function to get the sample size for a single organization.
@@ -903,8 +980,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 _custom_data = []
                 for org in labels:
                     data = latest_data[org]
-                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                    categorical_data, numerical_data = _load_organization_stats(data)
 
                     # Calculate total counts excluding 'nan' and 'outliers'
                     total_categorical_count = categorical_data[categorical_data["value"] != "nan"]["count"].sum()
@@ -915,9 +991,10 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
 
                     # Sum relative missing counts
-                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
-                            (total_categorical_count + missing_categorical_count) + (
-                            total_numerical_count + missing_numerical_count))
+                    relative_missing_count = _safe_ratio(
+                        missing_categorical_count + missing_numerical_count,
+                        (total_categorical_count + missing_categorical_count)
+                        + (total_numerical_count + missing_numerical_count))
                     missing_counts.append(total_categorical_count + total_numerical_count)
                     _custom_data.append((round((relative_missing_count * 100), 1)))
 
@@ -927,8 +1004,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 country_data = defaultdict(float)
                 relative_country_data = defaultdict(float)
                 for data in latest_data.values():
-                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                    categorical_data, numerical_data = _load_organization_stats(data)
 
                     # Calculate total counts excluding 'nan' and 'outliers'
                     total_categorical_count = categorical_data[categorical_data["value"] != "nan"]["count"].sum()
@@ -939,9 +1015,10 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     missing_numerical_count = numerical_data[numerical_data["statistic"] == "nan"]["value"].sum()
 
                     # Sum relative missing counts
-                    relative_missing_count = (missing_categorical_count + missing_numerical_count) / (
-                            (total_categorical_count + missing_categorical_count) + (
-                            total_numerical_count + missing_numerical_count))
+                    relative_missing_count = _safe_ratio(
+                        missing_categorical_count + missing_numerical_count,
+                        (total_categorical_count + missing_categorical_count)
+                        + (total_numerical_count + missing_numerical_count))
                     country_data[data["country"]] += (total_categorical_count + total_numerical_count)
                     relative_country_data[data["country"]] += round((relative_missing_count * 100), 1)
 
@@ -959,8 +1036,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 _custom_data = []
                 for org in labels:
                     data = latest_data[org]
-                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                    categorical_data, numerical_data = _load_organization_stats(data)
 
                     # Calculate total counts excluding 'outliers'
                     total_categorical_count = categorical_data["count"].sum()
@@ -991,8 +1067,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 country_data = defaultdict(float)
                 relative_country_data = defaultdict(float)
                 for data in latest_data.values():
-                    categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                    numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                    categorical_data, numerical_data = _load_organization_stats(data)
 
                     # Calculate total counts excluding 'outliers'
                     total_categorical_count = categorical_data["count"].sum()
@@ -1125,8 +1200,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             for org in labels:
                 completeness_info[org] = {}
                 data = latest_data[org]
-                categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                categorical_data, numerical_data = _load_organization_stats(data)
 
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
@@ -1173,11 +1247,13 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             # Keep a mapping of readable names to original codes for tooltip lookup
             var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
-            # Calculate percentages
-            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
-            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            # Calculate percentages; variables without any data points count as 0%
+            totals = visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s']
+            nonzero_totals = totals.replace(0, np.nan)
+            visualisation_df[f'Percentage available {text}s'] = (
+                    visualisation_df[f'Total available {text}s'] / nonzero_totals).fillna(0)
+            visualisation_df[f'Percentage unavailable {text}s'] = (
+                    visualisation_df[f'Total unavailable {text}s'] / nonzero_totals).fillna(0)
 
             # Ensure minimum bar height
             min_bar_height = 0.01
@@ -1234,8 +1310,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             for org in labels:
                 completeness_info[org] = {}
                 data = latest_data[org]
-                categorical_data = pd.DataFrame(json.loads(data["categorical"]))
-                numerical_data = pd.DataFrame(json.loads(data["numerical"]))
+                categorical_data, numerical_data = _load_organization_stats(data)
 
                 # Process categorical data
                 for var in categorical_data['variable'].unique():
@@ -1285,11 +1360,13 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             # Keep a mapping of readable names to original codes for tooltip lookup
             var_name_mapping = dict(zip(readable_variables, total_available.keys()))
 
-            # Calculate percentages
-            visualisation_df[f'Percentage available {text}s'] = visualisation_df[f'Total available {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
-            visualisation_df[f'Percentage unavailable {text}s'] = visualisation_df[f'Total unavailable {text}s'] / (
-                    visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s'])
+            # Calculate percentages; variables without any data points count as 0%
+            totals = visualisation_df[f'Total available {text}s'] + visualisation_df[f'Total unavailable {text}s']
+            nonzero_totals = totals.replace(0, np.nan)
+            visualisation_df[f'Percentage available {text}s'] = (
+                    visualisation_df[f'Total available {text}s'] / nonzero_totals).fillna(0)
+            visualisation_df[f'Percentage unavailable {text}s'] = (
+                    visualisation_df[f'Total unavailable {text}s'] / nonzero_totals).fillna(0)
 
             # Ensure minimum bar height
             min_bar_height = 0.01

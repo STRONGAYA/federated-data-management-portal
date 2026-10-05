@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Test artifacts
+.pytest_cache/
+
 # Build artifacts
 *.so
 .Python
@@ -45,3 +48,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Local mounted dashboard data
+data/

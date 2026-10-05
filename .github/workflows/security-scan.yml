@@ -1,0 +1,56 @@
+name: Weekly security scan
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        # https://github.com/actions/checkout/releases/tag/v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Install the pinned uv binary
+        # https://github.com/astral-sh/uv/releases/tag/0.11.24
+        run: |
+          curl -LsSf -o /tmp/uv.tar.gz \
+            https://github.com/astral-sh/uv/releases/download/0.11.24/uv-x86_64-unknown-linux-gnu.tar.gz
+          tar -xzf /tmp/uv.tar.gz -C /tmp
+          install /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv
+
+      - name: Install the locked dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Export the runtime dependencies
+        run: uv export --frozen --no-dev -o requirements.txt
+
+      - name: Scan the source for security issues
+        run: uv run --no-sync bandit -r src -ll
+
+      - name: Scan the dependencies for known vulnerabilities
+        # safety check is deprecated upstream in favour of `safety scan`,
+        # which requires a Safety organisation account; `check` remains the
+        # account-free option for scheduled CI.
+        run: uv run --no-sync safety check -r requirements.txt
+
+      - name: Report findings on an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="The weekly security scan failed for commit ${GITHUB_SHA}. See the run for details: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh label create security-scan --color d73a4a || true
+          issue_number=$(gh issue list --label security-scan --state open --json number --jq '.[0].number')
+          if [ -n "$issue_number" ]; then
+            gh issue comment "$issue_number" --body "$body"
+          else
+            gh issue create --title 'Weekly security scan failure' --label security-scan --body "$body"
+          fi

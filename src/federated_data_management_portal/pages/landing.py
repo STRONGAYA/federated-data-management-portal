@@ -5,6 +5,8 @@ import dash_bootstrap_components as dbc
 
 from dash import html, dcc
 
+from federated_data_management_portal import portal_version
+
 page_title = 'STRONG-AYA | Data Management Portal'
 
 aesthetic_logo_alt_text = 'STRONG-AYA Logo'
@@ -140,5 +142,6 @@ layout = html.Div([
                               ])
                  ]),
     ]),
-    html.Div(id='footer', className='footer')
+    html.Div(id='footer', className='footer',
+         children=[html.Div(f'Version {portal_version()}', className='version-note')])
 ])

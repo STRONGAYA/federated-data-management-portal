@@ -1,0 +1,12 @@
+# The image only needs the package metadata and application source. Keeping an
+# allowlist prevents deployment files and local secret files from entering the
+# remote/container build context.
+**
+
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+!src/**
