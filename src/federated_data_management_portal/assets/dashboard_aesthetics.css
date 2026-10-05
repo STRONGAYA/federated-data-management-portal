@@ -323,7 +323,7 @@ body {
 }
 
 .tile-content .plotly-graph-div {
-    min-width: 700px;
+    width: 100%;
 }
 
 

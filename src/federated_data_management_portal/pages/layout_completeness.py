@@ -84,7 +84,7 @@ layout = html.Div([
                             }
                         )
                     ]),
-                    width=6),
+                    width=6, lg=6, md=12, sm=12, xs=12),
                 dbc.Col(
                     html.Div(id='tile-5', className='tile tile-5', children=[
                         dcc.Graph(
@@ -104,7 +104,7 @@ layout = html.Div([
                             }
                         )
                     ]),
-                    width=6)
+                    width=6, lg=6, md=12, sm=12, xs=12)
             ])
         ]),
 

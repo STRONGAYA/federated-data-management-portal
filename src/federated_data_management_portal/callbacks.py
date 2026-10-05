@@ -472,7 +472,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             )],
             font=dict(family='Poppins, sans-serif'),
             plot_bgcolor='rgba(0,0,0,0)',
-            width=1100,
+            paper_bgcolor='rgba(0,0,0,0)',
             height=400,
         )
         return figure
@@ -521,7 +521,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
         hoverlabel=dict(font_family='Poppins, sans-serif'),
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
-        width=1100,
+        paper_bgcolor='rgba(0,0,0,0)',
         height=400,
         margin=dict(l=60, r=20, t=60, b=20),
         yaxis=dict(title=f'Number of {text} data points', rangemode='tozero'),
@@ -600,6 +600,8 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
             'layout': {
                 'title': f'Number of {text}s per organisation',
                 'barmode': 'stack',
+                'plot_bgcolor': 'rgba(0,0,0,0)',
+                'paper_bgcolor': 'rgba(0,0,0,0)',
                 'yaxis': {'visible': False},
                 'xaxis': {
                     'tickformat': ',.0%',
@@ -1206,6 +1208,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
             title=title,
             hoverlabel=dict(font_family='Poppins, sans-serif'),
             font=dict(family='Poppins, sans-serif'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
             legend=dict(
                 orientation='h',
                 yanchor='top',
@@ -1529,7 +1533,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             barmode='stack',
             font=dict(family='Poppins, sans-serif'),
             plot_bgcolor='rgba(0,0,0,0)',
-            width=1100,
+            paper_bgcolor='rgba(0,0,0,0)',
             height=400,
             margin=dict(l=20, r=20, t=20, b=20),
             legend=dict(
@@ -1570,13 +1574,12 @@ def generate_unavailable_organisation_annotation(domain):
         xref="paper", yref="paper",
         x=0.5, y=0.5, showarrow=False,
         font=dict(family='Poppins, sans-serif', size=20),
-        width=850,
-        height=400,
         xanchor='center', yanchor='middle'
     )
     fig.update_layout(
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
-        plot_bgcolor='rgba(0,0,0,0)'
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig
