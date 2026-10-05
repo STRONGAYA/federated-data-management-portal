@@ -673,7 +673,9 @@ class Dashboard:
         if isinstance(debug, bool) is False:
             debug = False
 
-        self.App.run(debug=debug, dev_tools_ui=False, host='0.0.0.0')
+        # Binding all interfaces is required inside the Docker container;
+        # exposure to the host is controlled by the container's published port.
+        self.App.run(debug=debug, dev_tools_ui=False, host='0.0.0.0')  # nosec B104
 
 
 def main():
