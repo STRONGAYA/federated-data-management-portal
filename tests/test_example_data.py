@@ -36,8 +36,8 @@ class ExampleDataTests(unittest.TestCase):
             self.assertIn("categorical", org_data)
             self.assertIn("numerical", org_data)
 
-    def test_keeps_the_original_example_totals(self):
-        self.assertEqual(callbacks.fetch_total_sample_size(self.dashboard_data)[0], "100150")
+    def test_keeps_the_example_totals(self):
+        self.assertEqual(callbacks.fetch_total_sample_size(self.dashboard_data)[0], "1100")
         self.assertEqual(callbacks.fetch_field_count(self.dashboard_data)[0], "2")
 
     def test_donut_charts_render_for_every_domain(self):
@@ -63,6 +63,73 @@ class ExampleDataTests(unittest.TestCase):
         figure = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
 
         self.assertEqual(len(figure["data"]), 3)
+
+    def test_organisations_keep_their_colour_across_charts(self):
+        donut = callbacks.generate_donut_chart(
+            self.dashboard_data, chart_domain="availability", chart_type="organisation")
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        donut_colours = dict(zip(donut.data[0].labels, donut.data[0].marker.colors))
+        over_time_colours = {trace.name: trace.marker.color for trace in over_time.data}
+        horizontal_colours = {trace["name"]: trace["marker"]["color"] for trace in horizontal["data"]}
+
+        for org in donut_colours:
+            self.assertEqual(donut_colours[org], over_time_colours[org])
+            self.assertEqual(donut_colours[org], horizontal_colours[org])
+
+    def test_country_donuts_keep_default_sector_colours(self):
+        donut = callbacks.generate_donut_chart(
+            self.dashboard_data, chart_domain="availability", chart_type="country")
+
+        self.assertIsNone(donut.data[0].marker.colors)
+
+    def test_charts_fill_their_container(self):
+        donut = callbacks.generate_donut_chart(self.dashboard_data, chart_domain="availability")
+        bar = callbacks.generate_variable_bar_chart(
+            self.dashboard_data, domain="completeness", semantic_map_data=self.schema)
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        for figure in (donut, bar, over_time):
+            self.assertIsNone(figure.layout.width)
+        self.assertNotIn("width", horizontal["layout"])
+
+    def test_charts_have_transparent_backgrounds(self):
+        donut = callbacks.generate_donut_chart(self.dashboard_data, chart_domain="availability")
+        bar = callbacks.generate_variable_bar_chart(
+            self.dashboard_data, domain="completeness", semantic_map_data=self.schema)
+        over_time = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+        horizontal = callbacks.generate_sample_size_horizontal_bar(self.dashboard_data)
+
+        for figure in (donut, bar, over_time):
+            self.assertEqual(figure.layout.paper_bgcolor, "rgba(0,0,0,0)")
+            self.assertEqual(figure.layout.plot_bgcolor, "rgba(0,0,0,0)")
+        self.assertEqual(horizontal["layout"]["paper_bgcolor"], "rgba(0,0,0,0)")
+        self.assertEqual(horizontal["layout"]["plot_bgcolor"], "rgba(0,0,0,0)")
+
+    def test_over_time_chart_renders_all_snapshots(self):
+        figure = callbacks.generate_sample_size_over_time_chart(self.dashboard_data)
+
+        for trace in figure.data:
+            self.assertEqual(len(trace.x), 2)
+        self.assertEqual(
+            [annotation.text for annotation in figure.layout.annotations],
+            ["800", "1,100"],
+        )
+
+    def test_over_time_chart_handles_a_single_snapshot(self):
+        single = {"2026-01-01T00:00:00": self.dashboard_data["2026-01-01T00:00:00"]}
+
+        figure = callbacks.generate_sample_size_over_time_chart(single)
+
+        for trace in figure.data:
+            self.assertEqual(len(trace.x), 1)
+
+    def test_over_time_chart_handles_empty_data(self):
+        figure = callbacks.generate_sample_size_over_time_chart({})
+
+        self.assertEqual(len(figure.data), 0)
 
 
 if __name__ == "__main__":

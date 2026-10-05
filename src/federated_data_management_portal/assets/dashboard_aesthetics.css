@@ -323,7 +323,7 @@ body {
 }
 
 .tile-content .plotly-graph-div {
-    min-width: 700px;
+    width: 100%;
 }
 
 
@@ -388,6 +388,16 @@ body {
 .tile-6 {
     padding: 10px;
     margin-top: 2.5%;
+}
+
+.tile-7 {
+    padding: 10px;
+    margin-top: 2.5%;
+}
+
+.tile-7 .tile-content {
+    overflow: visible !important;
+    white-space: normal;
 }
 
 .tile-title {
@@ -481,4 +491,10 @@ body {
     right: 24px;
     font-size: 0.75rem;
     color: #8a8a8a;
+}
+/* Plotly sizes the mode bar icon colour against the chart background; with a
+   transparent background it falls back to a nearly invisible white. Keep the
+   download icon dark so it is visible on the white tiles. */
+.modebar-btn svg path {
+    fill: #444444 !important;
 }

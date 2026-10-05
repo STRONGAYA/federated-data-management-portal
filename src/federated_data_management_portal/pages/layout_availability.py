@@ -73,11 +73,10 @@ layout = html.Div([
                     html.Div(id='tile-4', className='tile tile-4', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-one', 'index': 1},
-                            config={
-                                'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                           'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                           'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                           'toggleSpikelines'],
+                            config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+
+                                'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
                                     'filename': 'proportions-per-organisation',
@@ -88,16 +87,15 @@ layout = html.Div([
                             }
                         )
                     ]),
-                    width=6),
+                    width=6, lg=6, md=12, sm=12, xs=12),
                 dbc.Col(
                     html.Div(id='tile-5', className='tile tile-5', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-two', 'index': 2},
-                            config={
-                                'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                           'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                           'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                           'toggleSpikelines'],
+                            config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+
+                                'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
                                     'filename': 'proportions-per-country',
@@ -108,7 +106,27 @@ layout = html.Div([
                             }
                         )
                     ]),
-                    width=6)
+                    width=6, lg=6, md=12, sm=12, xs=12)
+            ])
+        ]),
+        html.Div(id='tile-7', className='tile tile-7', children=[
+            html.H5('Data availability over time', className='tile-title'),
+            html.Div(id='tile-content-8', className='tile-content', children=[
+                dcc.Graph(
+                    id='availability-over-time',
+                    config={'modeBarButtons': [['toImage']],
+                        'displayModeBar': True,
+
+                        'displaylogo': False,
+                        'toImageButtonOptions': {
+                            'format': 'svg',
+                            'filename': 'availability-over-time',
+                            'height': 500,
+                            'width': 1100,
+                            'scale': 1
+                        }
+                    }
+                )
             ])
         ]),
         html.Div(id='tile-6', className='tile tile-6', children=[

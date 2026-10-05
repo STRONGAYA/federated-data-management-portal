@@ -6,6 +6,7 @@ import re
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 
 from collections import defaultdict
 from dash import dash_table
@@ -90,6 +91,26 @@ def _safe_ratio(numerator, denominator):
     if denominator == 0:
         return 0.0
     return numerator / denominator
+
+
+def _organisation_color_map(descriptive_data):
+    """
+    Assign every organisation a fixed colour from the active template colourway.
+
+    The donut charts and the availability over time chart draw the same
+    organisations; both look up their colours here, so an organisation keeps
+    its colour across every chart on the page.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; every organisation in any
+                             snapshot receives a colour.
+
+    Returns:
+    dict: Organisation name mapped to a colour from the template colourway.
+    """
+    organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
+    colorway = pio.templates[pio.templates.default].layout.colorway
+    return {org: colorway[i % len(colorway)] for i, org in enumerate(organisations)}
 
 
 def _get_organization_sample_size(org_data):
@@ -443,6 +464,98 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     return filtered_data, selected_variable_classes
 
 
+def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
+    """
+    Generate a stacked bar chart of available sample sizes over time.
+
+    Each snapshot timestamp contributes one bar on the horizontal axis. The bars
+    stack the sample sizes of the individual organisations, so the height of a bar
+    is the total number of available data points at that moment and the width of
+    each segment is one organisation's contribution. Bars are used on purpose:
+    a snapshot is an isolated measurement and nothing is known about the data
+    between two snapshots, so the chart must not suggest a gradual change
+    between them the way a line or area chart would.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data to generate the chart from. Each key is a timestamp,
+                             and each value is a dictionary containing the data fetched at that timestamp.
+    text (str, optional): The text to use in the chart title and hovertemplate. Defaults to "AYA".
+
+    Returns:
+    go.Figure: The figure for the chart, or an annotation figure when no data is available.
+    """
+    if not descriptive_data:
+        figure = go.Figure()
+        figure.update_layout(
+            annotations=[dict(
+                text=f'No {text} data available',
+                font=dict(family='Poppins, sans-serif', size=20),
+                showarrow=False,
+                x=0.5, y=0.5, xref='paper', yref='paper',
+                xanchor='center', yanchor='middle',
+            )],
+            font=dict(family='Poppins, sans-serif'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            height=400,
+        )
+        return figure
+
+    timestamps = sorted(descriptive_data.keys())
+    organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
+
+    dates = [datetime.fromisoformat(timestamp) for timestamp in timestamps]
+
+    figure = go.Figure()
+    organisation_colors = _organisation_color_map(descriptive_data)
+    for org in organisations:
+        sizes = [
+            _get_organization_sample_size(descriptive_data[timestamp][org])
+            if org in descriptive_data[timestamp] else 0
+            for timestamp in timestamps
+        ]
+        figure.add_trace(go.Bar(
+            x=dates,
+            y=sizes,
+            name=org,
+            marker=dict(color=organisation_colors[org]),
+            hovertemplate=(f"<b>{org}</b><br>"
+                           f"%{{x|%d %B %Y}}: <b>%{{y:,}}</b> {text}{'s' if text[-1:] != 's' else ''}<extra></extra>"),
+        ))
+
+    # Annotate the total above each bar so the headline numbers are readable at a glance.
+    totals = [0] * len(timestamps)
+    for timestamp_index, timestamp in enumerate(timestamps):
+        for org in descriptive_data[timestamp]:
+            totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
+    figure.update_layout(
+        annotations=[
+            dict(
+                text=f'{total:,}',
+                font=dict(family='Poppins, sans-serif', size=13, color='#484848'),
+                showarrow=False,
+                x=date, y=total, xref='x', yref='y',
+                xanchor='center', yanchor='bottom', yshift=8,
+            )
+            for date, total in zip(dates, totals)
+        ],
+        title=f'Available {text} data points over time',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        barmode='stack',
+        bargap=0.6,
+        height=400,
+        margin=dict(l=60, r=20, t=60, b=20),
+        yaxis=dict(title=f'Number of {text} data points', rangemode='tozero'),
+        xaxis=dict(title=None, tickformat='%d %b %Y'),
+        legend=dict(orientation='h', yanchor='bottom', y=-0.35, xanchor='center', x=0.5),
+    )
+
+    return figure
+
+
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
     """
     Function to generate a horizontal bar chart of sample sizes per organisation.
@@ -476,7 +589,9 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         total_sample_size = sum(sample_sizes)
         proportions = [round((size / total_sample_size), ndigits=2) if total_sample_size > 0 else 0 for size in sample_sizes]
 
-        # Create the data for the bar chart
+        # Create the data for the bar chart, keeping every organisation on the
+        # colour it has in the donut charts and the availability over time chart.
+        organisation_colors = _organisation_color_map(descriptive_data)
         data = [
             dict(
                 x=[proportions[i]],
@@ -484,7 +599,7 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
                 name=org,
                 type='bar',
                 orientation='h',
-                marker=dict(line=dict(width=0)),
+                marker=dict(color=organisation_colors[org], line=dict(width=0)),
                 hovertemplate=(
                     f"{org} has made data of {sample_sizes[i]} {text}{'s' if sample_sizes[i] > 1 else ''} available, "
                     f"which is {proportions[i] * 100:.2f}% of all available {text} data."
@@ -511,6 +626,8 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
             'layout': {
                 'title': f'Number of {text}s per organisation',
                 'barmode': 'stack',
+                'plot_bgcolor': 'rgba(0,0,0,0)',
+                'paper_bgcolor': 'rgba(0,0,0,0)',
                 'yaxis': {'visible': False},
                 'xaxis': {
                     'tickformat': ',.0%',
@@ -1098,6 +1215,14 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                     f"Plausible {text} data points: <b>%{{value}}</b><br>" \
                     f"Proportion of all plausible {text} data points: <b>%{{percent}}</b>"
 
+        # Keep every organisation on the colour it has in the availability over
+        # time chart; country charts keep plotly's default sector colours.
+        if chart_type == "organisation":
+            organisation_colors = _organisation_color_map(descriptive_data)
+            sector_colors = [organisation_colors.get(label) for label in labels]
+        else:
+            sector_colors = None
+
         data = [
             dict(
                 labels=labels,
@@ -1107,7 +1232,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
                 name='',
                 hovertemplate=(hover),
                 customdata=_custom_data,
-                textinfo='value'
+                textinfo='value',
+                marker=dict(colors=sector_colors)
             )
         ]
 
@@ -1117,6 +1243,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
             title=title,
             hoverlabel=dict(font_family='Poppins, sans-serif'),
             font=dict(family='Poppins, sans-serif'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
             legend=dict(
                 orientation='h',
                 yanchor='top',
@@ -1440,7 +1568,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             barmode='stack',
             font=dict(family='Poppins, sans-serif'),
             plot_bgcolor='rgba(0,0,0,0)',
-            width=1100,
+            paper_bgcolor='rgba(0,0,0,0)',
             height=400,
             margin=dict(l=20, r=20, t=20, b=20),
             legend=dict(
@@ -1481,13 +1609,12 @@ def generate_unavailable_organisation_annotation(domain):
         xref="paper", yref="paper",
         x=0.5, y=0.5, showarrow=False,
         font=dict(family='Poppins, sans-serif', size=20),
-        width=850,
-        height=400,
         xanchor='center', yanchor='middle'
     )
     fig.update_layout(
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
-        plot_bgcolor='rgba(0,0,0,0)'
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig

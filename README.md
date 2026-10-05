@@ -27,7 +27,9 @@ include the schema metadata consumed by the callbacks, including `schema.prefixe
 `schema.variables` with camelCase field names (`dataType`, `valueMapping`, `schemaReconstruction`).
 
 `dashboard.json` contains the dashboard data consumed by the Dash callbacks. Top-level keys must be
-ISO timestamps for the generated dashboard snapshot:
+ISO timestamps for the generated dashboard snapshot; each snapshot is one bar on the horizontal
+axis of the data availability over time chart, so loading multiple snapshots compares the
+available data between those moments:
 
 ```json
 {
