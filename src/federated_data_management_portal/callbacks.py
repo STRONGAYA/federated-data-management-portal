@@ -445,12 +445,15 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
 
 def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     """
-    Generate a stacked area chart of available sample sizes over time.
+    Generate a stacked bar chart of available sample sizes over time.
 
-    Each snapshot timestamp contributes a point on the horizontal axis. The areas
-    stack the sample sizes of the individual organisations, so the top of the stack
-    is the total number of available data points at that moment, and the width of
-    each band shows the contribution of a single organisation.
+    Each snapshot timestamp contributes one bar on the horizontal axis. The bars
+    stack the sample sizes of the individual organisations, so the height of a bar
+    is the total number of available data points at that moment and the width of
+    each segment is one organisation's contribution. Bars are used on purpose:
+    a snapshot is an isolated measurement and nothing is known about the data
+    between two snapshots, so the chart must not suggest a gradual change
+    between them the way a line or area chart would.
 
     Parameters:
     descriptive_data (dict): The descriptive data to generate the chart from. Each key is a timestamp,
@@ -489,23 +492,19 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             if org in descriptive_data[timestamp] else 0
             for timestamp in timestamps
         ]
-        figure.add_trace(go.Scatter(
+        figure.add_trace(go.Bar(
             x=dates,
             y=sizes,
             name=org,
-            mode='lines+markers',
-            stackgroup='organisations',
-            hoveron='points+fills',
             hovertemplate=(f"<b>{org}</b><br>"
                            f"%{{x|%d %B %Y}}: <b>%{{y:,}}</b> {text}{'s' if text[-1:] != 's' else ''}<extra></extra>"),
         ))
 
-    # Annotate the running total above each snapshot so the headline numbers are readable at a glance.
+    # Annotate the total above each bar so the headline numbers are readable at a glance.
     totals = [0] * len(timestamps)
     for timestamp_index, timestamp in enumerate(timestamps):
         for org in descriptive_data[timestamp]:
             totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
-    top = max(totals) if totals else 1
     figure.update_layout(
         annotations=[
             dict(
@@ -522,6 +521,8 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
+        barmode='stack',
+        bargap=0.6,
         height=400,
         margin=dict(l=60, r=20, t=60, b=20),
         yaxis=dict(title=f'Number of {text} data points', rangemode='tozero'),
@@ -600,8 +601,6 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
             'layout': {
                 'title': f'Number of {text}s per organisation',
                 'barmode': 'stack',
-                'plot_bgcolor': 'rgba(0,0,0,0)',
-                'paper_bgcolor': 'rgba(0,0,0,0)',
                 'yaxis': {'visible': False},
                 'xaxis': {
                     'tickformat': ',.0%',
@@ -1208,8 +1207,6 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
             title=title,
             hoverlabel=dict(font_family='Poppins, sans-serif'),
             font=dict(family='Poppins, sans-serif'),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
             legend=dict(
                 orientation='h',
                 yanchor='top',
@@ -1533,7 +1530,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             barmode='stack',
             font=dict(family='Poppins, sans-serif'),
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
+            width=1100,
             height=400,
             margin=dict(l=20, r=20, t=20, b=20),
             legend=dict(
@@ -1574,12 +1571,13 @@ def generate_unavailable_organisation_annotation(domain):
         xref="paper", yref="paper",
         x=0.5, y=0.5, showarrow=False,
         font=dict(family='Poppins, sans-serif', size=20),
+        width=850,
+        height=400,
         xanchor='center', yanchor='middle'
     )
     fig.update_layout(
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+        plot_bgcolor='rgba(0,0,0,0)'
     )
     return fig
