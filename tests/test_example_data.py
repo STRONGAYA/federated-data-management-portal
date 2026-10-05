@@ -14,7 +14,7 @@ EXAMPLE_DATA = Path(__file__).resolve().parent.parent / "example_data"
 class ExampleDataTests(unittest.TestCase):
     def setUp(self):
         self.dashboard_data = load_static_dashboard_data(EXAMPLE_DATA / "dashboard.json")
-        self.schema = load_json_file(EXAMPLE_DATA / "schema.json")
+        self.schema = load_json_file(EXAMPLE_DATA / "schema.jsonld")
 
     def assert_no_nan(self, values):
         for value in values:

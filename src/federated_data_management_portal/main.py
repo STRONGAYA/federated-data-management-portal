@@ -22,13 +22,13 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 
 
 def load_json_file(json_file_path):
-    """Load a JSON file and fail with a clear message when the path is invalid."""
+    """Load a JSON or JSON-LD file and fail with a clear message when the path is invalid."""
     if not json_file_path:
         raise SystemExit('A JSON file path is required.')
 
     path = Path(json_file_path).expanduser()
-    if path.suffix != '.json':
-        raise SystemExit(f'Expected a .json file, got: {path}')
+    if path.suffix not in ('.json', '.jsonld'):
+        raise SystemExit(f'Expected a .json or .jsonld file, got: {path}')
     if not path.exists():
         raise SystemExit(f'JSON file does not exist: {path}')
 
@@ -82,12 +82,12 @@ class Dashboard:
         """
         Initialize the Dashboard class.
 
-        This constructor method initializes the Dashboard class with local JSON files.
-        It loads the schema and dashboard data, sets up the Dash app with a layout and title,
-        and registers callbacks.
+        This constructor method initializes the Dashboard class with local files.
+        It loads the JSON-LD schema and the static dashboard data, sets up the Dash app
+        with a layout and title, and registers callbacks.
 
         Parameters:
-        schema_file_path (str): The path to the schema JSON file.
+        schema_file_path (str): The path to the schema JSON-LD file.
         dashboard_data_file_path (str): The path to the static dashboard data JSON file.
         """
         self.global_semantic_map_data = load_json_file(schema_file_path)
@@ -107,32 +107,34 @@ class Dashboard:
 
     def extract_categories_from_semantic_map(self, max_depth=0):
         """
-        Extract categories from semantic_map_reconstruction hierarchy for filtering.
+        Extract categories from schemaReconstruction hierarchy for filtering.
         
         Parameters:
-        max_depth (int): Maximum depth to traverse in semantic_map_reconstruction (default: 2)
+        max_depth (int): Maximum depth to traverse in schemaReconstruction (default: 2)
         
         Returns:
         list: List of unique category labels with their corresponding values for filtering
         """
         categories = set()
         
-        if 'variable_info' not in self.global_semantic_map_data:
+        schema = self.global_semantic_map_data.get('schema', {})
+        variables = schema.get('variables', {})
+        if not variables:
             return []
             
-        for variable_name, variable_data in self.global_semantic_map_data['variable_info'].items():
-            if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
-                # Process each level in schema_reconstruction up to max_depth
-                # Only look at class items (not nodes) within the specified depth
-                for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+        for variable_name, variable_data in variables.items():
+            if 'schemaReconstruction' in variable_data and variable_data['schemaReconstruction']:
+                # Process each level in schemaReconstruction up to max_depth
+                # Only look at ClassNode items (not UnitNodes) within the specified depth
+                for level, reconstruction_item in enumerate(variable_data['schemaReconstruction']):
                     if level >= max_depth:
                         break
                     
-                    if (reconstruction_item.get('type') == 'class' and 
-                        'aesthetic_label' in reconstruction_item and
+                    if (reconstruction_item.get('@type') == 'schema:ClassNode' and 
+                        'aestheticLabel' in reconstruction_item and
                         reconstruction_item.get('placement') != 'before'):
                         # Remove underscores and format the aesthetic label nicely
-                        aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
+                        aesthetic_label = reconstruction_item['aestheticLabel'].replace('_', ' ')
                         categories.add(f" {aesthetic_label}")
         
         return sorted(list(categories))
@@ -511,12 +513,12 @@ class Dashboard:
             filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
             if prefix_selection and selected_variables:
                 variables_to_remove = []
-                for variable_name, variable_data in filtered_semantic_map['variable_info'].items():
+                for variable_name, variable_data in filtered_semantic_map['schema']['variables'].items():
                     if variable_data.get('class') not in selected_variables:
                         variables_to_remove.append(variable_name)
 
                 for variable_name in variables_to_remove:
-                    filtered_semantic_map['variable_info'].pop(variable_name)
+                    filtered_semantic_map['schema']['variables'].pop(variable_name)
 
             # Generate table with filtered data
             df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)

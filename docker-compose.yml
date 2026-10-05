@@ -4,7 +4,7 @@ services:
     volumes:
       - ./data:/data:ro
     environment:
-      - SCHEMA_FILE_PATH=/data/schema.json
+      - SCHEMA_FILE_PATH=/data/schema.jsonld
       - DASHBOARD_DATA_FILE_PATH=/data/dashboard.json
     ports:
       - 8050:8050

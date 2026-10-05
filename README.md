@@ -7,6 +7,8 @@ For a hosted deployment, provide the schema and dashboard data as a Docker volum
 application with Docker Compose.
 
 A demo can be seen below or found in the form of an mp4 file in the `example_data/` directory.
+The version of the deployed portal is shown in the footer of every page. Releases are tagged `release/v*`.
+
 
 https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
 
@@ -16,12 +18,13 @@ The Compose setup expects two files outside the repository:
 
 ```text
 data/
-  schema.json
+  schema.jsonld
   dashboard.json
 ```
 
-`schema.json` contains the semantic schema used by the dashboard. It must include the schema
-metadata consumed by the callbacks, including `prefixes` and `variable_info`.
+`schema.jsonld` contains the semantic schema used by the dashboard, in JSON-LD format. It must
+include the schema metadata consumed by the callbacks, including `schema.prefixes` and
+`schema.variables` with camelCase field names (`dataType`, `valueMapping`, `schemaReconstruction`).
 
 `dashboard.json` contains the dashboard data consumed by the Dash callbacks. Top-level keys must be
 ISO timestamps for the generated dashboard snapshot:
@@ -43,7 +46,7 @@ Example versions of both files are included in `example_data/` and can be used t
 dashboard locally:
 
 ```bash
-SCHEMA_FILE_PATH=example_data/schema.json \
+SCHEMA_FILE_PATH=example_data/schema.jsonld \
 DASHBOARD_DATA_FILE_PATH=example_data/dashboard.json \
 uv run python -m federated_data_management_portal.main
 ```
@@ -61,7 +64,7 @@ The dashboard will be available at `http://localhost:8050`.
 The default Compose file mounts `./data` to `/data` and sets:
 
 ```text
-SCHEMA_FILE_PATH=/data/schema.json
+SCHEMA_FILE_PATH=/data/schema.jsonld
 DASHBOARD_DATA_FILE_PATH=/data/dashboard.json
 ```
 
@@ -73,7 +76,7 @@ Use Python 3.12:
 python -m venv .venv
 source .venv/bin/activate
 uv sync --no-dev
-SCHEMA_FILE_PATH=/path/to/schema.json \
+SCHEMA_FILE_PATH=/path/to/schema.jsonld \
 DASHBOARD_DATA_FILE_PATH=/path/to/dashboard.json \
 uv run python -m federated_data_management_portal.main
 ```

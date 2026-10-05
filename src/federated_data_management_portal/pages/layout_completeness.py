@@ -3,6 +3,8 @@ import os
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
+from federated_data_management_portal import portal_version
+
 page_title = 'STRONG-AYA | Data Management Portal'
 aesthetic_logo_alt_text = 'STRONG-AYA Logo'
 aesthetic_title = 'Data management portal'
@@ -180,5 +182,6 @@ layout = html.Div([
                      html.Br(),
                      '(see https://github.com/STRONGAYA/v6-descriptive-statistics)'])
     ]),
-    html.Div(id='footer', className='footer')
+    html.Div(id='footer', className='footer',
+         children=[html.Div(f'Version {portal_version()}', className='version-note')])
 ])

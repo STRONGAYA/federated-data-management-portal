@@ -11,7 +11,7 @@ class AuthenticatedEmailCallbackTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp_dir = tempfile.TemporaryDirectory()
         data_dir = Path(cls.temp_dir.name)
-        schema_path = data_dir / "schema.json"
+        schema_path = data_dir / "schema.jsonld"
         dashboard_path = data_dir / "dashboard.json"
         schema_path.write_text(json.dumps({}), encoding="utf-8")
         dashboard_path.write_text(

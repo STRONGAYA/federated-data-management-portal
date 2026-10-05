@@ -474,3 +474,11 @@ body {
     border-color: #007bff !important;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
 }
+
+.version-note {
+    position: absolute;
+    bottom: 16px;
+    right: 24px;
+    font-size: 0.75rem;
+    color: #8a8a8a;
+}
