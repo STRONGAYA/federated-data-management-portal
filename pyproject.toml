@@ -10,9 +10,9 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-    "dash==4.1.0",
+    "dash==4.4.1",
     "dash-bootstrap-components==2.0.4",
-    "pandas==3.0.2",
+    "pandas==3.0.6",
     "plotly==6.7.0",
 ]
 
