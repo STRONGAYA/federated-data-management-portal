@@ -39,6 +39,15 @@ ISO timestamps for the generated dashboard snapshot:
 }
 ```
 
+Example versions of both files are included in `example_data/` and can be used to run the
+dashboard locally:
+
+```bash
+SCHEMA_FILE_PATH=example_data/schema.json \
+DASHBOARD_DATA_FILE_PATH=example_data/dashboard.json \
+uv run python -m federated_data_management_portal.main
+```
+
 ## Running With Docker Compose
 
 Create or mount the external `data/` directory, then run:
