@@ -13,7 +13,7 @@ dependencies = [
     "dash==4.4.1",
     "dash-bootstrap-components==2.0.4",
     "pandas==3.0.6",
-    "plotly==6.7.0",
+    "plotly==7.1.0",
 ]
 
 [dependency-groups]
