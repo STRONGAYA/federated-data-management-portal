@@ -69,11 +69,8 @@ layout = html.Div([
                     html.Div(id='tile-4', className='tile tile-4', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-five', 'index': 1},
-                            config={
-                                'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                           'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                           'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                           'toggleSpikelines'],
+                            config={'modeBarButtons': [['toImage']],
+                                'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
                                     'filename': 'plausible-per-organisation',
@@ -89,11 +86,8 @@ layout = html.Div([
                     html.Div(id='tile-5', className='tile tile-5', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-six', 'index': 2},
-                            config={
-                                'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                           'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                           'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                           'toggleSpikelines'],
+                            config={'modeBarButtons': [['toImage']],
+                                'displaylogo': False,
                                 'toImageButtonOptions': {
                                     'format': 'svg',
                                     'filename': 'plausible-per-country',
@@ -129,11 +123,8 @@ layout = html.Div([
             html.Div(id='tile-content-7', className='tile-content', children=[
                 dcc.Graph(
                     id={'type': 'dynamic-plausibility-bar', 'index': 3},
-                    config={
-                        'modeBarButtonsToRemove': ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d',
-                                                   'zoomOut2d', 'autoScale2d', 'resetScale2d',
-                                                   'hoverClosestCartesian', 'hoverCompareCartesian',
-                                                   'toggleSpikelines'],
+                    config={'modeBarButtons': [['toImage']],
+                        'displaylogo': False,
                         'toImageButtonOptions': {
                             'format': 'svg',
                             'filename': 'variable-atemporal-plausibility',
