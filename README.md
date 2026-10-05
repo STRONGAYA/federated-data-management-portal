@@ -7,7 +7,7 @@ For a hosted deployment, provide the schema and dashboard data as a Docker volum
 application with Docker Compose.
 
 A demo can be seen below or found in the form of an mp4 file in the `example_data/` directory.
-The version of the deployed portal is shown in the footer of every page. Releases are tagged `release/v*`.
+The version of the deployed portal is shown in the footer of every page. Releases are tagged `v*`.
 
 
 https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
