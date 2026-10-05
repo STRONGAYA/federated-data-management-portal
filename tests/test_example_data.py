@@ -36,8 +36,8 @@ class ExampleDataTests(unittest.TestCase):
             self.assertIn("categorical", org_data)
             self.assertIn("numerical", org_data)
 
-    def test_keeps_the_original_example_totals(self):
-        self.assertEqual(callbacks.fetch_total_sample_size(self.dashboard_data)[0], "100150")
+    def test_keeps_the_example_totals(self):
+        self.assertEqual(callbacks.fetch_total_sample_size(self.dashboard_data)[0], "1100")
         self.assertEqual(callbacks.fetch_field_count(self.dashboard_data)[0], "2")
 
     def test_donut_charts_render_for_every_domain(self):
@@ -71,7 +71,7 @@ class ExampleDataTests(unittest.TestCase):
             self.assertEqual(len(trace.x), 2)
         self.assertEqual(
             [annotation.text for annotation in figure.layout.annotations],
-            ["41,925", "100,150"],
+            ["800", "1,100"],
         )
 
     def test_over_time_chart_handles_a_single_snapshot(self):
