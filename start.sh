@@ -51,7 +51,7 @@ else
     echo "No organization information provided, using defaults"
 fi
 
-echo "Please enter the path to the schema JSON file:"
+echo "Please enter the path to the schema JSON-LD file:"
 read -r json_file_path
 export JSON_FILE_PATH=$json_file_path
 

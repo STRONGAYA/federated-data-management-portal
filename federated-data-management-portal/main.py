@@ -24,20 +24,20 @@ class Dashboard:
         """
         Initialize the Dashboard class.
 
-        This constructor method initializes the Dashboard class with a given JSON file path.
-        It loads data from the JSON file, sets up the Dash app with a layout and title, and registers callbacks.
+        This constructor method initializes the Dashboard class with a given JSON-LD file path.
+        It loads data from the JSON-LD file, sets up the Dash app with a layout and title, and registers callbacks.
 
         Parameters:
-        json_file_path (str): The path to the JSON file to load data from.
+        json_file_path (str): The path to the JSON-LD file to load data from.
 
         Raises:
-        SystemExit: If the provided file path does not end with '.json'.
+        SystemExit: If the provided file path does not end with '.jsonld'.
         """
-        if json_file_path.endswith('.json'):
+        if json_file_path.endswith('.jsonld'):
             with open(json_file_path, 'r') as f:
                 self.global_semantic_map_data = json.load(f)
         else:
-            exit('Invalid semantic_map file path')
+            exit('Invalid semantic_map file path, expected a .jsonld file')
 
         # Set default max_depth for semantic_map category extraction
         self.max_depth = 1
@@ -52,32 +52,34 @@ class Dashboard:
 
     def extract_categories_from_semantic_map(self, max_depth=0):
         """
-        Extract categories from semantic_map_reconstruction hierarchy for filtering.
+        Extract categories from schemaReconstruction hierarchy for filtering.
         
         Parameters:
-        max_depth (int): Maximum depth to traverse in semantic_map_reconstruction (default: 2)
+        max_depth (int): Maximum depth to traverse in schemaReconstruction (default: 2)
         
         Returns:
         list: List of unique category labels with their corresponding values for filtering
         """
         categories = set()
         
-        if 'variable_info' not in self.global_semantic_map_data:
+        schema = self.global_semantic_map_data.get('schema', {})
+        variables = schema.get('variables', {})
+        if not variables:
             return []
             
-        for variable_name, variable_data in self.global_semantic_map_data['variable_info'].items():
-            if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
-                # Process each level in schema_reconstruction up to max_depth
-                # Only look at class items (not nodes) within the specified depth
-                for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+        for variable_name, variable_data in variables.items():
+            if 'schemaReconstruction' in variable_data and variable_data['schemaReconstruction']:
+                # Process each level in schemaReconstruction up to max_depth
+                # Only look at ClassNode items (not UnitNodes) within the specified depth
+                for level, reconstruction_item in enumerate(variable_data['schemaReconstruction']):
                     if level >= max_depth:
                         break
                     
-                    if (reconstruction_item.get('type') == 'class' and 
-                        'aesthetic_label' in reconstruction_item and
+                    if (reconstruction_item.get('@type') == 'schema:ClassNode' and 
+                        'aestheticLabel' in reconstruction_item and
                         reconstruction_item.get('placement') != 'before'):
                         # Remove underscores and format the aesthetic label nicely
-                        aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
+                        aesthetic_label = reconstruction_item['aestheticLabel'].replace('_', ' ')
                         categories.add(f" {aesthetic_label}")
         
         return sorted(list(categories))
@@ -423,12 +425,12 @@ class Dashboard:
             filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
             if prefix_selection and selected_variables:
                 variables_to_remove = []
-                for variable_name, variable_data in filtered_semantic_map['variable_info'].items():
+                for variable_name, variable_data in filtered_semantic_map['schema']['variables'].items():
                     if variable_data.get('class') not in selected_variables:
                         variables_to_remove.append(variable_name)
 
                 for variable_name in variables_to_remove:
-                    filtered_semantic_map['variable_info'].pop(variable_name)
+                    filtered_semantic_map['schema']['variables'].pop(variable_name)
 
             # Generate table with filtered data
             df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)
@@ -598,9 +600,9 @@ if __name__ == '__main__':
         config_path = input("Please provide the path to the Vantage6 configuration JSON file "
                             "or press enter to use mock data.\n")
         if len(config_path) == 0:
-            json_file_path = os.path.join(os.getcwd(), 'example_data', 'schema.json')
+            json_file_path = os.path.join(os.getcwd(), 'example_data', 'schema.jsonld')
         else:
-            json_file_path = input("Please provide the path to the global semantic_map JSON file.\n")
+            json_file_path = input("Please provide the path to the global semantic_map JSON-LD file.\n")
         dash_app = Dashboard(json_file_path)
 
         if config_path and config_path.endswith('.json'):
@@ -611,7 +613,7 @@ if __name__ == '__main__':
 
     # Call the fetch_data function immediately at startup
     dash_app.App.layout['store'].data = fetch_data(vantage6_config, None,
-                                                   dash_app.global_semantic_map_data['variable_info'])
+                                                   dash_app.global_semantic_map_data['schema']['variables'])
 
     # Run the fetch_data function every six days
     scheduler = BackgroundScheduler()

@@ -279,8 +279,8 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     Parameters:
     descriptive_data (dict): Dictionary containing the descriptive data with timestamps as keys
     selected_categories (list): List of category strings to filter variables by (e.g., ['demographic', 'clinical'])
-    semantic_map_data (dict): Semantic_map data containing variable_info with schema_reconstruction
-    max_depth (int): Maximum depth to check in schema_reconstruction
+    semantic_map_data (dict): Semantic_map data containing schema.variables with schemaReconstruction
+    max_depth (int): Maximum depth to check in schemaReconstruction
 
     Returns:
     dict: Filtered descriptive data containing only variables with matching categories
@@ -298,20 +298,22 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
         category_mapping[cat] = cat.lstrip('_').replace('_', ' ').title()
 
     # Get variable classes (not names) that belong to selected categories
-    if 'variable_info' in semantic_map_data:
-        for variable_name, variable_data in semantic_map_data['variable_info'].items():
-            if 'schema_reconstruction' in variable_data and variable_data['schema_reconstruction']:
-                # Check each level in schema_reconstruction up to max_depth
-                # Only look at class items (not nodes) within the specified depth
-                for level, reconstruction_item in enumerate(variable_data['schema_reconstruction']):
+    schema = semantic_map_data.get('schema', {})
+    variables = schema.get('variables', {})
+    if variables:
+        for variable_name, variable_data in variables.items():
+            if 'schemaReconstruction' in variable_data and variable_data['schemaReconstruction']:
+                # Check each level in schemaReconstruction up to max_depth
+                # Only look at ClassNode items (not UnitNodes) within the specified depth
+                for level, reconstruction_item in enumerate(variable_data['schemaReconstruction']):
                     if level >= max_depth:
                         break
                     
-                    if (reconstruction_item.get('type') == 'class' and 
-                        'aesthetic_label' in reconstruction_item and
+                    if (reconstruction_item.get('@type') == 'schema:ClassNode' and 
+                        'aestheticLabel' in reconstruction_item and
                         reconstruction_item.get('placement') != 'before'):
                         # Remove underscores from aesthetic label and normalize
-                        aesthetic_label = reconstruction_item['aesthetic_label'].replace('_', ' ')
+                        aesthetic_label = reconstruction_item['aestheticLabel'].replace('_', ' ')
                         # Check if this variable belongs to any selected category
                         for cat_value, cat_label in category_mapping.items():
                             if aesthetic_label.lower() == cat_label.lower():
@@ -475,10 +477,12 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     tooltips = []   # Initialise tooltips as a list
 
     # prefixes for replacement purposes
-    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', global_semantic_map_data.get('prefixes', '')))
-    prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+    schema = global_semantic_map_data.get('schema', {})
+    prefixes = dict(schema.get('prefixes', {}))
+    if 'ncit' not in prefixes:
+        prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
 
-    variable_info = global_semantic_map_data.get('variable_info')
+    variable_info = schema.get('variables')
     if variable_info is None:
         variable_info = {}
 
@@ -617,7 +621,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
             any_expected_value_class_found = False
             
             # Check categorical data for expected value classes
-            value_mapping = _variable_info[variable].get('value_mapping', {})
+            value_mapping = _variable_info[variable].get('valueMapping', {})
             
             # Determine if this variable should be subject to value class checking
             should_check_value_classes = False
@@ -648,7 +652,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             if term_key == 'missing_or_unspecified':
                                 continue
                                 
-                            target_class = value_info.get('target_class', '')
+                            target_class = value_info.get('targetClass', '')
                             
                             # Check if this target class is present
                             if target_class in actual_values:
@@ -710,7 +714,7 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
                             if term_key == 'missing_or_unspecified':
                                 continue
                                 
-                            target_class = value_info.get('target_class', '')
+                            target_class = value_info.get('targetClass', '')
                             
                             # Check if the target class ontology code is directly present in the data
                             # Look for both prefixed (ncit:C20197) and full URI versions
@@ -1075,13 +1079,17 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
         
         # Helper function to convert ontology codes to human-readable names
         def get_readable_variable_name(ontology_code):
-            if semantic_map_data and 'variable_info' in semantic_map_data:
-                variable_info = semantic_map_data['variable_info']
+            schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+            variables = schema.get('variables', {})
+            if variables:
+                variable_info = variables
                 # Expand prefixes in ontology code if needed
                 expanded_code = ontology_code
-                if 'prefixes' in semantic_map_data:
-                    prefixes = dict(re.findall(r'PREFIX (\w+): <([^>]+)>', semantic_map_data.get('prefixes', '')))
-                    prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+                schema_prefixes = schema.get('prefixes', {})
+                if schema_prefixes:
+                    prefixes = dict(schema_prefixes)
+                    if 'ncit' not in prefixes:
+                        prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
                     for prefix, uri in prefixes.items():
                         if prefix + ":" in expanded_code:
                             expanded_code = expanded_code.replace(prefix + ":", uri)
@@ -1092,7 +1100,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                     var_class = var_data.get('class', '')
                     # Expand prefixes in variable class too
                     expanded_var_class = var_class
-                    if 'prefixes' in semantic_map_data:
+                    if schema_prefixes:
                         for prefix, uri in prefixes.items():
                             if prefix + ":" in expanded_var_class:
                                 expanded_var_class = expanded_var_class.replace(prefix + ":", uri)

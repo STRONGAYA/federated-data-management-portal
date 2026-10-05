@@ -71,7 +71,7 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
 
     variables_to_describe = {}
     for value in semantic_map.values():
-        data_type = value.get('data_type', None)
+        data_type = value.get('dataType', None)
         if data_type == 'continuous':
             variables_to_describe[value['class']] = {'datatype': 'numerical'}
         elif data_type == 'categorical':
@@ -129,10 +129,10 @@ def fetch_data(vantage6_config, descriptive_data, semantic_map):
         variable_class_code_to_name = {v['class']: k for k, v in semantic_map.items()}
         value_class_code_to_name = {}
         for variable in variable_class_code_to_name.values():
-            if semantic_map[variable].get('value_mapping') is not None:
-                for value in semantic_map[variable].get('value_mapping').get('terms'):
+            if semantic_map[variable].get('valueMapping') is not None:
+                for value in semantic_map[variable].get('valueMapping').get('terms'):
                     value_class_code_to_name.update({semantic_map[variable].get(
-                        'value_mapping').get('terms').get(value).get('target_class'): value})
+                        'valueMapping').get('terms').get(value).get('targetClass'): value})
 
         # Combine the new data with the descriptive statistics
         _partial_stats = _new_descriptive_stats['partial_results']
