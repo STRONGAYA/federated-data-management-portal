@@ -46,10 +46,12 @@ available data between those moments:
 
 In addition, a reserved top-level `aggregate` key may hold the results of the central
 (aggregating) task of the "Descriptive statistics" Vantage6 algorithm. It is keyed by ISO
-timestamp as well and feeds the data exploration page, which renders the federated
-quartiles (q1, median, q3) and the derived IQR per continuous variable. The central result
-has `min` and `max` removed by the algorithm, so the portal draws the box plot whiskers at
-the 1.5*IQR fences:
+timestamp as well and feeds the data exploration page, which reconstructs a density curve
+per continuous variable from the federated quartiles (q1, median, q3) and the derived IQR.
+The central result has `min` and `max` removed by the algorithm, so the curve is modelled
+from the quartiles alone: log-normal when the quartiles are right-skewed and strictly
+positive, normal otherwise, evaluated on a dense evenly spaced grid with the IQR band
+shaded:
 
 ```json
 {
