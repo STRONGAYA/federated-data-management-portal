@@ -1,6 +1,7 @@
 import copy
 import io
 import json
+import math
 import re
 
 import numpy as np
@@ -1756,13 +1757,24 @@ def load_aggregate_stats(aggregate_data):
     return categorical, numerical
 
 
-def generate_distribution_box_figure(aggregate_data, variable, semantic_map_data=None):
+# For a normal distribution the IQR spans q1..q3 = mu +/- z*sigma with z ~ 0.6745
+_QUARTILE_Z = 0.6744897501960817
+# Number of evenly spaced grid points the density curve is evaluated on
+_CURVE_GRID_POINTS = 500
+
+
+def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_data=None):
     """
-    Generate a box plot of one continuous variable from the central aggregate result.
+    Generate a density curve of one continuous variable, reconstructed from the
+    central aggregate quartiles (q1, median, q3).
 
     The central v6-descriptive-statistics result carries the federated q1, median
-    and q3 per variable (the algorithm removes min and max), so the IQR is
-    computed as q3 - q1 and the whiskers are drawn at the 1.5*IQR fences.
+    and q3 per variable (the algorithm removes min and max), so the distribution
+    is modelled from the quartiles alone: a log-normal when the quartiles are
+    right-skewed and strictly positive (the log transform makes it normal), a
+    normal otherwise. In both cases sigma follows from the IQR = q3 - q1 via
+    IQR = 2*z*sigma. The curve is evaluated on a dense, evenly spaced grid, the
+    IQR band (q1..q3) is shaded and the median is marked.
 
     Parameters:
     aggregate_data (dict): The 'aggregate' section of the dashboard data.
@@ -1770,8 +1782,8 @@ def generate_distribution_box_figure(aggregate_data, variable, semantic_map_data
     semantic_map_data (dict, optional): The semantic map used for the variable label.
 
     Returns:
-    plotly.graph_objs._figure.Figure: The box plot, or an annotation figure when no
-                                      aggregate result or quartiles are available.
+    plotly.graph_objs._figure.Figure: The density curve, or an annotation figure when
+                                      no aggregate result or quartiles are available.
     """
     if not aggregate_data:
         return _empty_annotation_figure('No central aggregate result available')
@@ -1786,31 +1798,66 @@ def generate_distribution_box_figure(aggregate_data, variable, semantic_map_data
 
     q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
     iqr = q3 - q1
-    lower_fence = q1 - 1.5 * iqr
-    upper_fence = q3 + 1.5 * iqr
-    custom = [[q1, median, q3, iqr,
-               stats.get('mean', float('nan')), stats.get('std', float('nan')),
-               stats.get('count', float('nan'))]]
+    if iqr <= 0:
+        return _empty_annotation_figure(f'Degenerate IQR of 0 for {label}')
 
-    figure = go.Figure(go.Box(
-        x=[label],
-        q1=[q1],
-        median=[median],
-        q3=[q3],
-        lowerfence=[lower_fence],
-        upperfence=[upper_fence],
-        customdata=custom,
+    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
+    if right_skewed:
+        # Log transform: the log-normal median is exp(mu) and its log-scale
+        # quartiles are mu +/- z*sigma, so sigma = ln(q3/q1) / (2*z)
+        mu = math.log(median)
+        sigma = math.log(q3 / q1) / (2 * _QUARTILE_Z)
+        x = np.linspace(math.exp(mu - 4 * sigma), math.exp(mu + 4 * sigma), _CURVE_GRID_POINTS)
+        y = np.exp(-((np.log(x) - mu) ** 2) / (2 * sigma ** 2)) / (x * sigma * math.sqrt(2 * math.pi))
+        transform_note = 'log-transformed'
+    else:
+        mu = median
+        sigma = iqr / (2 * _QUARTILE_Z)
+        x_lo = max(0.0, mu - 4 * sigma) if q1 > 0 else mu - 4 * sigma
+        x = np.linspace(x_lo, mu + 4 * sigma, _CURVE_GRID_POINTS)
+        y = np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
+        transform_note = 'normal'
+
+    curve_color = pio.templates[pio.templates.default].layout.colorway[0]
+    figure = go.Figure(go.Scatter(
+        x=x,
+        y=y,
+        mode='lines',
+        fill='tozeroy',
+        name=label,
+        line=dict(color=curve_color, width=2),
         hovertemplate=(
             f"<b>{label}</b><br>"
-            "Q1: <b>%{customdata[0]:.2f}</b><br>"
-            "Median: <b>%{customdata[1]:.2f}</b><br>"
-            "Q3: <b>%{customdata[2]:.2f}</b><br>"
-            "IQR (Q3 - Q1): <b>%{customdata[3]:.2f}</b><br>"
-            "Mean: <b>%{customdata[4]:.2f}</b><br>"
-            "Std: <b>%{customdata[5]:.2f}</b><br>"
-            "Count: <b>%{customdata[6]:.0f}</b><extra></extra>"
+            "Value: <b>%{x:.2f}</b><br>"
+            "Density: <b>%{y:.4f}</b><extra></extra>"
         ),
     ))
+
+    # Shade the IQR band and mark the median
+    figure.add_shape(
+        type='rect', x0=q1, x1=q3, y0=0, y1=1, yref='paper',
+        fillcolor=f'rgba(72, 72, 72, 0.15)', line=dict(width=0),
+    )
+    figure.add_shape(
+        type='line', x0=median, x1=median, y0=0, y1=1, yref='paper',
+        line=dict(color='#484848', width=2, dash='dash'),
+    )
+
+    stats_text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
+    if 'mean' in stats:
+        stats_text += f' | Mean: {float(stats["mean"]):.2f}'
+    if 'std' in stats:
+        stats_text += f' | Std: {float(stats["std"]):.2f}'
+    if 'count' in stats:
+        stats_text += f' | n: {float(stats["count"]):.0f}'
+    stats_text += f' ({transform_note})'
+    figure.add_annotation(
+        text=stats_text,
+        xref='paper', yref='paper', x=0.01, y=0.98,
+        xanchor='left', yanchor='top', showarrow=False,
+        font=dict(family='Poppins, sans-serif', size=12, color='#484848'),
+    )
+
     figure.update_layout(
         title=f'Federated distribution of {label}',
         hoverlabel=dict(font_family='Poppins, sans-serif'),
@@ -1818,9 +1865,9 @@ def generate_distribution_box_figure(aggregate_data, variable, semantic_map_data
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         height=400,
-        margin=dict(l=60, r=20, t=60, b=20),
-        yaxis=dict(title=label, rangemode='tozero'),
-        xaxis=dict(title=None),
+        margin=dict(l=60, r=20, t=60, b=40),
+        xaxis=dict(title=label),
+        yaxis=dict(title='Density', rangemode='tozero'),
     )
     return figure
 
