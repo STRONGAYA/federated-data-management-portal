@@ -831,8 +831,8 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated box plot figure.
             """
-            return callbacks.generate_distribution_box_figure(aggregate_data, variable,
-                                                              self.global_semantic_map_data)
+            return callbacks.generate_distribution_curve_figure(aggregate_data, variable,
+                                                                self.global_semantic_map_data)
 
     def run(self, debug=None):
         """
