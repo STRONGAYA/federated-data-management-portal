@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+import simple_icd_10 as icd10
 
 from collections import defaultdict
 from dash import dash_table
@@ -1624,3 +1625,437 @@ def generate_unavailable_organisation_annotation(domain):
         paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig
+
+
+def _empty_annotation_figure(text):
+    """
+    Generate a Plotly figure with a single centered annotation and no axes.
+
+    Parameters:
+    text (str): The message to display.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The annotation figure.
+    """
+    figure = go.Figure()
+    figure.update_layout(
+        annotations=[dict(
+            text=text,
+            font=dict(family='Poppins, sans-serif', size=20),
+            showarrow=False,
+            x=0.5, y=0.5, xref='paper', yref='paper',
+            xanchor='center', yanchor='middle',
+        )],
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=400,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+    return figure
+
+
+def _schema_prefixes(semantic_map_data):
+    """Return the schema prefixes, always including the ncit prefix."""
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    prefixes = dict(schema.get('prefixes', {}))
+    if 'ncit' not in prefixes:
+        prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+    return prefixes
+
+
+def _expand_prefix(code, prefixes):
+    """Expand a prefixed ontology code (e.g. 'ncit:C28421') to its full URI."""
+    if not isinstance(code, str):
+        return code
+    for prefix, uri in prefixes.items():
+        if prefix + ':' in code:
+            return code.replace(prefix + ':', uri, 1)
+    return code
+
+
+def _readable_variable_name(ontology_code, semantic_map_data=None):
+    """
+    Map an ontology class code to the human-readable schema variable name.
+
+    Falls back to a formatted version of the code itself when the code is not
+    part of the schema.
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    prefixes = _schema_prefixes(semantic_map_data)
+    expanded_code = _expand_prefix(ontology_code, prefixes)
+    for var_key, var_data in variables.items():
+        var_class = var_data.get('class', '')
+        if var_class == ontology_code or _expand_prefix(var_class, prefixes) == expanded_code:
+            return var_key.replace('_', ' ').upper() if any(
+                name in var_key for name in names_to_capitalise) else var_key.replace('_', ' ').title()
+    return ontology_code.replace('_', ' ').upper() if any(
+        name in ontology_code for name in names_to_capitalise) else ontology_code.replace('_', ' ').title()
+
+
+def _variable_class(variable_name, semantic_map_data=None):
+    """Resolve a schema variable name to its ontology class code."""
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    if variable_name in variables:
+        return variables[variable_name].get('class', variable_name)
+    return variable_name
+
+
+def _value_label(value, variable_class, semantic_map_data=None):
+    """
+    Map a categorical value code to its valueMapping term label.
+
+    Falls back to the raw value when no term targets it.
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    prefixes = _schema_prefixes(semantic_map_data)
+    expanded_value = _expand_prefix(value, prefixes)
+    expanded_class = _expand_prefix(variable_class, prefixes)
+    for var_data in variables.values():
+        var_class = var_data.get('class', '')
+        if var_class != variable_class and _expand_prefix(var_class, prefixes) != expanded_class:
+            continue
+        for term_key, term_data in var_data.get('valueMapping', {}).get('terms', {}).items():
+            target = term_data.get('targetClass', '')
+            if target == value or _expand_prefix(target, prefixes) == expanded_value:
+                return term_key.replace('_', ' ').title()
+    return str(value)
+
+
+def load_aggregate_stats(aggregate_data):
+    """
+    Load the categorical and numerical statistics of the latest central aggregate snapshot.
+
+    Accepts both the 'categorical'/'numerical' keys and the vantage6-native
+    'categorical_general_statistics'/'numerical_general_statistics' keys, so raw
+    central task exports also work.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data, keyed by
+                           ISO timestamp.
+
+    Returns:
+    tuple: The (categorical, numerical) DataFrames of the latest aggregate snapshot,
+           empty when no aggregate data is present.
+    """
+    categorical = _load_stats_frame(None, ['variable', 'value', 'count'])
+    numerical = _load_stats_frame(None, ['variable', 'statistic', 'value'])
+    if not aggregate_data:
+        return categorical, numerical
+    latest = aggregate_data[max(aggregate_data.keys())]
+    if not isinstance(latest, dict):
+        return categorical, numerical
+    categorical_raw = latest.get('categorical', latest.get('categorical_general_statistics'))
+    numerical_raw = latest.get('numerical', latest.get('numerical_general_statistics'))
+    categorical = _load_stats_frame(categorical_raw, ['variable', 'value', 'count']).dropna(subset=['variable'])
+    numerical = _load_stats_frame(numerical_raw, ['variable', 'statistic', 'value']).dropna(subset=['variable'])
+    return categorical, numerical
+
+
+def generate_distribution_box_figure(aggregate_data, variable, semantic_map_data=None):
+    """
+    Generate a box plot of one continuous variable from the central aggregate result.
+
+    The central v6-descriptive-statistics result carries the federated q1, median
+    and q3 per variable (the algorithm removes min and max), so the IQR is
+    computed as q3 - q1 and the whiskers are drawn at the 1.5*IQR fences.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable to plot.
+    semantic_map_data (dict, optional): The semantic map used for the variable label.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The box plot, or an annotation figure when no
+                                      aggregate result or quartiles are available.
+    """
+    if not aggregate_data:
+        return _empty_annotation_figure('No central aggregate result available')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise its distribution')
+    label = _readable_variable_name(variable, semantic_map_data)
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    stats = dict(zip(rows['statistic'], rows['value']))
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return _empty_annotation_figure(f'No quartile statistics available for {label}')
+
+    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    iqr = q3 - q1
+    lower_fence = q1 - 1.5 * iqr
+    upper_fence = q3 + 1.5 * iqr
+    custom = [[q1, median, q3, iqr,
+               stats.get('mean', float('nan')), stats.get('std', float('nan')),
+               stats.get('count', float('nan'))]]
+
+    figure = go.Figure(go.Box(
+        x=[label],
+        q1=[q1],
+        median=[median],
+        q3=[q3],
+        lowerfence=[lower_fence],
+        upperfence=[upper_fence],
+        customdata=custom,
+        hovertemplate=(
+            f"<b>{label}</b><br>"
+            "Q1: <b>%{customdata[0]:.2f}</b><br>"
+            "Median: <b>%{customdata[1]:.2f}</b><br>"
+            "Q3: <b>%{customdata[2]:.2f}</b><br>"
+            "IQR (Q3 - Q1): <b>%{customdata[3]:.2f}</b><br>"
+            "Mean: <b>%{customdata[4]:.2f}</b><br>"
+            "Std: <b>%{customdata[5]:.2f}</b><br>"
+            "Count: <b>%{customdata[6]:.0f}</b><extra></extra>"
+        ),
+    ))
+    figure.update_layout(
+        title=f'Federated distribution of {label}',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=400,
+        margin=dict(l=60, r=20, t=60, b=20),
+        yaxis=dict(title=label, rangemode='tozero'),
+        xaxis=dict(title=None),
+    )
+    return figure
+
+
+def generate_categorical_donut(descriptive_data, selection, variable_name, semantic_map_data=None, text="AYA"):
+    """
+    Generate a donut chart of the counts of one categorical variable, summed over
+    the selected organisations in the latest snapshot.
+
+    Value labels come from the schema valueMapping terms when available; the
+    bookkeeping 'outliers' value is excluded.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; each key is a timestamp and each
+                             value maps organisations to their statistics.
+    selection (list): The selected organisation names.
+    variable_name (str): The schema variable name (e.g. 'biological_sex'); resolved
+                         to its ontology class via the semantic map.
+    semantic_map_data (dict, optional): The semantic map used for labels.
+    text (str, optional): The text used in annotation messages. Defaults to "AYA".
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
+    """
+    variable_class = _variable_class(variable_name, semantic_map_data)
+    label = _readable_variable_name(variable_class, semantic_map_data)
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    counts = defaultdict(float)
+    for org in selection:
+        if org not in latest_data:
+            continue
+        categorical, _ = _load_organization_stats(latest_data[org])
+        rows = categorical[categorical['variable'] == variable_class]
+        for value, count in zip(rows['value'], rows['count']):
+            if str(value).lower() == 'outliers':
+                continue
+            counts[value] += count
+    if not counts:
+        return _empty_annotation_figure(f'No data available for {label}')
+
+    items = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+    labels = ['Missing' if str(value).lower() == 'nan'
+              else _value_label(value, variable_class, semantic_map_data) for value, _ in items]
+    values = [count for _, count in items]
+
+    figure = go.Figure(data=[
+        dict(
+            labels=labels,
+            values=values,
+            type='pie',
+            hole=.56,
+            name='',
+            textinfo='value',
+            hovertemplate=("<b>%{label}</b><br>"
+                           "Count: <b>%{value}</b><br>"
+                           "Proportion: <b>%{percent}</b><extra></extra>"),
+        )
+    ])
+    figure.update_layout(
+        title=f'{label} distribution',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
+    )
+    return figure
+
+
+# Values that are bookkeeping rows rather than actual categories
+SPECIAL_CATEGORICAL_VALUES = ['na', 'outliers', '']
+
+
+def _get_icd10_block(code):
+    """
+    Determine the ICD-10 block (e.g. 'C50-C50') that the given ICD-10 code belongs to.
+
+    Parameters:
+    code: The ICD-10 code (e.g. 'C50.9').
+
+    Returns:
+    str: The block code, or None if the code is not a valid ICD-10 item.
+    """
+    try:
+        code = str(code).strip()
+        if not code or not icd10.is_valid_item(code):
+            return None
+        if icd10.is_block(code):
+            return code
+        # Walk up the ancestors (from closest to furthest) until we find the block
+        for ancestor in icd10.get_ancestors(code):
+            if icd10.is_block(ancestor):
+                return ancestor
+        return None
+    except Exception:
+        return None
+
+
+def detect_icd10_variables(categorical_df, minimum_valid_fraction=0.5):
+    """
+    Detect which categorical variables actually contain ICD-10 codes.
+
+    The variable holding the ICD-10 codes cannot reliably be recognised by its
+    name, so it is detected by the shape of its values: at least
+    minimum_valid_fraction of a variable's non-bookkeeping values must be valid
+    ICD-10 items.
+
+    Parameters:
+    categorical_df (pd.DataFrame): Categorical statistics with 'variable', 'value'
+                                   and 'count' columns.
+    minimum_valid_fraction (float): Minimum fraction of valid ICD-10 items required.
+
+    Returns:
+    list: The variable codes that contain ICD-10 codes.
+    """
+    icd10_variables = []
+    if categorical_df.empty:
+        return icd10_variables
+    for variable, var_rows in categorical_df.groupby('variable', sort=False):
+        values = var_rows['value'].dropna()
+        values = values[~values.astype(str).str.strip().str.lower().isin(SPECIAL_CATEGORICAL_VALUES)]
+        if values.empty:
+            continue
+        valid_count = sum(_get_icd10_block(value) is not None for value in values)
+        if valid_count and valid_count / len(values) >= minimum_valid_fraction:
+            icd10_variables.append(variable)
+    return icd10_variables
+
+
+def bin_icd10_blocks(categorical_df):
+    """
+    Aggregate ICD-10 coded categorical values into block-level counts.
+
+    Mirrors add_binned_icd10_categories from the vantage6-sandbox
+    run-descriptive-statistics notebook: ICD-10 variables are detected by value
+    shape and each code is mapped to its ICD-10 block.
+
+    Parameters:
+    categorical_df (pd.DataFrame): Categorical statistics with 'variable', 'value'
+                                   and 'count' columns.
+
+    Returns:
+    pd.DataFrame: Columns 'block' and 'count', summed per block; empty when no
+                  ICD-10 coded values are present.
+    """
+    blocks = pd.DataFrame(columns=['block', 'count'])
+    for variable in detect_icd10_variables(categorical_df):
+        var_rows = categorical_df[categorical_df['variable'] == variable].copy()
+        var_rows = var_rows[
+            ~var_rows['value'].astype(str).str.strip().str.lower().isin(SPECIAL_CATEGORICAL_VALUES)
+            & var_rows['value'].notna()
+        ]
+        if var_rows.empty:
+            continue
+        var_rows['block'] = var_rows['value'].apply(_get_icd10_block)
+        var_rows = var_rows[var_rows['block'].notna()]
+        if var_rows.empty:
+            continue
+        var_rows['count'] = pd.to_numeric(var_rows['count'], errors='coerce')
+        grouped = var_rows.groupby('block')['count'].sum().reset_index()
+        grouped.columns = ['block', 'count']
+        blocks = pd.concat([blocks, grouped], ignore_index=True)
+    if blocks.empty:
+        return blocks
+    return blocks.groupby('block')['count'].sum().reset_index()
+
+
+def generate_cancer_group_bar_chart(descriptive_data, selection, semantic_map_data=None, text="AYA"):
+    """
+    Generate a horizontal bar chart of cancer types grouped into ICD-10 blocks,
+    with counts summed over the selected organisations in the latest snapshot.
+
+    Each block is labelled with its code and its ICD-10 description (e.g.
+    'C50-C50 - Malignant neoplasm of breast').
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; each key is a timestamp and each
+                             value maps organisations to their statistics.
+    selection (list): The selected organisation names.
+    semantic_map_data (dict, optional): The semantic map (unused, kept for a
+                                        consistent signature with the other charts).
+    text (str, optional): The text used in titles and annotations. Defaults to "AYA".
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The bar chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the cancer type groups')
+
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    frames = []
+    for org in selection:
+        if org in latest_data:
+            categorical, _ = _load_organization_stats(latest_data[org])
+            frames.append(categorical)
+    if not frames:
+        return _empty_annotation_figure('No data available for the selected organisations')
+
+    blocks = bin_icd10_blocks(pd.concat(frames, ignore_index=True))
+    if blocks.empty:
+        return _empty_annotation_figure('No ICD-10 coded cancer types available for the selected organisations')
+
+    # Ascending order so the largest bar ends up on top of the horizontal chart
+    blocks = blocks.sort_values('count').reset_index(drop=True)
+    labels = []
+    for block in blocks['block']:
+        try:
+            description = icd10.get_description(block)
+        except Exception:
+            description = None
+        labels.append(f'{block} - {description}' if description else str(block))
+
+    figure = go.Figure(go.Bar(
+        x=blocks['count'],
+        y=labels,
+        orientation='h',
+        hovertemplate=("<b>%{y}</b><br>"
+                       "Number of " + text + "s: <b>%{x}</b><extra></extra>"),
+    ))
+    figure.update_layout(
+        title='Grouped cancer types (ICD-10 blocks)',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=max(400, len(labels) * 28 + 200),
+        margin=dict(l=260, r=20, t=60, b=40),
+        xaxis=dict(title=f'Number of {text}s', rangemode='tozero'),
+        yaxis=dict(title=None, automargin=True),
+    )
+    return figure
