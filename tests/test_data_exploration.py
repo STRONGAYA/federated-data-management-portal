@@ -3,6 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 from federated_data_management_portal import callbacks
 from federated_data_management_portal.main import (
     load_static_dashboard_data,
@@ -163,37 +165,72 @@ class LoadAggregateStatsTests(unittest.TestCase):
         self.assertEqual(len(numerical), 0)
 
 
-class DistributionBoxFigureTests(unittest.TestCase):
-    def test_box_uses_the_federated_quartiles_and_iqr_fences(self):
-        figure = callbacks.generate_distribution_box_figure(
+class DistributionCurveFigureTests(unittest.TestCase):
+    @staticmethod
+    def curve_area(trace):
+        x, y = np.asarray(trace.x), np.asarray(trace.y)
+        return float(np.sum((y[:-1] + y[1:]) / 2 * np.diff(x)))
+
+    def test_curve_is_a_density_on_a_dense_evenly_spaced_grid(self):
+        figure = callbacks.generate_distribution_curve_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
-        box = figure.data[0]
-        self.assertEqual(list(box.x), ["Age At Diagnosis"])
-        self.assertEqual(list(box.q1), [30.0])
-        self.assertEqual(list(box.median), [32.5])
-        self.assertEqual(list(box.q3), [38.75])
-        # IQR = q3 - q1 = 8.75, whiskers at the 1.5*IQR fences
-        self.assertAlmostEqual(box.lowerfence[0], 30.0 - 1.5 * 8.75)
-        self.assertAlmostEqual(box.upperfence[0], 38.75 + 1.5 * 8.75)
-        self.assertIn("IQR", box.hovertemplate)
+        trace = figure.data[0]
+        self.assertEqual(trace.type, "scatter")
+        self.assertEqual(trace.fill, "tozeroy")
+        self.assertEqual(len(trace.x), callbacks._CURVE_GRID_POINTS)
+        diffs = np.diff(trace.x)
+        self.assertTrue(np.allclose(diffs, diffs[0]))
+        # the curve is a proper density: it integrates to ~1
+        self.assertAlmostEqual(self.curve_area(trace), 1.0, places=2)
         self.assertEqual(figure.layout.title.text, "Federated distribution of Age At Diagnosis")
 
+    def test_symmetric_quartiles_peak_at_the_median(self):
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 35.0])
+        figure = callbacks.generate_distribution_curve_figure(
+            aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
+
+        trace = figure.data[0]
+        peak_x = trace.x[int(np.argmax(trace.y))]
+        self.assertAlmostEqual(peak_x, 32.5, places=1)
+        self.assertIn("(normal)", figure.layout.annotations[0].text)
+
+    def test_right_skewed_positive_quartiles_are_log_transformed(self):
+        figure = callbacks.generate_distribution_curve_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
+
+        trace = figure.data[0]
+        peak_x = trace.x[int(np.argmax(trace.y))]
+        # the log-normal mode lies below the median
+        self.assertLess(peak_x, 32.5)
+        self.assertIn("(log-transformed)", figure.layout.annotations[0].text)
+        self.assertAlmostEqual(self.curve_area(trace), 1.0, places=2)
+
+    def test_iqr_band_and_median_are_marked(self):
+        figure = callbacks.generate_distribution_curve_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
+
+        shapes = {shape.type: shape for shape in figure.layout.shapes}
+        self.assertEqual(shapes["rect"].x0, 30.0)
+        self.assertEqual(shapes["rect"].x1, 38.75)
+        self.assertEqual(shapes["line"].x0, 32.5)
+        self.assertIn("IQR: 8.75", figure.layout.annotations[0].text)
+
     def test_missing_aggregate_section_renders_an_annotation(self):
-        figure = callbacks.generate_distribution_box_figure({}, "ncit:C156420", SCHEMA)
+        figure = callbacks.generate_distribution_curve_figure({}, "ncit:C156420", SCHEMA)
 
         self.assertEqual(len(figure.data), 0)
         self.assertIn("No central aggregate result available", figure.layout.annotations[0].text)
 
     def test_missing_variable_renders_an_annotation(self):
-        figure = callbacks.generate_distribution_box_figure(
+        figure = callbacks.generate_distribution_curve_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), None, SCHEMA)
 
         self.assertIn("Select a variable", figure.layout.annotations[0].text)
 
     def test_variable_without_quartiles_renders_an_annotation(self):
         numerical = numerical_stats(["ncit:C156420", "ncit:C156420"], ["mean", "count"], [34.5, 18.0])
-        figure = callbacks.generate_distribution_box_figure(
+        figure = callbacks.generate_distribution_curve_figure(
             aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
 
         self.assertIn("No quartile statistics available", figure.layout.annotations[0].text)
@@ -280,13 +317,18 @@ class ExampleDataExplorationTests(unittest.TestCase):
         with (EXAMPLE_DATA / "schema.jsonld").open(encoding="utf-8") as f:
             self.schema = json.load(f)
 
-    def test_distribution_box_renders_for_the_example_aggregate(self):
-        figure = callbacks.generate_distribution_box_figure(
+    def test_distribution_curve_renders_for_the_example_aggregate(self):
+        figure = callbacks.generate_distribution_curve_figure(
             self.aggregate_data, "ncit:C156420", self.schema)
 
-        self.assertEqual(list(figure.data[0].q1), [29.9])
-        self.assertEqual(list(figure.data[0].q3), [37.1])
-        self.assertAlmostEqual(figure.data[0].lowerfence[0], 29.9 - 1.5 * (37.1 - 29.9))
+        trace = figure.data[0]
+        self.assertEqual(len(trace.x), callbacks._CURVE_GRID_POINTS)
+        x, y = np.asarray(trace.x), np.asarray(trace.y)
+        area = float(np.sum((y[:-1] + y[1:]) / 2 * np.diff(x)))
+        self.assertAlmostEqual(area, 1.0, places=2)
+        shapes = {shape.type: shape for shape in figure.layout.shapes}
+        self.assertEqual(shapes["rect"].x0, 29.9)
+        self.assertEqual(shapes["rect"].x1, 37.1)
 
     def test_sex_donut_sums_the_latest_snapshot(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())
