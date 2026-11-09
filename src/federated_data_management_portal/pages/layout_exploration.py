@@ -1,6 +1,8 @@
 import dash
 import os
 
+import dash_bootstrap_components as dbc
+
 from dash import html, dcc
 
 from federated_data_management_portal import portal_version
@@ -77,43 +79,45 @@ layout = html.Div([
                         labelStyle={'display': 'inline-block'}
                     )]),
             ]),
-            html.Div(id='tile-exploration-sex', className='tile tile-7', children=[
-                html.H5('Biological sex balance', className='tile-title'),
-                html.Div(id='tile-content-exploration-sex', className='tile-content', children=[
-                    dcc.Graph(
-                        id='exploration-sex-donut',
-                        config={'modeBarButtons': [['toImage']],
-                            'displayModeBar': True,
-                            'displaylogo': False,
-                            'toImageButtonOptions': {
-                                'format': 'svg',
-                                'filename': 'biological-sex-distribution',
-                                'height': 500,
-                                'width': 700,
-                                'scale': 1
+            dbc.Row([
+                dbc.Col(
+                    html.Div(id='tile-exploration-sex', className='tile tile-4', children=[
+                        html.H5('Biological sex balance', className='tile-title'),
+                        dcc.Graph(
+                            id='exploration-sex-donut',
+                            config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+                                'displaylogo': False,
+                                'toImageButtonOptions': {
+                                    'format': 'svg',
+                                    'filename': 'biological-sex-distribution',
+                                    'height': 500,
+                                    'width': 700,
+                                    'scale': 1
+                                }
                             }
-                        }
-                    )
-                ])
-            ]),
-            html.Div(id='tile-exploration-cancer', className='tile tile-7', children=[
-                html.H5('Grouped cancer types (ICD-10 blocks)', className='tile-title'),
-                html.Div(id='tile-content-exploration-cancer', className='tile-content', children=[
-                    dcc.Graph(
-                        id='exploration-cancer-bar',
-                        config={'modeBarButtons': [['toImage']],
-                            'displayModeBar': True,
-                            'displaylogo': False,
-                            'toImageButtonOptions': {
-                                'format': 'svg',
-                                'filename': 'grouped-cancer-types',
-                                'height': 500,
-                                'width': 700,
-                                'scale': 1
+                        )
+                    ]),
+                    width=6, lg=6, md=12, sm=12, xs=12),
+                dbc.Col(
+                    html.Div(id='tile-exploration-cancer', className='tile tile-5', children=[
+                        html.H5('Grouped cancer types (ICD-10 blocks)', className='tile-title'),
+                        dcc.Graph(
+                            id='exploration-cancer-donut',
+                            config={'modeBarButtons': [['toImage']],
+                                'displayModeBar': True,
+                                'displaylogo': False,
+                                'toImageButtonOptions': {
+                                    'format': 'svg',
+                                    'filename': 'grouped-cancer-types',
+                                    'height': 500,
+                                    'width': 700,
+                                    'scale': 1
+                                }
                             }
-                        }
-                    )
-                ])
+                        )
+                    ]),
+                    width=6, lg=6, md=12, sm=12, xs=12)
             ]),
             html.Div(id='tile-exploration-distributions', className='tile tile-7', children=[
                 html.H5('Data distributions', className='tile-title'),
@@ -140,7 +144,28 @@ layout = html.Div([
                             }
                         }
                     )
+                ]),
+                html.Div(id='exploration-distribution-stats', className='explanation', children=[]),
+                html.Div(id='exploration-distribution-disclaimer', className='explanation', children=[
+                    "The curve is an approximation reconstructed from the federated quartiles "
+                    "(q1, median, q3) and IQR; min/max and raw values are not part of the central "
+                    "aggregate result."
                 ])
+            ]),
+            html.Div(id='btn-subject-a', className='btn-subject-a', children=[
+                html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
+                         alt='Arrowhead pointing left',
+                         style={'width': '2.5rem',
+                                'height': '2.5rem'}),
+                dcc.Link('Plausibility', href='/data-plausibility',
+                         className='no-decoration-link')
+            ]),
+            html.Div(id='btn-subject-b', className='btn-subject-b', style={'margin-left': '73%'}, children=[
+                dcc.Link('Availability', href='/data-availability', className='no-decoration-link'),
+                html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
+                         alt='Arrowhead pointing right',
+                         style={'width': '2.5rem',
+                                'height': '2.5rem'})
             ]),
         ]),
         html.Div(id='exploration-explanation', className='explanation',
