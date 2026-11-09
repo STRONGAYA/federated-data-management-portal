@@ -44,6 +44,27 @@ available data between those moments:
 }
 ```
 
+In addition, a reserved top-level `aggregate` key may hold the results of the central
+(aggregating) task of the "Descriptive statistics" Vantage6 algorithm. It is keyed by ISO
+timestamp as well and feeds the data exploration page, which renders the federated
+quartiles (q1, median, q3) and the derived IQR per continuous variable. The central result
+has `min` and `max` removed by the algorithm, so the portal draws the box plot whiskers at
+the 1.5*IQR fences:
+
+```json
+{
+  "aggregate": {
+    "2026-01-01T00:00:00": {
+      "categorical": "{\"variable\":{},\"value\":{},\"count\":{}}",
+      "numerical": "{\"variable\":{},\"statistic\":{},\"value\":{}}"
+    }
+  }
+}
+```
+
+The vantage6-native key names `categorical_general_statistics` and
+`numerical_general_statistics` are accepted as aliases for `categorical` and `numerical`.
+
 Example versions of both files are included in `example_data/` and can be used to run the
 dashboard locally:
 
