@@ -40,9 +40,10 @@ class ChartModeBarTests(unittest.TestCase):
             landing,
             layout_availability,
             layout_completeness,
+            layout_exploration,
             layout_plausibility,
         )
-        cls.pages = (landing, layout_availability, layout_completeness, layout_plausibility)
+        cls.pages = (landing, layout_availability, layout_completeness, layout_exploration, layout_plausibility)
 
     @classmethod
     def tearDownClass(cls):
