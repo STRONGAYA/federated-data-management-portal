@@ -165,7 +165,7 @@ layout = html.Div([
                      className='no-decoration-link')
         ]),
         html.Div(id='btn-subject-b', className='btn-subject-b', style={'margin-left': '73%'}, children=[
-            dcc.Link('Availability', href='/data-availability', className='no-decoration-link'),
+            dcc.Link('Data exploration', href='/data-exploration', className='no-decoration-link'),
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
                      alt='Arrowhead pointing right',
                      style={'width': '2.5rem',
