@@ -193,7 +193,6 @@ class DistributionCurveFigureTests(unittest.TestCase):
         trace = figure.data[0]
         peak_x = trace.x[int(np.argmax(trace.y))]
         self.assertAlmostEqual(peak_x, 32.5, places=1)
-        self.assertIn("(normal)", figure.layout.annotations[0].text)
 
     def test_right_skewed_positive_quartiles_are_log_transformed(self):
         figure = callbacks.generate_distribution_curve_figure(
@@ -203,7 +202,6 @@ class DistributionCurveFigureTests(unittest.TestCase):
         peak_x = trace.x[int(np.argmax(trace.y))]
         # the log-normal mode lies below the median
         self.assertLess(peak_x, 32.5)
-        self.assertIn("(log-transformed)", figure.layout.annotations[0].text)
         self.assertAlmostEqual(self.curve_area(trace), 1.0, places=2)
 
     def test_iqr_band_and_median_are_marked(self):
@@ -214,7 +212,35 @@ class DistributionCurveFigureTests(unittest.TestCase):
         self.assertEqual(shapes["rect"].x0, 30.0)
         self.assertEqual(shapes["rect"].x1, 38.75)
         self.assertEqual(shapes["line"].x0, 32.5)
-        self.assertIn("IQR: 8.75", figure.layout.annotations[0].text)
+
+    def test_the_figure_keeps_the_graph_space_free_of_numbers(self):
+        figure = callbacks.generate_distribution_curve_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
+
+        self.assertEqual(len(figure.layout.annotations), 0)
+
+
+class FormatDistributionStatsTests(unittest.TestCase):
+    def test_summarises_the_quartiles_and_transform(self):
+        text = callbacks.format_distribution_stats(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420")
+
+        self.assertIn("Q1: 30.00", text)
+        self.assertIn("Median: 32.50", text)
+        self.assertIn("Q3: 38.75", text)
+        self.assertIn("IQR: 8.75", text)
+        self.assertIn("n: 18", text)
+        self.assertIn("(log-transformed)", text)
+
+    def test_symmetric_quartiles_are_marked_normal(self):
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 35.0])
+        text = callbacks.format_distribution_stats(aggregate_data(numerical=numerical), "ncit:C156420")
+
+        self.assertIn("(normal)", text)
+
+    def test_returns_empty_string_without_quartiles(self):
+        self.assertEqual(callbacks.format_distribution_stats({}, "ncit:C156420"), "")
+        self.assertEqual(callbacks.format_distribution_stats(aggregate_data(), None), "")
 
     def test_missing_aggregate_section_renders_an_annotation(self):
         figure = callbacks.generate_distribution_curve_figure({}, "ncit:C156420", SCHEMA)
@@ -270,36 +296,37 @@ class CategoricalDonutTests(unittest.TestCase):
         self.assertIn("Select an organisation", figure.layout.annotations[0].text)
 
 
-class CancerGroupBarChartTests(unittest.TestCase):
-    def test_icd10_codes_are_binned_into_blocks_with_descriptions(self):
+class CancerGroupDonutTests(unittest.TestCase):
+    def test_icd10_codes_are_binned_into_donut_sectors_with_descriptions(self):
         data = dashboard_data({
             "Org A": organisation(categorical=CANCER_CATEGORICAL),
             "Org B": organisation(categorical=categorical_stats(
                 ["ncit:C3263", "ncit:C3263"], ["C50.9", "C18.7"], [3, 2])),
         })
 
-        figure = callbacks.generate_cancer_group_bar_chart(data, ["Org A", "Org B"], SCHEMA)
+        figure = callbacks.generate_cancer_group_donut(data, ["Org A", "Org B"], SCHEMA)
 
-        labels = list(figure.data[0].y)
-        counts = list(figure.data[0].x)
+        self.assertEqual(figure.data[0].type, "pie")
+        labels = list(figure.data[0].labels)
+        values = list(figure.data[0].values)
         self.assertIn("C50-C50 - Malignant neoplasm of breast", labels)
         self.assertIn("C30-C39 - Malignant neoplasms of respiratory and intrathoracic organs", labels)
         self.assertIn("C15-C26 - Malignant neoplasms of digestive organs", labels)
-        self.assertEqual(dict(zip(labels, counts))["C50-C50 - Malignant neoplasm of breast"], 10)
-        # ascending order so the largest bar is on top
-        self.assertEqual(counts, sorted(counts))
+        self.assertEqual(dict(zip(labels, values))["C50-C50 - Malignant neoplasm of breast"], 10)
+        # largest sector first
+        self.assertEqual(values, sorted(values, reverse=True))
 
     def test_non_icd10_variables_are_not_binned(self):
         data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
 
-        figure = callbacks.generate_cancer_group_bar_chart(data, ["Org A"], SCHEMA)
+        figure = callbacks.generate_cancer_group_donut(data, ["Org A"], SCHEMA)
 
         self.assertIn("No ICD-10 coded cancer types", figure.layout.annotations[0].text)
 
     def test_no_selection_renders_an_annotation(self):
         data = dashboard_data({"Org A": organisation(categorical=CANCER_CATEGORICAL)})
 
-        figure = callbacks.generate_cancer_group_bar_chart(data, [], SCHEMA)
+        figure = callbacks.generate_cancer_group_donut(data, [], SCHEMA)
 
         self.assertIn("Select an organisation", figure.layout.annotations[0].text)
 
@@ -342,12 +369,11 @@ class ExampleDataExplorationTests(unittest.TestCase):
         self.assertEqual(labels[1], "Female")
         self.assertEqual(values[1], 18)
 
-    def test_cancer_bar_groups_the_example_icd10_codes(self):
+    def test_cancer_donut_groups_the_example_icd10_codes(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())
-        figure = callbacks.generate_cancer_group_bar_chart(self.dashboard_data, orgs, self.schema)
+        figure = callbacks.generate_cancer_group_donut(self.dashboard_data, orgs, self.schema)
 
-        labels = list(figure.data[0].y)
-        counts = dict(zip(labels, figure.data[0].x))
+        counts = dict(zip(figure.data[0].labels, figure.data[0].values))
         self.assertEqual(counts["C50-C50 - Malignant neoplasm of breast"], 20)
         self.assertEqual(counts["C30-C39 - Malignant neoplasms of respiratory and intrathoracic organs"], 15)
         # C18.7 and C25.9 both fall in the C15-C26 digestive organs block
