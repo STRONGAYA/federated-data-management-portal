@@ -1,8 +1,6 @@
 import dash
 import os
 
-import dash_bootstrap_components as dbc
-
 from dash import html, dcc
 
 from federated_data_management_portal import portal_version
@@ -78,43 +76,43 @@ layout = html.Div([
                         value=[],
                         labelStyle={'display': 'inline-block'}
                     )]),
-                dbc.Row([
-                    dbc.Col(
-                        html.Div(id='tile-exploration-sex', className='tile tile-4', children=[
-                            dcc.Graph(
-                                id='exploration-sex-donut',
-                                config={'modeBarButtons': [['toImage']],
-                                    'displayModeBar': True,
-                                    'displaylogo': False,
-                                    'toImageButtonOptions': {
-                                        'format': 'svg',
-                                        'filename': 'biological-sex-distribution',
-                                        'height': 500,
-                                        'width': 700,
-                                        'scale': 1
-                                    }
-                                }
-                            )
-                        ]),
-                        width=6, lg=6, md=12, sm=12, xs=12),
-                    dbc.Col(
-                        html.Div(id='tile-exploration-cancer', className='tile tile-5', children=[
-                            dcc.Graph(
-                                id='exploration-cancer-bar',
-                                config={'modeBarButtons': [['toImage']],
-                                    'displayModeBar': True,
-                                    'displaylogo': False,
-                                    'toImageButtonOptions': {
-                                        'format': 'svg',
-                                        'filename': 'grouped-cancer-types',
-                                        'height': 500,
-                                        'width': 700,
-                                        'scale': 1
-                                    }
-                                }
-                            )
-                        ]),
-                        width=6, lg=6, md=12, sm=12, xs=12)
+            ]),
+            html.Div(id='tile-exploration-sex', className='tile tile-7', children=[
+                html.H5('Biological sex balance', className='tile-title'),
+                html.Div(id='tile-content-exploration-sex', className='tile-content', children=[
+                    dcc.Graph(
+                        id='exploration-sex-donut',
+                        config={'modeBarButtons': [['toImage']],
+                            'displayModeBar': True,
+                            'displaylogo': False,
+                            'toImageButtonOptions': {
+                                'format': 'svg',
+                                'filename': 'biological-sex-distribution',
+                                'height': 500,
+                                'width': 700,
+                                'scale': 1
+                            }
+                        }
+                    )
+                ])
+            ]),
+            html.Div(id='tile-exploration-cancer', className='tile tile-7', children=[
+                html.H5('Grouped cancer types (ICD-10 blocks)', className='tile-title'),
+                html.Div(id='tile-content-exploration-cancer', className='tile-content', children=[
+                    dcc.Graph(
+                        id='exploration-cancer-bar',
+                        config={'modeBarButtons': [['toImage']],
+                            'displayModeBar': True,
+                            'displaylogo': False,
+                            'toImageButtonOptions': {
+                                'format': 'svg',
+                                'filename': 'grouped-cancer-types',
+                                'height': 500,
+                                'width': 700,
+                                'scale': 1
+                            }
+                        }
+                    )
                 ])
             ]),
             html.Div(id='tile-exploration-distributions', className='tile tile-7', children=[
@@ -146,9 +144,9 @@ layout = html.Div([
             ]),
         ]),
         html.Div(id='exploration-explanation', className='explanation',
-                 children=["Graphics aim to visualise the aggregate data distributions (via the federated "
-                           "quartiles and IQR) and key variable characteristics such as the biological sex "
-                           "balance and the grouped cancer types.",
+                 children=["Graphics aim to visualise the aggregate data distributions as density curves "
+                           "reconstructed from the federated quartiles and IQR, and key variable "
+                           "characteristics such as the biological sex balance and the grouped cancer types.",
                            html.Br(), html.Br(),
                            'Distributions and variable info are based on the "Descriptive statistics" Vantage6 '
                            'algorithm ',
