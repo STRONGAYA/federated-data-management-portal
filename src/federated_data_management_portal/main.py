@@ -20,6 +20,9 @@ pio.templates.default = 'seaborn'
 page_title = 'STRONG-AYA | Data Management Portal'
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
+# Reserved top-level key holding the central (aggregating) task results
+AGGREGATE_SECTION_KEY = 'aggregate'
+
 
 def load_json_file(json_file_path):
     """Load a JSON or JSON-LD file and fail with a clear message when the path is invalid."""
@@ -58,23 +61,62 @@ def load_static_dashboard_data(dashboard_data_file_path):
           "categorical": "{...}",
           "numerical": "{...}"
         }
+      },
+      "aggregate": {
+        "2026-01-01T00:00:00": {
+          "categorical": "{...}",
+          "numerical": "{...}"
+        }
       }
     }
 
     Top-level keys must be ISO timestamps so exported dashboard snapshots retain
-    when the data was generated.
+    when the data was generated. The reserved 'aggregate' key is the one
+    exception: it holds the central (aggregating) task results, itself keyed by
+    ISO timestamps.
     """
     dashboard_data = load_json_file(dashboard_data_file_path)
 
     if not isinstance(dashboard_data, dict):
         raise SystemExit('Dashboard data JSON must contain an object at the top level.')
 
-    invalid_timestamp_keys = [key for key in dashboard_data.keys() if not is_timestamp_key(key)]
+    invalid_timestamp_keys = [key for key in dashboard_data.keys()
+                              if key != AGGREGATE_SECTION_KEY and not is_timestamp_key(key)]
     if invalid_timestamp_keys:
         keys = ', '.join(str(key) for key in invalid_timestamp_keys[:3])
         raise SystemExit(f'Dashboard data top-level keys must be ISO timestamps. Invalid key(s): {keys}')
 
+    aggregate_section = dashboard_data.get(AGGREGATE_SECTION_KEY, {})
+    if not isinstance(aggregate_section, dict):
+        raise SystemExit(f'The "{AGGREGATE_SECTION_KEY}" section must contain an object keyed by ISO timestamps.')
+    invalid_aggregate_keys = [key for key in aggregate_section.keys() if not is_timestamp_key(key)]
+    if invalid_aggregate_keys:
+        keys = ', '.join(str(key) for key in invalid_aggregate_keys[:3])
+        raise SystemExit(f'The "{AGGREGATE_SECTION_KEY}" section keys must be ISO timestamps. Invalid key(s): {keys}')
+
     return dashboard_data
+
+
+def split_aggregate_section(dashboard_data):
+    """
+    Split the reserved top-level 'aggregate' section from the timestamped
+    organisation snapshots.
+
+    Existing callbacks iterate over the top-level keys as timestamps, so the
+    central aggregate results are kept apart and served through their own store.
+
+    Parameters:
+    dashboard_data (dict): The full dashboard data including the optional
+                           'aggregate' section.
+
+    Returns:
+    tuple: (snapshots, aggregate_section) where snapshots maps ISO timestamps to
+           organisation data and aggregate_section maps ISO timestamps to the
+           central results.
+    """
+    aggregate_section = dashboard_data.get(AGGREGATE_SECTION_KEY, {})
+    snapshots = {key: value for key, value in dashboard_data.items() if key != AGGREGATE_SECTION_KEY}
+    return snapshots, aggregate_section
 
 
 class Dashboard:
@@ -91,7 +133,8 @@ class Dashboard:
         dashboard_data_file_path (str): The path to the static dashboard data JSON file.
         """
         self.global_semantic_map_data = load_json_file(schema_file_path)
-        self.dashboard_data = load_static_dashboard_data(dashboard_data_file_path)
+        self.dashboard_data, self.aggregate_data = split_aggregate_section(
+            load_static_dashboard_data(dashboard_data_file_path))
 
         # Set default max_depth for semantic_map category extraction
         self.max_depth = 1
@@ -155,10 +198,12 @@ class Dashboard:
                 ])
             ]),
             dcc.Store(id='store', data=self.dashboard_data),
+            dcc.Store(id='aggregate-store', data=self.aggregate_data),
             dcc.Store(id='data-availability-store-1'),
             html.Div([
                 dcc.Link('Data availability', href='/data-availability'),
-                dcc.Link('Missing Data', href='/data-completeness')
+                dcc.Link('Missing Data', href='/data-completeness'),
+                dcc.Link('Data exploration', href='/data-exploration')
             ]),
             dash.page_container
         ])
@@ -686,6 +731,108 @@ class Dashboard:
             plotly.graph_objs._figure.Figure: The updated availability over time chart figure.
             """
             return callbacks.generate_sample_size_over_time_chart(descriptive_data)
+
+        @self.App.callback(
+            Output('exploration-subset-selection-checkboxes', 'options'),
+            [Input('store', 'data')]
+        )
+        def update_exploration_checkboxes(descriptive_data):
+            """
+            Callback function to populate the organisation selection checkboxes on
+            the data exploration page with the organisations of the latest snapshot.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+
+            Returns:
+            list: A list of dictionaries representing the checkbox options.
+            """
+            latest_data = descriptive_data[max(descriptive_data.keys())]
+            return [{'label': org, 'value': org} for org in sorted(latest_data.keys())]
+
+        @self.App.callback(
+            Output('exploration-sex-donut', 'figure'),
+            [Input('store', 'data'),
+             Input('exploration-subset-selection-checkboxes', 'value')]
+        )
+        def update_exploration_sex_donut(descriptive_data, selection):
+            """
+            Callback function to update the biological sex donut chart on the data
+            exploration page. Counts are summed over the selected organisations.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+            selection (list): The selected organisations.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            """
+            return callbacks.generate_categorical_donut(descriptive_data, selection, 'biological_sex',
+                                                        self.global_semantic_map_data)
+
+        @self.App.callback(
+            Output('exploration-cancer-bar', 'figure'),
+            [Input('store', 'data'),
+             Input('exploration-subset-selection-checkboxes', 'value')]
+        )
+        def update_exploration_cancer_bar(descriptive_data, selection):
+            """
+            Callback function to update the grouped cancer type bar chart on the data
+            exploration page. ICD-10 codes are binned into blocks and the counts are
+            summed over the selected organisations.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+            selection (list): The selected organisations.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated bar chart figure.
+            """
+            return callbacks.generate_cancer_group_bar_chart(descriptive_data, selection,
+                                                             self.global_semantic_map_data)
+
+        @self.App.callback(
+            [Output('exploration-variable-dropdown', 'options'),
+             Output('exploration-variable-dropdown', 'value')],
+            [Input('aggregate-store', 'data')]
+        )
+        def update_exploration_variable_dropdown(aggregate_data):
+            """
+            Callback function to populate the variable dropdown on the data exploration
+            page with the continuous variables of the latest central aggregate result.
+
+            Parameters:
+            aggregate_data (dict): The data stored in the 'aggregate-store' component.
+
+            Returns:
+            list: The dropdown options with schema-based labels.
+            str: The initially selected variable.
+            """
+            _, numerical = callbacks.load_aggregate_stats(aggregate_data)
+            variables = sorted(numerical['variable'].unique()) if not numerical.empty else []
+            options = [{'label': callbacks._readable_variable_name(variable, self.global_semantic_map_data),
+                        'value': variable} for variable in variables]
+            return options, (variables[0] if variables else None)
+
+        @self.App.callback(
+            Output('exploration-distribution-graph', 'figure'),
+            [Input('aggregate-store', 'data'),
+             Input('exploration-variable-dropdown', 'value')]
+        )
+        def update_exploration_distribution(aggregate_data, variable):
+            """
+            Callback function to update the distribution box plot on the data
+            exploration page from the central aggregate (federated IQR) result.
+
+            Parameters:
+            aggregate_data (dict): The data stored in the 'aggregate-store' component.
+            variable (str): The selected variable's ontology class code.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated box plot figure.
+            """
+            return callbacks.generate_distribution_box_figure(aggregate_data, variable,
+                                                              self.global_semantic_map_data)
 
     def run(self, debug=None):
         """
