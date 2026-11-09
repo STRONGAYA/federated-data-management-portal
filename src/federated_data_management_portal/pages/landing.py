@@ -141,6 +141,33 @@ layout = html.Div([
                                            ])
                               ])
                  ]),
+        html.Div(id='exploration-tile', className='subject-tile',
+                 children=[
+                     dcc.Link(href='/data-exploration', className='no-decoration-link',
+                              children=[
+                                  html.Div(className='subject-title-container',
+                                           children=[
+                                               html.Div(className='subject-title',
+                                                        children=['Data exploration']
+                                                        )
+                                           ]),
+                                  html.Div(className='subject-tile-content',
+                                           children=[
+                                               html.Img(
+                                                   src=f'..{os.path.sep}assets{os.path.sep}scatter-basic.svg',
+                                                   alt='A simple scatter plot',
+                                                   className='subject-image'
+                                               ),
+                                               html.Div(
+                                                   className='subject-explanation',
+                                                   children=[
+                                                       "Explore the aggregate data distributions via the federated "
+                                                       "quartiles and IQR, and key variable characteristics such as "
+                                                       "the biological sex balance and the grouped cancer types."])
+
+                                           ])
+                              ])
+                 ]),
     ]),
     html.Div(id='footer', className='footer',
          children=[html.Div(f'Version {portal_version()}', className='version-note')])
