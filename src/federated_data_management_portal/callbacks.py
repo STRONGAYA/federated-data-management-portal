@@ -1809,14 +1809,12 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         sigma = math.log(q3 / q1) / (2 * _QUARTILE_Z)
         x = np.linspace(math.exp(mu - 4 * sigma), math.exp(mu + 4 * sigma), _CURVE_GRID_POINTS)
         y = np.exp(-((np.log(x) - mu) ** 2) / (2 * sigma ** 2)) / (x * sigma * math.sqrt(2 * math.pi))
-        transform_note = 'log-transformed'
     else:
         mu = median
         sigma = iqr / (2 * _QUARTILE_Z)
         x_lo = max(0.0, mu - 4 * sigma) if q1 > 0 else mu - 4 * sigma
         x = np.linspace(x_lo, mu + 4 * sigma, _CURVE_GRID_POINTS)
         y = np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
-        transform_note = 'normal'
 
     curve_color = pio.templates[pio.templates.default].layout.colorway[0]
     figure = go.Figure(go.Scatter(
@@ -1843,21 +1841,6 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         line=dict(color='#484848', width=2, dash='dash'),
     )
 
-    stats_text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
-    if 'mean' in stats:
-        stats_text += f' | Mean: {float(stats["mean"]):.2f}'
-    if 'std' in stats:
-        stats_text += f' | Std: {float(stats["std"]):.2f}'
-    if 'count' in stats:
-        stats_text += f' | n: {float(stats["count"]):.0f}'
-    stats_text += f' ({transform_note})'
-    figure.add_annotation(
-        text=stats_text,
-        xref='paper', yref='paper', x=0.01, y=0.98,
-        xanchor='left', yanchor='top', showarrow=False,
-        font=dict(family='Poppins, sans-serif', size=12, color='#484848'),
-    )
-
     figure.update_layout(
         title=f'Federated distribution of {label}',
         hoverlabel=dict(font_family='Poppins, sans-serif'),
@@ -1865,9 +1848,80 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         height=400,
-        margin=dict(l=60, r=20, t=60, b=40),
+        margin=dict(l=60, r=20, t=40, b=40),
         xaxis=dict(title=label),
         yaxis=dict(title='Density', rangemode='tozero'),
+    )
+    return figure
+
+
+def format_distribution_stats(aggregate_data, variable):
+    """
+    Format the quartile statistics of one variable from the central aggregate
+    result as a one-line summary (Q1, median, Q3, IQR, mean, std, n, transform),
+    rendered next to the distribution curve instead of inside the graph.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    str: The summary line, or an empty string when no quartiles are available.
+    """
+    if not aggregate_data or not variable:
+        return ''
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    stats = dict(zip(rows['statistic'], rows['value']))
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return ''
+
+    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    iqr = q3 - q1
+    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
+    text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
+    if 'mean' in stats:
+        text += f' | Mean: {float(stats["mean"]):.2f}'
+    if 'std' in stats:
+        text += f' | Std: {float(stats["std"]):.2f}'
+    if 'count' in stats:
+        text += f' | n: {float(stats["count"]):.0f}'
+    text += ' (log-transformed)' if right_skewed else ' (normal)'
+    return text
+
+
+def _donut_figure(labels, values):
+    """
+    Build a donut (pie with a hole) figure from parallel label/value lists.
+
+    The figure carries no title on purpose: the tile around the chart provides it.
+
+    Parameters:
+    labels (list): The sector labels.
+    values (list): The sector values.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut figure.
+    """
+    figure = go.Figure(data=[
+        dict(
+            labels=labels,
+            values=values,
+            type='pie',
+            hole=.56,
+            name='',
+            textinfo='value',
+            hovertemplate=("<b>%{label}</b><br>"
+                           "Count: <b>%{value}</b><br>"
+                           "Proportion: <b>%{percent}</b><extra></extra>"),
+        )
+    ])
+    figure.update_layout(
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
     )
     return figure
 
@@ -1878,7 +1932,8 @@ def generate_categorical_donut(descriptive_data, selection, variable_name, seman
     the selected organisations in the latest snapshot.
 
     Value labels come from the schema valueMapping terms when available; the
-    bookkeeping 'outliers' value is excluded.
+    bookkeeping 'outliers' value is excluded. The figure has no title; the tile
+    around the chart provides it.
 
     Parameters:
     descriptive_data (dict): The descriptive data; each key is a timestamp and each
@@ -1917,29 +1972,7 @@ def generate_categorical_donut(descriptive_data, selection, variable_name, seman
     labels = ['Missing' if str(value).lower() == 'nan'
               else _value_label(value, variable_class, semantic_map_data) for value, _ in items]
     values = [count for _, count in items]
-
-    figure = go.Figure(data=[
-        dict(
-            labels=labels,
-            values=values,
-            type='pie',
-            hole=.56,
-            name='',
-            textinfo='value',
-            hovertemplate=("<b>%{label}</b><br>"
-                           "Count: <b>%{value}</b><br>"
-                           "Proportion: <b>%{percent}</b><extra></extra>"),
-        )
-    ])
-    figure.update_layout(
-        title=f'{label} distribution',
-        hoverlabel=dict(font_family='Poppins, sans-serif'),
-        font=dict(family='Poppins, sans-serif'),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
-    )
-    return figure
+    return _donut_figure(labels, values)
 
 
 # Values that are bookkeeping rows rather than actual categories
@@ -2040,13 +2073,14 @@ def bin_icd10_blocks(categorical_df):
     return blocks.groupby('block')['count'].sum().reset_index()
 
 
-def generate_cancer_group_bar_chart(descriptive_data, selection, semantic_map_data=None, text="AYA"):
+def generate_cancer_group_donut(descriptive_data, selection, semantic_map_data=None, text="AYA"):
     """
-    Generate a horizontal bar chart of cancer types grouped into ICD-10 blocks,
-    with counts summed over the selected organisations in the latest snapshot.
+    Generate a donut chart of cancer types grouped into ICD-10 blocks, with counts
+    summed over the selected organisations in the latest snapshot.
 
-    Each block is labelled with its code and its ICD-10 description (e.g.
-    'C50-C50 - Malignant neoplasm of breast').
+    Each sector is labelled with its block code and its ICD-10 description (e.g.
+    'C50-C50 - Malignant neoplasm of breast'). The figure has no title; the tile
+    around the chart provides it.
 
     Parameters:
     descriptive_data (dict): The descriptive data; each key is a timestamp and each
@@ -2054,10 +2088,10 @@ def generate_cancer_group_bar_chart(descriptive_data, selection, semantic_map_da
     selection (list): The selected organisation names.
     semantic_map_data (dict, optional): The semantic map (unused, kept for a
                                         consistent signature with the other charts).
-    text (str, optional): The text used in titles and annotations. Defaults to "AYA".
+    text (str, optional): The text used in annotation messages. Defaults to "AYA".
 
     Returns:
-    plotly.graph_objs._figure.Figure: The bar chart, or an annotation figure.
+    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
     """
     if not descriptive_data:
         return _empty_annotation_figure(f'No {text} data available')
@@ -2077,8 +2111,8 @@ def generate_cancer_group_bar_chart(descriptive_data, selection, semantic_map_da
     if blocks.empty:
         return _empty_annotation_figure('No ICD-10 coded cancer types available for the selected organisations')
 
-    # Ascending order so the largest bar ends up on top of the horizontal chart
-    blocks = blocks.sort_values('count').reset_index(drop=True)
+    # Largest sector first
+    blocks = blocks.sort_values('count', ascending=False).reset_index(drop=True)
     labels = []
     for block in blocks['block']:
         try:
@@ -2086,23 +2120,4 @@ def generate_cancer_group_bar_chart(descriptive_data, selection, semantic_map_da
         except Exception:
             description = None
         labels.append(f'{block} - {description}' if description else str(block))
-
-    figure = go.Figure(go.Bar(
-        x=blocks['count'],
-        y=labels,
-        orientation='h',
-        hovertemplate=("<b>%{y}</b><br>"
-                       "Number of " + text + "s: <b>%{x}</b><extra></extra>"),
-    ))
-    figure.update_layout(
-        title='Grouped cancer types (ICD-10 blocks)',
-        hoverlabel=dict(font_family='Poppins, sans-serif'),
-        font=dict(family='Poppins, sans-serif'),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        height=max(400, len(labels) * 28 + 200),
-        margin=dict(l=260, r=20, t=60, b=40),
-        xaxis=dict(title=f'Number of {text}s', rangemode='tozero'),
-        yaxis=dict(title=None, automargin=True),
-    )
-    return figure
+    return _donut_figure(labels, list(blocks['count']))
