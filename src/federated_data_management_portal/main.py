@@ -771,13 +771,13 @@ class Dashboard:
                                                         self.global_semantic_map_data)
 
         @self.App.callback(
-            Output('exploration-cancer-bar', 'figure'),
+            Output('exploration-cancer-donut', 'figure'),
             [Input('store', 'data'),
              Input('exploration-subset-selection-checkboxes', 'value')]
         )
-        def update_exploration_cancer_bar(descriptive_data, selection):
+        def update_exploration_cancer_donut(descriptive_data, selection):
             """
-            Callback function to update the grouped cancer type bar chart on the data
+            Callback function to update the grouped cancer type donut chart on the data
             exploration page. ICD-10 codes are binned into blocks and the counts are
             summed over the selected organisations.
 
@@ -786,10 +786,10 @@ class Dashboard:
             selection (list): The selected organisations.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated bar chart figure.
+            plotly.graph_objs._figure.Figure: The updated donut chart figure.
             """
-            return callbacks.generate_cancer_group_bar_chart(descriptive_data, selection,
-                                                             self.global_semantic_map_data)
+            return callbacks.generate_cancer_group_donut(descriptive_data, selection,
+                                                         self.global_semantic_map_data)
 
         @self.App.callback(
             [Output('exploration-variable-dropdown', 'options'),
@@ -815,24 +815,28 @@ class Dashboard:
             return options, (variables[0] if variables else None)
 
         @self.App.callback(
-            Output('exploration-distribution-graph', 'figure'),
+            [Output('exploration-distribution-graph', 'figure'),
+             Output('exploration-distribution-stats', 'children')],
             [Input('aggregate-store', 'data'),
              Input('exploration-variable-dropdown', 'value')]
         )
         def update_exploration_distribution(aggregate_data, variable):
             """
-            Callback function to update the distribution box plot on the data
-            exploration page from the central aggregate (federated IQR) result.
+            Callback function to update the distribution density curve on the data
+            exploration page from the central aggregate (federated IQR) result, plus
+            the one-line quartile summary shown next to the graph.
 
             Parameters:
             aggregate_data (dict): The data stored in the 'aggregate-store' component.
             variable (str): The selected variable's ontology class code.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated box plot figure.
+            plotly.graph_objs._figure.Figure: The updated density curve figure.
+            str: The quartile statistics summary line.
             """
-            return callbacks.generate_distribution_curve_figure(aggregate_data, variable,
-                                                                self.global_semantic_map_data)
+            return (callbacks.generate_distribution_curve_figure(aggregate_data, variable,
+                                                                 self.global_semantic_map_data),
+                    callbacks.format_distribution_stats(aggregate_data, variable))
 
     def run(self, debug=None):
         """
