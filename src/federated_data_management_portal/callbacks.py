@@ -1926,53 +1926,155 @@ def _donut_figure(labels, values):
     return figure
 
 
-def generate_categorical_donut(descriptive_data, selection, variable_name, semantic_map_data=None, text="AYA"):
-    """
-    Generate a donut chart of the counts of one categorical variable, summed over
-    the selected organisations in the latest snapshot.
+# Special dropdown value for the ICD-10 binned cancer type groups
+CANCER_GROUPS_VARIABLE = 'cancer_groups'
 
-    Value labels come from the schema valueMapping terms when available; the
-    bookkeeping 'outliers' value is excluded. The figure has no title; the tile
-    around the chart provides it.
+
+def categorical_value_counts(descriptive_data, selection, variable, semantic_map_data=None):
+    """
+    Aggregate the counts of one categorical variable over the selected organisations
+    in the latest snapshot.
+
+    variable is a schema variable name (e.g. 'biological_sex'), resolved to its
+    ontology class via the semantic map, or the special value 'cancer_groups',
+    which bins all ICD-10 coded variables into ICD-10 blocks. Value labels come
+    from the schema valueMapping terms when available; the bookkeeping 'outliers'
+    value is excluded and 'nan' is labelled 'Missing'.
 
     Parameters:
     descriptive_data (dict): The descriptive data; each key is a timestamp and each
                              value maps organisations to their statistics.
     selection (list): The selected organisation names.
-    variable_name (str): The schema variable name (e.g. 'biological_sex'); resolved
-                         to its ontology class via the semantic map.
+    variable (str): The schema variable name, or 'cancer_groups'.
     semantic_map_data (dict, optional): The semantic map used for labels.
-    text (str, optional): The text used in annotation messages. Defaults to "AYA".
+
+    Returns:
+    tuple: (labels, values) sorted by count descending, or None when there is
+           nothing to show.
+    """
+    if not descriptive_data or not selection or not variable:
+        return None
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    frames = []
+    for org in selection:
+        if org in latest_data:
+            categorical, _ = _load_organization_stats(latest_data[org])
+            frames.append(categorical)
+    if not frames:
+        return None
+    combined = pd.concat(frames, ignore_index=True)
+
+    if variable == CANCER_GROUPS_VARIABLE:
+        blocks = bin_icd10_blocks(combined)
+        if blocks.empty:
+            return None
+        blocks = blocks.sort_values('count', ascending=False).reset_index(drop=True)
+        labels = []
+        for block in blocks['block']:
+            try:
+                description = icd10.get_description(block)
+            except Exception:
+                description = None
+            labels.append(f'{block} - {description}' if description else str(block))
+        return labels, [float(count) for count in blocks['count']]
+
+    variable_class = _variable_class(variable, semantic_map_data)
+    counts = defaultdict(float)
+    rows = combined[combined['variable'] == variable_class]
+    for value, count in zip(rows['value'], rows['count']):
+        if str(value).lower() == 'outliers':
+            continue
+        counts[value] += count
+    if not counts:
+        return None
+    items = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+    labels = ['Missing' if str(value).lower() == 'nan'
+              else _value_label(value, variable_class, semantic_map_data) for value, _ in items]
+    return labels, [count for _, count in items]
+
+
+def generate_categorical_pie_figure(descriptive_data, selection, variable, semantic_map_data=None, text="AYA"):
+    """
+    Generate a donut chart of the counts of one categorical variable (see
+    categorical_value_counts). The figure has no title; the tile around the
+    chart provides it.
 
     Returns:
     plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
     """
-    variable_class = _variable_class(variable_name, semantic_map_data)
-    label = _readable_variable_name(variable_class, semantic_map_data)
     if not descriptive_data:
         return _empty_annotation_figure(f'No {text} data available')
     if not selection:
         return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise')
+    counts = categorical_value_counts(descriptive_data, selection, variable, semantic_map_data)
+    if counts is None:
+        return _empty_annotation_figure('No data available for the selected organisations and variable')
+    return _donut_figure(*counts)
 
-    latest_data = descriptive_data[max(descriptive_data.keys())]
-    counts = defaultdict(float)
-    for org in selection:
-        if org not in latest_data:
-            continue
-        categorical, _ = _load_organization_stats(latest_data[org])
-        rows = categorical[categorical['variable'] == variable_class]
-        for value, count in zip(rows['value'], rows['count']):
-            if str(value).lower() == 'outliers':
-                continue
-            counts[value] += count
-    if not counts:
-        return _empty_annotation_figure(f'No data available for {label}')
 
-    items = sorted(counts.items(), key=lambda item: item[1], reverse=True)
-    labels = ['Missing' if str(value).lower() == 'nan'
-              else _value_label(value, variable_class, semantic_map_data) for value, _ in items]
-    values = [count for _, count in items]
-    return _donut_figure(labels, values)
+def generate_categorical_bar_figure(descriptive_data, selection, variable, semantic_map_data=None, text="AYA"):
+    """
+    Generate a horizontal bar chart of the counts of one categorical variable
+    (see categorical_value_counts), largest bar on top. The figure has no title;
+    the tile around the chart provides it.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The bar chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise')
+    counts = categorical_value_counts(descriptive_data, selection, variable, semantic_map_data)
+    if counts is None:
+        return _empty_annotation_figure('No data available for the selected organisations and variable')
+
+    labels, values = counts
+    # ascending order so the largest bar ends up on top
+    order = sorted(range(len(values)), key=lambda i: values[i])
+    labels = [labels[i] for i in order]
+    values = [values[i] for i in order]
+
+    figure = go.Figure(go.Bar(
+        x=values,
+        y=labels,
+        orientation='h',
+        hovertemplate=("<b>%{y}</b><br>"
+                       "Count: <b>%{x}</b><extra></extra>"),
+    ))
+    figure.update_layout(
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=max(400, len(labels) * 28 + 200),
+        margin=dict(l=260, r=20, t=20, b=40),
+        xaxis=dict(title=f'Number of {text}s', rangemode='tozero'),
+        yaxis=dict(title=None, automargin=True),
+    )
+    return figure
+
+
+def format_categorical_csv(labels, values):
+    """
+    Format categorical counts as CSV text with a 'category,count' header.
+
+    Parameters:
+    labels (list): The category labels.
+    values (list): The counts.
+
+    Returns:
+    str: The CSV text.
+    """
+    lines = ['category,count']
+    for label, value in zip(labels, values):
+        safe_label = str(label).replace('"', '""')
+        lines.append(f'"{safe_label}",{value:g}')
+    return '\n'.join(lines) + '\n'
 
 
 # Values that are bookkeeping rows rather than actual categories
@@ -2073,51 +2175,26 @@ def bin_icd10_blocks(categorical_df):
     return blocks.groupby('block')['count'].sum().reset_index()
 
 
-def generate_cancer_group_donut(descriptive_data, selection, semantic_map_data=None, text="AYA"):
+def detect_icd10_variables_in_data(descriptive_data):
     """
-    Generate a donut chart of cancer types grouped into ICD-10 blocks, with counts
-    summed over the selected organisations in the latest snapshot.
-
-    Each sector is labelled with its block code and its ICD-10 description (e.g.
-    'C50-C50 - Malignant neoplasm of breast'). The figure has no title; the tile
-    around the chart provides it.
+    Detect ICD-10 coded categorical variables across all organisations of the
+    latest snapshot. Used to decide whether the 'cancer_groups' dropdown option
+    should be offered.
 
     Parameters:
     descriptive_data (dict): The descriptive data; each key is a timestamp and each
                              value maps organisations to their statistics.
-    selection (list): The selected organisation names.
-    semantic_map_data (dict, optional): The semantic map (unused, kept for a
-                                        consistent signature with the other charts).
-    text (str, optional): The text used in annotation messages. Defaults to "AYA".
 
     Returns:
-    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
+    list: The variable codes that contain ICD-10 codes.
     """
     if not descriptive_data:
-        return _empty_annotation_figure(f'No {text} data available')
-    if not selection:
-        return _empty_annotation_figure('Select an organisation to visualise the cancer type groups')
-
+        return []
     latest_data = descriptive_data[max(descriptive_data.keys())]
     frames = []
-    for org in selection:
-        if org in latest_data:
-            categorical, _ = _load_organization_stats(latest_data[org])
-            frames.append(categorical)
+    for org_data in latest_data.values():
+        categorical, _ = _load_organization_stats(org_data)
+        frames.append(categorical)
     if not frames:
-        return _empty_annotation_figure('No data available for the selected organisations')
-
-    blocks = bin_icd10_blocks(pd.concat(frames, ignore_index=True))
-    if blocks.empty:
-        return _empty_annotation_figure('No ICD-10 coded cancer types available for the selected organisations')
-
-    # Largest sector first
-    blocks = blocks.sort_values('count', ascending=False).reset_index(drop=True)
-    labels = []
-    for block in blocks['block']:
-        try:
-            description = icd10.get_description(block)
-        except Exception:
-            description = None
-        labels.append(f'{block} - {description}' if description else str(block))
-    return _donut_figure(labels, list(blocks['count']))
+        return []
+    return detect_icd10_variables(pd.concat(frames, ignore_index=True))
