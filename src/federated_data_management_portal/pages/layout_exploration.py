@@ -26,9 +26,9 @@ layout = chrome.page_scaffold(
                     value=None,
                     clearable=False
                 )]),
-            html.Div(children=[
-                "View as ",
-                dcc.RadioItems(
+            html.Div(className='visualisation-selector', children=[
+                html.Span('Select visualisation'),
+                dcc.Dropdown(
                     id='exploration-categorical-view',
                     options=[
                         {'label': 'Pie chart', 'value': 'pie'},
@@ -36,8 +36,7 @@ layout = chrome.page_scaffold(
                         {'label': 'CSV', 'value': 'csv'},
                     ],
                     value='pie',
-                    inline=True,
-                    labelStyle={'display': 'inline-block'}
+                    clearable=False
                 )]),
             dcc.Graph(
                 id='exploration-categorical-graph',
