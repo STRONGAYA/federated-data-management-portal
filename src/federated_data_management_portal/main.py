@@ -200,11 +200,6 @@ class Dashboard:
             dcc.Store(id='store', data=self.dashboard_data),
             dcc.Store(id='aggregate-store', data=self.aggregate_data),
             dcc.Store(id='data-availability-store-1'),
-            html.Div([
-                dcc.Link('Data availability', href='/data-availability'),
-                dcc.Link('Missing Data', href='/data-completeness'),
-                dcc.Link('Data exploration', href='/data-exploration')
-            ]),
             dash.page_container
         ])
 
