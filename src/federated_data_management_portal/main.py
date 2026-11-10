@@ -9,7 +9,7 @@ import dash_bootstrap_components as dbc
 import plotly.io as pio
 
 from dash.dependencies import MATCH
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash import html, dcc
 from flask import request
 
@@ -751,45 +751,120 @@ class Dashboard:
             return [{'label': org, 'value': org} for org in sorted(latest_data.keys())]
 
         @self.App.callback(
-            Output('exploration-sex-donut', 'figure'),
-            [Input('store', 'data'),
-             Input('exploration-subset-selection-checkboxes', 'value')]
+            [Output('exploration-categorical-variable', 'options'),
+             Output('exploration-categorical-variable', 'value')],
+            [Input('store', 'data')]
         )
-        def update_exploration_sex_donut(descriptive_data, selection):
+        def update_exploration_categorical_variables(descriptive_data):
             """
-            Callback function to update the biological sex donut chart on the data
-            exploration page. Counts are summed over the selected organisations.
+            Callback function to populate the categorical variable dropdown on the data
+            exploration page. Offers every schema categorical variable present in the
+            latest snapshot, plus a 'cancer_groups' option when ICD-10 coded variables
+            are detected.
 
             Parameters:
             descriptive_data (dict): The data stored in the 'store' component.
-            selection (list): The selected organisations.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            list: The dropdown options with schema-based labels.
+            str: The initially selected variable.
             """
-            return callbacks.generate_categorical_donut(descriptive_data, selection, 'biological_sex',
-                                                        self.global_semantic_map_data)
+            latest_data = descriptive_data[max(descriptive_data.keys())]
+            present = set()
+            for org_data in latest_data.values():
+                categorical, _ = callbacks._load_organization_stats(org_data)
+                present.update(categorical['variable'].unique())
+
+            schema = self.global_semantic_map_data.get('schema', {})
+            variables = schema.get('variables', {})
+            options = []
+            for var_name, var_data in sorted(variables.items()):
+                if var_data.get('dataType') != 'categorical':
+                    continue
+                var_class = var_data.get('class', var_name)
+                if var_class in present or var_name in present:
+                    options.append({
+                        'label': callbacks._readable_variable_name(var_class, self.global_semantic_map_data),
+                        'value': var_name,
+                    })
+            if callbacks.detect_icd10_variables_in_data(descriptive_data):
+                options.append({'label': 'Grouped cancer types (ICD-10 blocks)',
+                                'value': callbacks.CANCER_GROUPS_VARIABLE})
+            return options, (options[0]['value'] if options else None)
 
         @self.App.callback(
-            Output('exploration-cancer-donut', 'figure'),
+            [Output('exploration-categorical-graph', 'figure'),
+             Output('exploration-categorical-graph', 'style'),
+             Output('exploration-categorical-csv', 'hidden'),
+             Output('exploration-categorical-csv-table', 'data'),
+             Output('exploration-csv-store', 'data')],
             [Input('store', 'data'),
-             Input('exploration-subset-selection-checkboxes', 'value')]
+             Input('exploration-subset-selection-checkboxes', 'value'),
+             Input('exploration-categorical-variable', 'value'),
+             Input('exploration-categorical-view', 'value')]
         )
-        def update_exploration_cancer_donut(descriptive_data, selection):
+        def update_exploration_categorical_chart(descriptive_data, selection, variable, view):
             """
-            Callback function to update the grouped cancer type donut chart on the data
-            exploration page. ICD-10 codes are binned into blocks and the counts are
-            summed over the selected organisations.
+            Callback function to update the categorical chart on the data exploration
+            page. Depending on the view it renders a pie chart, a bar chart, or the
+            underlying counts as a CSV table (with a downloadable CSV in the store).
+            Counts are summed over the selected organisations.
 
             Parameters:
             descriptive_data (dict): The data stored in the 'store' component.
             selection (list): The selected organisations.
+            variable (str): The selected categorical variable ('cancer_groups' for the
+                            ICD-10 binned cancer types).
+            view (str): 'pie', 'bar' or 'csv'.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated donut chart figure.
+            plotly.graph_objs._figure.Figure: The chart figure.
+            dict: The graph style (hidden in CSV view).
+            bool: Whether the CSV view is hidden.
+            list: The CSV table rows.
+            str: The CSV text for download.
             """
-            return callbacks.generate_cancer_group_donut(descriptive_data, selection,
-                                                         self.global_semantic_map_data)
+            if view == 'bar':
+                figure = callbacks.generate_categorical_bar_figure(
+                    descriptive_data, selection, variable, self.global_semantic_map_data)
+            else:
+                figure = callbacks.generate_categorical_pie_figure(
+                    descriptive_data, selection, variable, self.global_semantic_map_data)
+
+            counts = callbacks.categorical_value_counts(
+                descriptive_data, selection, variable, self.global_semantic_map_data)
+            if counts is None:
+                table_data, csv_text = [], ''
+            else:
+                labels, values = counts
+                table_data = [{'category': label, 'count': value} for label, value in zip(labels, values)]
+                csv_text = callbacks.format_categorical_csv(labels, values)
+
+            return (figure,
+                    {'display': 'none'} if view == 'csv' else {},
+                    view != 'csv',
+                    table_data,
+                    csv_text)
+
+        @self.App.callback(
+            Output('exploration-csv-download', 'data'),
+            [Input('exploration-csv-download-btn', 'n_clicks')],
+            [State('exploration-csv-store', 'data')]
+        )
+        def download_exploration_csv(n_clicks, csv_text):
+            """
+            Callback function to download the currently shown categorical counts as CSV.
+
+            Parameters:
+            n_clicks (int): The download button click count.
+            csv_text (str): The CSV text stored by the chart callback.
+
+            Returns:
+            dict: The dcc.Download data payload.
+            """
+            if not n_clicks or not csv_text:
+                return dash.no_update
+            return dcc.send_string(csv_text, 'categorical-variable-counts.csv')
 
         @self.App.callback(
             [Output('exploration-variable-dropdown', 'options'),
