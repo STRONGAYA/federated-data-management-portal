@@ -13,10 +13,6 @@ body {
     background: linear-gradient(to bottom, #f9f4ea, #ffffff);
 }
 
-.white-text {
-    color: white !important;
-}
-
 .no-decoration-link {
     text-decoration: none;
     color: inherit;
@@ -60,18 +56,6 @@ body {
 }
 
 
-/*First header; login section*/
-.primary-header {
-    content: '';
-    width: 80%;
-    height: 4.35%;
-    background: #f9741f;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-}
-
 .authenticated-user-container {
     align-items: center;
     box-sizing: border-box;
@@ -113,64 +97,6 @@ body {
     color: #ffffff;
     text-decoration-thickness: 2px;
 }
-
-.text-container {
-    width: 45%;
-    background-color: transparent;
-    display: flex;
-    position: absolute;
-    justify-content: space-between;
-    z-index: 10;
-    margin-right: 2%;
-}
-
-
-/*Second header; STRONG-AYA specific*/
-.secondary-header {
-    content: '';
-    width: 80%;
-    background-color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    position: absolute;
-    top: 4.35%;
-    left: 0;
-    z-index: 0;
-}
-
-.logo {
-    font-size: 24px;
-    font-weight: bold;
-    margin-right: 55%;
-    position: relative;
-    z-index: 3;
-}
-
-.text-field {
-    color: #696969;
-    text-decoration: none;
-    font-size: 14px;
-    z-index: 10;
-}
-
-.orange-cube {
-    width: 8%;
-    height: 88px;
-    background-color: #f9741f;
-    z-index: 2;
-}
-
-.footer {
-    height: 50px;
-    clear: both;
-    position: relative;
-    z-index: 10;
-    bottom: 0;
-    width: 100%;
-    background-color: transparent;
-}
-
 
 /*Content*/
 .dashboard {
