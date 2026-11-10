@@ -16,19 +16,20 @@ from federated_data_management_portal import portal_version
 
 _ASSET = f'..{os.path.sep}assets{os.path.sep}info-portal{os.path.sep}'
 
+# (label, href, font-awesome icon class or None) — icons as in the info portal
 SITE_NAV = [
-    ("Home", "https://strongaya.eu/"),
-    ("About us", "https://strongaya.eu/about-us/"),
-    ("Our consortium", "https://strongaya.eu/our-consortium/"),
-    ("Ecosystems", "https://strongaya.eu/what-is-ecosystem/"),
-    ("Resources", "https://strongaya.eu/publications/"),
-    ("News & media", "https://strongaya.eu/news/"),
+    ("Home", "https://strongaya.eu/", None),
+    ("About us", "https://strongaya.eu/about-us/", "fas fa-chevron-down"),
+    ("Our consortium", "https://strongaya.eu/our-consortium/", None),
+    ("Ecosystems", "https://strongaya.eu/what-is-ecosystem/", "fas fa-chevron-down"),
+    ("Resources", "https://strongaya.eu/publications/", "fas fa-chevron-down"),
+    ("News & media", "https://strongaya.eu/news/", "fas fa-chevron-down"),
 ]
 
 SOCIAL_LINKS = [
-    ("LinkedIn", "https://www.linkedin.com/company/strong-aya/"),
-    ("Bluesky", "https://bsky.app/profile/strongaya.eu"),
-    ("Instagram", "https://www.instagram.com/strongaya_eu/"),
+    ("fab fa-linkedin-in", "LinkedIn", "https://www.linkedin.com/company/strong-aya/"),
+    ("fab fa-bluesky", "Bluesky", "https://bsky.app/profile/strongaya.eu"),
+    ("fab fa-instagram", "Instagram", "https://www.instagram.com/strongaya_eu/"),
 ]
 
 FOOTER_OTHER_LINKS = [
@@ -47,23 +48,30 @@ FOOTER_LINKS = [
 ]
 
 
+# External links open in a new tab
+_EXTERNAL_PROPS = {'target': '_blank', 'rel': 'noopener noreferrer'}
+
+
 def info_portal_header():
     """Build the info portal site header, with the internal-use notice banner."""
     return html.Header(className='site-header', children=[
         html.Div(className='header-topbar', children=[
             html.Div(className='topbar-social', children=[
-                html.A(label, href=href) for label, href in SOCIAL_LINKS
+                html.A([html.I(className=icon), label], href=href, **{'aria-label': label}, **_EXTERNAL_PROPS)
+                for icon, label, href in SOCIAL_LINKS
             ]),
-            html.A('INFO@STRONGAYA.EU', href='mailto:info@strongaya.eu', className='topbar-mail'),
+            html.A([html.I(className='fas fa-envelope'), 'INFO@STRONGAYA.EU'],
+                   href='mailto:info@strongaya.eu', className='topbar-mail'),
         ]),
         html.Div(className='header-main', children=[
             html.A(className='site-logo', href='https://strongaya.eu/', children=[
                 html.Img(src=f'{_ASSET}weblogo1@2x.png', alt='STRONG-AYA'),
-            ]),
+            ], **_EXTERNAL_PROPS),
             html.Nav(className='site-nav', children=[
-                html.A(label, href=href) for label, href in SITE_NAV
+                html.A([label, html.I(className=icon)] if icon else [label], href=href, **_EXTERNAL_PROPS)
+                for label, href, icon in SITE_NAV
             ]),
-            html.A('Contact', href='https://strongaya.eu/contact/', className='contact-btn'),
+            html.A('Contact', href='https://strongaya.eu/contact/', className='contact-btn', **_EXTERNAL_PROPS),
         ]),
         html.Div(className='notice-banner', children=[
             html.B('Please note: this portal is for internal use only.'),
@@ -91,11 +99,13 @@ def info_portal_footer():
                 ]),
                 html.Div(className='footer-col', children=[
                     html.H2('Other'),
-                    html.Ul(children=[html.Li(html.A(label, href=href)) for label, href in FOOTER_OTHER_LINKS]),
+                    html.Ul(children=[html.Li(html.A(label, href=href, **_EXTERNAL_PROPS))
+                                      for label, href in FOOTER_OTHER_LINKS]),
                 ]),
                 html.Div(className='footer-col', children=[
                     html.H2('Links'),
-                    html.Ul(children=[html.Li(html.A(label, href=href)) for label, href in FOOTER_LINKS]),
+                    html.Ul(children=[html.Li(html.A(label, href=href, **_EXTERNAL_PROPS))
+                                      for label, href in FOOTER_LINKS]),
                 ]),
                 html.Div(className='footer-col quick-contact', children=[
                     html.H2('Quick contact'),
