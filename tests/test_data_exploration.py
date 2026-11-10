@@ -262,7 +262,7 @@ class FormatDistributionStatsTests(unittest.TestCase):
         self.assertIn("No quartile statistics available", figure.layout.annotations[0].text)
 
 
-class CategoricalDonutTests(unittest.TestCase):
+class CategoricalValueCountsTests(unittest.TestCase):
     def test_counts_are_summed_over_the_selected_organisations(self):
         data = dashboard_data({
             "Org A": organisation(categorical=SEX_CATEGORICAL),
@@ -270,10 +270,9 @@ class CategoricalDonutTests(unittest.TestCase):
                 ["ncit:C28421", "ncit:C28421"], ["ncit:C20197", "ncit:C16576"], [4, 9])),
         })
 
-        figure = callbacks.generate_categorical_donut(data, ["Org A", "Org B"], "biological_sex", SCHEMA)
+        labels, values = callbacks.categorical_value_counts(
+            data, ["Org A", "Org B"], "biological_sex", SCHEMA)
 
-        labels = list(figure.data[0].labels)
-        values = list(figure.data[0].values)
         # valueMapping labels, sorted by count descending; 'outliers' excluded, 'nan' shown as Missing
         self.assertEqual(labels, ["Male", "Female", "Missing"])
         self.assertEqual(values, [14, 14, 2])
@@ -285,56 +284,90 @@ class CategoricalDonutTests(unittest.TestCase):
                 ["ncit:C28421"], ["ncit:C20197"], [100])),
         })
 
-        figure = callbacks.generate_categorical_donut(data, ["Org A"], "biological_sex", SCHEMA)
+        _, values = callbacks.categorical_value_counts(data, ["Org A"], "biological_sex", SCHEMA)
 
-        self.assertEqual(list(figure.data[0].values), [10, 5, 2])
+        self.assertEqual(values, [10, 5, 2])
 
-    def test_no_selection_renders_an_annotation(self):
-        figure = callbacks.generate_categorical_donut(
-            dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)}), [], "biological_sex", SCHEMA)
-
-        self.assertIn("Select an organisation", figure.layout.annotations[0].text)
-
-
-class CancerGroupDonutTests(unittest.TestCase):
-    def test_icd10_codes_are_binned_into_donut_sectors_with_descriptions(self):
+    def test_cancer_groups_bin_icd10_codes_into_blocks(self):
         data = dashboard_data({
             "Org A": organisation(categorical=CANCER_CATEGORICAL),
             "Org B": organisation(categorical=categorical_stats(
                 ["ncit:C3263", "ncit:C3263"], ["C50.9", "C18.7"], [3, 2])),
         })
 
-        figure = callbacks.generate_cancer_group_donut(data, ["Org A", "Org B"], SCHEMA)
+        labels, values = callbacks.categorical_value_counts(
+            data, ["Org A", "Org B"], callbacks.CANCER_GROUPS_VARIABLE, SCHEMA)
 
-        self.assertEqual(figure.data[0].type, "pie")
-        labels = list(figure.data[0].labels)
-        values = list(figure.data[0].values)
-        self.assertIn("C50-C50 - Malignant neoplasm of breast", labels)
+        self.assertEqual(labels[0], "C50-C50 - Malignant neoplasm of breast")
+        self.assertEqual(values[0], 10)
         self.assertIn("C30-C39 - Malignant neoplasms of respiratory and intrathoracic organs", labels)
         self.assertIn("C15-C26 - Malignant neoplasms of digestive organs", labels)
-        self.assertEqual(dict(zip(labels, values))["C50-C50 - Malignant neoplasm of breast"], 10)
-        # largest sector first
         self.assertEqual(values, sorted(values, reverse=True))
 
-    def test_non_icd10_variables_are_not_binned(self):
+    def test_returns_none_without_selection_variable_or_data(self):
         data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
 
-        figure = callbacks.generate_cancer_group_donut(data, ["Org A"], SCHEMA)
+        self.assertIsNone(callbacks.categorical_value_counts(data, [], "biological_sex", SCHEMA))
+        self.assertIsNone(callbacks.categorical_value_counts(data, ["Org A"], None, SCHEMA))
+        self.assertIsNone(callbacks.categorical_value_counts(
+            dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)}),
+            ["Org A"], "tumour_location", SCHEMA))
 
-        self.assertIn("No ICD-10 coded cancer types", figure.layout.annotations[0].text)
+
+class CategoricalFigureTests(unittest.TestCase):
+    def test_pie_figure_is_a_donut_without_title(self):
+        data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
+
+        figure = callbacks.generate_categorical_pie_figure(data, ["Org A"], "biological_sex", SCHEMA)
+
+        self.assertEqual(figure.data[0].type, "pie")
+        self.assertIsNone(figure.layout.title.text)
+        self.assertEqual(list(figure.data[0].labels), ["Male", "Female", "Missing"])
+
+    def test_bar_figure_is_horizontal_with_the_largest_bar_on_top(self):
+        data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
+
+        figure = callbacks.generate_categorical_bar_figure(data, ["Org A"], "biological_sex", SCHEMA)
+
+        self.assertEqual(figure.data[0].orientation, "h")
+        values = list(figure.data[0].x)
+        self.assertEqual(values, sorted(values))
+        self.assertEqual(list(figure.data[0].y)[-1], "Male")
 
     def test_no_selection_renders_an_annotation(self):
-        data = dashboard_data({"Org A": organisation(categorical=CANCER_CATEGORICAL)})
+        data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
 
-        figure = callbacks.generate_cancer_group_donut(data, [], SCHEMA)
+        for figure_fn in (callbacks.generate_categorical_pie_figure,
+                          callbacks.generate_categorical_bar_figure):
+            figure = figure_fn(data, [], "biological_sex", SCHEMA)
+            self.assertIn("Select an organisation", figure.layout.annotations[0].text)
 
-        self.assertIn("Select an organisation", figure.layout.annotations[0].text)
 
+class CategoricalCsvTests(unittest.TestCase):
+    def test_csv_has_a_header_and_quoted_rows(self):
+        csv_text = callbacks.format_categorical_csv(
+            ["Male", 'C50-C50 - "breast"'], [14, 10])
+
+        self.assertEqual(csv_text.splitlines(), [
+            "category,count",
+            '"Male",14',
+            '"C50-C50 - ""breast""",10',
+        ])
+
+
+class Icd10DetectionTests(unittest.TestCase):
     def test_detect_icd10_variables_ignores_plain_categorical_variables(self):
         import pandas as pd
         frame = pd.DataFrame(json.loads(SEX_CATEGORICAL))
 
         self.assertEqual(callbacks.detect_icd10_variables(frame), [])
+
+    def test_detect_icd10_variables_in_data_finds_cancer_codes(self):
+        data = dashboard_data({"Org A": organisation(categorical=CANCER_CATEGORICAL)})
+
+        self.assertEqual(callbacks.detect_icd10_variables_in_data(data), ["ncit:C3263"])
+        self.assertEqual(callbacks.detect_icd10_variables_in_data(
+            dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})), [])
 
 
 class ExampleDataExplorationTests(unittest.TestCase):
@@ -357,23 +390,22 @@ class ExampleDataExplorationTests(unittest.TestCase):
         self.assertEqual(shapes["rect"].x0, 29.9)
         self.assertEqual(shapes["rect"].x1, 37.1)
 
-    def test_sex_donut_sums_the_latest_snapshot(self):
+    def test_sex_counts_sum_the_latest_snapshot(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())
-        figure = callbacks.generate_categorical_donut(
+        labels, values = callbacks.categorical_value_counts(
             self.dashboard_data, orgs, "biological_sex", self.schema)
 
-        labels = list(figure.data[0].labels)
-        values = list(figure.data[0].values)
         self.assertEqual(labels[0], "Male")
         self.assertEqual(values[0], 31)
         self.assertEqual(labels[1], "Female")
         self.assertEqual(values[1], 18)
 
-    def test_cancer_donut_groups_the_example_icd10_codes(self):
+    def test_cancer_groups_count_the_example_icd10_codes(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())
-        figure = callbacks.generate_cancer_group_donut(self.dashboard_data, orgs, self.schema)
+        labels, values = callbacks.categorical_value_counts(
+            self.dashboard_data, orgs, callbacks.CANCER_GROUPS_VARIABLE, self.schema)
 
-        counts = dict(zip(figure.data[0].labels, figure.data[0].values))
+        counts = dict(zip(labels, values))
         self.assertEqual(counts["C50-C50 - Malignant neoplasm of breast"], 20)
         self.assertEqual(counts["C30-C39 - Malignant neoplasms of respiratory and intrathoracic organs"], 15)
         # C18.7 and C25.9 both fall in the C15-C26 digestive organs block
