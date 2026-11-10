@@ -82,6 +82,12 @@ class PageChromeTests(unittest.TestCase):
         rendered = json.dumps(self.dashboard.App.layout, default=str)
         self.assertNotIn("Missing Data", rendered)
 
+    def test_tab_icon_is_the_info_portal_favicon(self):
+        self.assertEqual(self.dashboard.App._favicon, "info-portal/favicon.png")
+        favicon = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
+                   / "assets" / "info-portal" / "favicon.png")
+        self.assertTrue(favicon.exists())
+
     def test_external_links_open_in_a_new_tab(self):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
