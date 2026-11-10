@@ -51,13 +51,24 @@ FOOTER_LINKS = [
 # External links open in a new tab
 _EXTERNAL_PROPS = {'target': '_blank', 'rel': 'noopener noreferrer'}
 
+# The info portal appends this icon to every external link, plus a
+# screen-reader-only note that the link opens in a new tab
+_EXTERNAL_ICON = html.I(className='fas fa-arrow-up-right-from-square', **{'aria-hidden': 'true'})
+_NEW_TAB_NOTE = html.Span(' (opens in a new tab)', className='visually-hidden')
+
+
+def _external_children(children):
+    """Append the external-link icon and the new-tab note to link children."""
+    return [*children, _EXTERNAL_ICON, _NEW_TAB_NOTE]
+
 
 def info_portal_header():
     """Build the info portal site header, with the internal-use notice banner."""
     return html.Header(className='site-header', children=[
         html.Div(className='header-topbar', children=[
             html.Div(className='topbar-social', children=[
-                html.A([html.I(className=icon), label], href=href, **{'aria-label': label}, **_EXTERNAL_PROPS)
+                html.A(_external_children([html.I(className=icon), label]),
+                       href=href, **{'aria-label': label}, **_EXTERNAL_PROPS)
                 for icon, label, href in SOCIAL_LINKS
             ]),
             html.A([html.I(className='fas fa-envelope'), 'INFO@STRONGAYA.EU'],
@@ -68,10 +79,12 @@ def info_portal_header():
                 html.Img(src=f'{_ASSET}weblogo1@2x.png', alt='STRONG-AYA'),
             ], **_EXTERNAL_PROPS),
             html.Nav(className='site-nav', children=[
-                html.A([label, html.I(className=icon)] if icon else [label], href=href, **_EXTERNAL_PROPS)
+                html.A(_external_children([label, html.I(className=icon)] if icon else [label]),
+                       href=href, **_EXTERNAL_PROPS)
                 for label, href, icon in SITE_NAV
             ]),
-            html.A('Contact', href='https://strongaya.eu/contact/', className='contact-btn', **_EXTERNAL_PROPS),
+            html.A(_external_children(['Contact']), href='https://strongaya.eu/contact/',
+                   className='contact-btn', **_EXTERNAL_PROPS),
         ]),
         html.Div(className='notice-banner', children=[
             html.B('Please note: this portal is for internal use only.'),
@@ -99,12 +112,12 @@ def info_portal_footer():
                 ]),
                 html.Div(className='footer-col', children=[
                     html.H2('Other'),
-                    html.Ul(children=[html.Li(html.A(label, href=href, **_EXTERNAL_PROPS))
+                    html.Ul(children=[html.Li(html.A(_external_children([label]), href=href, **_EXTERNAL_PROPS))
                                       for label, href in FOOTER_OTHER_LINKS]),
                 ]),
                 html.Div(className='footer-col', children=[
                     html.H2('Links'),
-                    html.Ul(children=[html.Li(html.A(label, href=href, **_EXTERNAL_PROPS))
+                    html.Ul(children=[html.Li(html.A(_external_children([label]), href=href, **_EXTERNAL_PROPS))
                                       for label, href in FOOTER_LINKS]),
                 ]),
                 html.Div(className='footer-col quick-contact', children=[
