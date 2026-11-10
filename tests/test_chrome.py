@@ -64,6 +64,12 @@ class PageChromeTests(unittest.TestCase):
             for icon in ("fa-linkedin-in", "fa-bluesky", "fa-instagram", "fa-envelope", "fa-chevron-down"):
                 self.assertIn(icon, rendered, f"{page.__name__} missing {icon}")
 
+    def test_external_links_carry_the_info_portal_external_icon(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("fa-arrow-up-right-from-square", rendered, page.__name__)
+            self.assertIn("opens in a new tab", rendered, page.__name__)
+
     def test_internal_nav_bar_is_removed_from_the_app_layout(self):
         rendered = json.dumps(self.dashboard.App.layout, default=str)
         self.assertNotIn("Missing Data", rendered)
