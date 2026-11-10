@@ -603,3 +603,26 @@ input[type='radio'] {
     color: var(--brand-orange-text, #be4f07);
     font-weight: 600;
 }
+
+/* the other dropdowns styled like the view selector pill */
+.pill-dropdown .Select {
+    width: auto;
+    min-width: 260px;
+}
+
+.pill-dropdown .Select-control {
+    border-radius: 20px;
+    padding: 8px 18px;
+    min-height: 0;
+    height: auto;
+    font-size: 0.8667rem;
+}
+
+/* subtle horizontal line below the option rows, with the graph underneath
+   (as in the info portal's .tile-divider) */
+.tile-divider {
+    border: none;
+    border-top: 1px solid var(--border-grey, #d7d7d7);
+    opacity: 0.6;
+    margin: 22px 48px;
+}

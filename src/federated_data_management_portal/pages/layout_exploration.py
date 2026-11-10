@@ -23,6 +23,7 @@ layout = chrome.page_scaffold(
                     "Select the categorical variable",
                     dcc.Dropdown(
                         id='exploration-categorical-variable',
+                        className='pill-dropdown',
                         options=[],
                         value=None,
                         clearable=False
@@ -42,6 +43,7 @@ layout = chrome.page_scaffold(
                     dcc.Store(id='exploration-view-store', data='pie'),
                 ]),
             ]),
+            html.Hr(className='tile-divider'),
             dcc.Graph(
                 id='exploration-categorical-graph',
                 config=chrome.graph_config('categorical-variable-counts')
@@ -67,10 +69,12 @@ layout = chrome.page_scaffold(
                 "Select the variable you would like to visualise",
                 dcc.Dropdown(
                     id='exploration-variable-dropdown',
+                    className='pill-dropdown',
                     options=[],
                     value=None,
                     clearable=False
                 )]),
+            html.Hr(className='tile-divider'),
             html.Div(id='tile-content-exploration-distribution', className='tile-content', children=[
                 dcc.Graph(
                     id='exploration-distribution-graph',
