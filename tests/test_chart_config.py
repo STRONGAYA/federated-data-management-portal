@@ -23,6 +23,28 @@ def find_graphs(component):
         yield from find_graphs(children)
 
 
+class ChartHoverTests(unittest.TestCase):
+    def test_default_template_disables_the_hover_crosshair(self):
+        import plotly.io as pio
+
+        import federated_data_management_portal.main  # noqa: F401  (sets the default template)
+
+        template = pio.templates[pio.templates.default]
+        self.assertIs(template.layout.dragmode, False)
+        self.assertIs(template.layout.xaxis.showspikes, False)
+        self.assertIs(template.layout.yaxis.showspikes, False)
+
+    def test_served_figures_carry_the_template(self):
+        import plotly.io as pio
+
+        import federated_data_management_portal.main  # noqa: F401
+        from federated_data_management_portal import callbacks
+
+        figure = callbacks.generate_donut_chart({"2026-01-01T00:00:00": {}}, chart_domain="availability")
+        template = figure.to_plotly_json()["layout"]["template"]
+        self.assertIs(template["layout"]["dragmode"], False)
+
+
 class ChartModeBarTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
