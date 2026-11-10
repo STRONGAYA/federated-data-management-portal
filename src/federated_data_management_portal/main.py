@@ -16,7 +16,14 @@ from flask import request
 from federated_data_management_portal import callbacks
 from federated_data_management_portal.auth import authenticated_email_from_headers
 
-pio.templates.default = 'seaborn'
+# Own template based on seaborn, with the hover crosshair disabled:
+# dragmode=False removes the crosshair cursor (and drag-zoom) on every
+# chart, and spikes are explicitly off
+pio.templates['portal'] = copy.deepcopy(pio.templates['seaborn'])
+pio.templates.default = 'portal'
+pio.templates['portal'].layout.dragmode = False
+pio.templates['portal'].layout.xaxis.showspikes = False
+pio.templates['portal'].layout.yaxis.showspikes = False
 page_title = 'STRONG-AYA | Data Management Portal'
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
