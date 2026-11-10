@@ -18,27 +18,29 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
-            html.Div(children=[
-                "Select the categorical variable",
-                dcc.Dropdown(
-                    id='exploration-categorical-variable',
-                    options=[],
-                    value=None,
-                    clearable=False
-                )]),
-            html.Div(className='filter-wrap visualisation-selector', children=[
-                html.Button([
-                    'Select visualisation ',
-                    html.Span(id='exploration-view-indicator', className='view-type-indicator',
-                              children='(Pie chart)'),
-                    html.I(className='fas fa-chevron-down'),
-                ], id='exploration-view-toggle', className='vis-btn view-selection-btn'),
-                html.Div(id='exploration-view-menu', className='filter-dropdown', hidden=True, children=[
-                    html.Button('Pie chart', id='exploration-view-pie', className='filter-option current'),
-                    html.Button('Bar chart', id='exploration-view-bar', className='filter-option'),
-                    html.Button('CSV', id='exploration-view-csv', className='filter-option'),
+            html.Div(className='filter-bar', children=[
+                html.Div(children=[
+                    "Select the categorical variable",
+                    dcc.Dropdown(
+                        id='exploration-categorical-variable',
+                        options=[],
+                        value=None,
+                        clearable=False
+                    )]),
+                html.Div(className='filter-wrap visualisation-selector', children=[
+                    html.Button([
+                        'Select visualisation ',
+                        html.Span(id='exploration-view-indicator', className='view-type-indicator',
+                                  children='(Pie chart)'),
+                        html.I(className='fas fa-chevron-down'),
+                    ], id='exploration-view-toggle', className='vis-btn view-selection-btn'),
+                    html.Div(id='exploration-view-menu', className='filter-dropdown', hidden=True, children=[
+                        html.Button('Pie chart', id='exploration-view-pie', className='filter-option current'),
+                        html.Button('Bar chart', id='exploration-view-bar', className='filter-option'),
+                        html.Button('CSV', id='exploration-view-csv', className='filter-option'),
+                    ]),
+                    dcc.Store(id='exploration-view-store', data='pie'),
                 ]),
-                dcc.Store(id='exploration-view-store', data='pie'),
             ]),
             dcc.Graph(
                 id='exploration-categorical-graph',

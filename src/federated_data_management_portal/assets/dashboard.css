@@ -526,11 +526,22 @@ input[type='radio'] {
     --text-grey: #6d6d6d;
 }
 
+/* filter row above the chart: variable dropdown left, view button right,
+   as in the info portal's filter bar */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
 .visualisation-selector {
     display: flex;
     justify-content: flex-end;
     position: relative;
-    margin-bottom: 12px;
+    margin-left: auto;
+    margin-bottom: 0;
 }
 
 .vis-btn {
