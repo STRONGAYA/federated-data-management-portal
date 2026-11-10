@@ -776,6 +776,39 @@ class Dashboard:
             return options, (options[0]['value'] if options else None)
 
         @self.App.callback(
+            Output('exploration-view-menu', 'hidden'),
+            [Input('exploration-view-toggle', 'n_clicks')]
+        )
+        def toggle_exploration_view_menu(n_clicks):
+            """Open/close the 'Select visualisation' menu when the pill button is clicked."""
+            return (n_clicks or 0) % 2 == 0
+
+        @self.App.callback(
+            [Output('exploration-view-store', 'data'),
+             Output('exploration-view-menu', 'hidden'),
+             Output('exploration-view-indicator', 'children'),
+             Output('exploration-view-pie', 'className'),
+             Output('exploration-view-bar', 'className'),
+             Output('exploration-view-csv', 'className')],
+            [Input('exploration-view-pie', 'n_clicks'),
+             Input('exploration-view-bar', 'n_clicks'),
+             Input('exploration-view-csv', 'n_clicks')]
+        )
+        def select_exploration_view(pie_clicks, bar_clicks, csv_clicks):
+            """
+            Store the chosen visualisation view, close the menu, update the current-view
+            indicator on the pill button and mark the chosen menu option as current.
+            """
+            ctx = dash.callback_context
+            view = 'pie'
+            if ctx.triggered:
+                view = ctx.triggered[0]['prop_id'].split('.')[0].replace('exploration-view-', '')
+            labels = {'pie': '(Pie chart)', 'bar': '(Bar chart)', 'csv': '(CSV)'}
+            classes = {v: 'filter-option current' if v == view else 'filter-option'
+                       for v in ('pie', 'bar', 'csv')}
+            return view, True, labels[view], classes['pie'], classes['bar'], classes['csv']
+
+        @self.App.callback(
             [Output('exploration-categorical-graph', 'figure'),
              Output('exploration-categorical-graph', 'style'),
              Output('exploration-categorical-csv', 'hidden'),
@@ -784,7 +817,7 @@ class Dashboard:
             [Input('store', 'data'),
              Input('exploration-subset-selection-checkboxes', 'value'),
              Input('exploration-categorical-variable', 'value'),
-             Input('exploration-categorical-view', 'value')]
+             Input('exploration-view-store', 'data')]
         )
         def update_exploration_categorical_chart(descriptive_data, selection, variable, view):
             """
