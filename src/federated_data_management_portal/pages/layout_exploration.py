@@ -1,9 +1,7 @@
 import dash
 import os
 
-import dash_bootstrap_components as dbc
-
-from dash import html, dcc
+from dash import html, dcc, dash_table
 
 from federated_data_management_portal import portal_version
 
@@ -68,59 +66,68 @@ layout = html.Div([
         ]),
         html.Div([
             html.H3(id='exploration-title', className='page-title', children='Data exploration'),
-            html.Div(id='tile-exploration-info', className='tile tile-6', children=[
+            html.Div(id='tile-exploration-categorical', className='tile tile-7', children=[
                 html.H5('Variable info', className='tile-title'),
                 html.Div(children=[
-                    "Select the organisation(s) you would like to visualise",
+                    "Select the organisation(s) for this chart",
                     dcc.Checklist(
                         id='exploration-subset-selection-checkboxes', className='subset-selection-checkboxes',
                         options=[],
                         value=[],
                         labelStyle={'display': 'inline-block'}
                     )]),
-            ]),
-            dbc.Row([
-                dbc.Col(
-                    html.Div(id='tile-exploration-sex', className='tile tile-4', children=[
-                        html.H5('Biological sex balance', className='tile-title'),
-                        dcc.Graph(
-                            id='exploration-sex-donut',
-                            config={'modeBarButtons': [['toImage']],
-                                'displayModeBar': True,
-                                'displaylogo': False,
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'biological-sex-distribution',
-                                    'height': 500,
-                                    'width': 700,
-                                    'scale': 1
-                                }
-                            }
-                        )
-                    ]),
-                    width=6, lg=6, md=12, sm=12, xs=12),
-                dbc.Col(
-                    html.Div(id='tile-exploration-cancer', className='tile tile-5', children=[
-                        html.H5('Grouped cancer types (ICD-10 blocks)', className='tile-title'),
-                        dcc.Graph(
-                            id='exploration-cancer-donut',
-                            config={'modeBarButtons': [['toImage']],
-                                'displayModeBar': True,
-                                'displaylogo': False,
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'grouped-cancer-types',
-                                    'height': 500,
-                                    'width': 700,
-                                    'scale': 1
-                                }
-                            }
-                        )
-                    ]),
-                    width=6, lg=6, md=12, sm=12, xs=12)
+                html.Div(children=[
+                    "Select the categorical variable",
+                    dcc.Dropdown(
+                        id='exploration-categorical-variable',
+                        options=[],
+                        value=None,
+                        clearable=False
+                    )]),
+                html.Div(children=[
+                    "View as ",
+                    dcc.RadioItems(
+                        id='exploration-categorical-view',
+                        options=[
+                            {'label': 'Pie chart', 'value': 'pie'},
+                            {'label': 'Bar chart', 'value': 'bar'},
+                            {'label': 'CSV', 'value': 'csv'},
+                        ],
+                        value='pie',
+                        inline=True,
+                        labelStyle={'display': 'inline-block'}
+                    )]),
+                dcc.Graph(
+                    id='exploration-categorical-graph',
+                    config={'modeBarButtons': [['toImage']],
+                        'displayModeBar': True,
+                        'displaylogo': False,
+                        'toImageButtonOptions': {
+                            'format': 'svg',
+                            'filename': 'categorical-variable-counts',
+                            'height': 500,
+                            'width': 1100,
+                            'scale': 1
+                        }
+                    }
+                ),
+                html.Div(id='exploration-categorical-csv', hidden=True, children=[
+                    dash_table.DataTable(
+                        id='exploration-categorical-csv-table',
+                        columns=[{'name': 'Category', 'id': 'category'},
+                                 {'name': 'Count', 'id': 'count'}]
+                    ),
+                    html.Button('Download CSV', id='exploration-csv-download-btn'),
+                    dcc.Download(id='exploration-csv-download')
+                ]),
+                dcc.Store(id='exploration-csv-store')
             ]),
             html.Div(id='tile-exploration-distributions', className='tile tile-7', children=[
                 html.H5('Data distributions', className='tile-title'),
+                html.Div(className='explanation', children=[
+                    "Based on the central aggregate result across all organisations; "
+                    "the organisation selection above does not apply here."
+                ]),
                 html.Div(children=[
                     "Select the variable you would like to visualise",
                     dcc.Dropdown(
