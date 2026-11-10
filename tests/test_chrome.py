@@ -17,7 +17,7 @@ class PageChromeTests(unittest.TestCase):
         schema_path.write_text(json.dumps({}), encoding="utf-8")
         dashboard_path.write_text(json.dumps({"2026-01-01T00:00:00": {}}), encoding="utf-8")
 
-        Dashboard(schema_path, dashboard_path)
+        cls.dashboard = Dashboard(schema_path, dashboard_path)
 
         from federated_data_management_portal.pages import (
             landing,
@@ -57,6 +57,24 @@ class PageChromeTests(unittest.TestCase):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
             self.assertIn("Version", rendered, page.__name__)
+
+    def test_header_uses_the_info_portal_font_awesome_icons(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            for icon in ("fa-linkedin-in", "fa-bluesky", "fa-instagram", "fa-envelope", "fa-chevron-down"):
+                self.assertIn(icon, rendered, f"{page.__name__} missing {icon}")
+
+    def test_internal_nav_bar_is_removed_from_the_app_layout(self):
+        rendered = json.dumps(self.dashboard.App.layout, default=str)
+        self.assertNotIn("Missing Data", rendered)
+
+    def test_external_links_open_in_a_new_tab(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            # every external (https) link in the chrome carries target=_blank
+            self.assertIn("target='_blank'", rendered, page.__name__)
+            self.assertIn("rel='noopener noreferrer'", rendered, page.__name__)
+            self.assertIn("https://strongaya.eu/", rendered, page.__name__)
 
 
 if __name__ == "__main__":
