@@ -3,44 +3,16 @@ import os
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
-from federated_data_management_portal import portal_version
+from federated_data_management_portal import chrome
 
 page_title = 'STRONG-AYA | Data Management Portal'
-aesthetic_logo_alt_text = 'STRONG-AYA Logo'
 aesthetic_title = 'Data management portal'
-secondary_headers = {
-    "HOME": "https://strongaya.eu/",
-    "ABOUT US": "https://strongaya.eu/about-us",
-    "OUR CONSORTIUM": "https://strongaya.eu/our-consortium/",
-    "ECOSYSTEMS": "https://strongaya.eu/what-is-ecosystem/",
-    "NEWS": "https://strongaya.eu/news/",
-    "CONTACT <white-text>": "https://strongaya.eu/contact/"
-}
 tile_placeholders = ["0 countries", "0 institutions", "0 AYAs"]
 
 dash.register_page(__name__, path='/data-plausibility', title=page_title)
 
 layout = html.Div([
-    html.Header([
-        html.Div(className='primary-header'),
-        html.Div(className='secondary-header', children=[
-            html.Div(className='logo', children=[
-                html.Img(src=f'..{os.path.sep}assets{os.path.sep}web-logo-1.png',
-                         alt=aesthetic_logo_alt_text,
-                         style={'width': '200px', 'height': '40px'}
-                         )
-            ]),
-            html.Div(id='text-container', className='text-container', children=[
-                *[html.A(className='text-field', children=text, href=link) for text, link in
-                  secondary_headers.items() if '<white-text>' not in text],
-                *[html.A(className='text-field white-text', children=text[:text.rfind('<white-text>')],
-                         href=link) for
-                  text, link in
-                  secondary_headers.items() if '<white-text>' in text]
-            ]),
-            html.Div(className='orange-cube')
-        ]),
-    ]),
+    chrome.info_portal_header(),
     html.Div([
         html.Div(id='btn-return', className='btn-return', children=[
             html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
@@ -180,6 +152,5 @@ layout = html.Div([
                            html.Br(),
                            '(see https://github.com/STRONGAYA/v6-descriptive-statistics)'])
     ]),
-    html.Div(id='footer', className='footer',
-         children=[html.Div(f'Version {portal_version()}', className='version-note')])
+    chrome.info_portal_footer()
 ])
