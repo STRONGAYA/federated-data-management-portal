@@ -32,8 +32,8 @@ layout = chrome.page_scaffold(
             "distribution in both atemporal as temporal data fields.",
             '/data-plausibility'),
         chrome.subject_tile(
-            'exploration-tile', 'Data exploration', 'scatter-basic.svg',
-            'A simple scatter plot',
+            'exploration-tile', 'Data exploration', 'scatter-exploration.svg',
+            'A simple scatter plot with a highlighted outlier point',
             "Explore the aggregate data distributions via the federated "
             "quartiles and IQR, and key variable characteristics such as "
             "the biological sex balance and the grouped cancer types.",
