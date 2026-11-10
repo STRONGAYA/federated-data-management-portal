@@ -74,7 +74,7 @@ class PageChromeTests(unittest.TestCase):
 
     def test_chrome_css_renders_links_without_underline_or_link_colour(self):
         css_path = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
-                    / "assets" / "info_portal_chrome.css")
+                    / "assets" / "info-portal-chrome.css")
         css = css_path.read_text(encoding="utf-8")
         self.assertIn("color: inherit", css)
         self.assertIn("text-decoration: none", css)
