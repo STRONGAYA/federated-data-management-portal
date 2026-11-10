@@ -468,8 +468,13 @@ button {
     background: var(--brand-orange-icon, #ef6409);
 }
 
-/* Dash dropdown (react-select) */
-.Select-control {
+/* Dash dropdowns (dash-dropdown markup), info portal control look */
+.dash-dropdown {
+    width: auto;
+    min-width: 260px;
+}
+
+.dash-dropdown-trigger {
     background: #fff;
     border: 1px solid var(--border-control);
     border-radius: 8px;
@@ -477,28 +482,27 @@ button {
     color: var(--text-dark, #1c1c1c);
 }
 
-.Select-control:hover,
-.Select.is-focused:not(.is-open) > .Select-control {
+.dash-dropdown-trigger:hover,
+.dash-dropdown:focus-within .dash-dropdown-trigger {
     border-color: var(--brand-orange-icon, #ef6409);
-    box-shadow: none;
 }
 
-.Select-placeholder,
-.Select-value-label {
+.dash-dropdown-value,
+.dash-dropdown-placeholder {
     color: var(--text-dark, #1c1c1c);
 }
 
-.Select-menu-outer {
+.dash-dropdown-options {
     border: 1px solid var(--border-control);
     border-radius: 8px;
     font-size: 0.9333rem;
 }
 
-.Select-option {
+.dash-dropdown-option {
     color: var(--text-dark, #1c1c1c);
 }
 
-.Select-option.is-focused {
+.dash-dropdown-option:hover {
     background: rgba(247, 116, 30, 0.08);
     color: var(--brand-orange-text, #be4f07);
 }
@@ -605,22 +609,13 @@ input[type='radio'] {
 }
 
 /* the other dropdowns styled like the view selector pill */
-.pill-dropdown .Select,
-.pill-dropdown.Select {
-    width: auto;
-    min-width: 260px;
-}
-
-.pill-dropdown .Select-control,
-.pill-dropdown.Select > .Select-control {
+.pill-dropdown .dash-dropdown-trigger {
     border-radius: 20px;
     padding: 8px 18px;
-    min-height: 0;
-    height: auto;
     font-size: 0.8667rem;
 }
 
-.pill-dropdown .Select-menu-outer {
+.pill-dropdown .dash-dropdown-options {
     border-radius: 14px;
 }
 
