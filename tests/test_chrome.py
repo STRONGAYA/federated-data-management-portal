@@ -54,10 +54,18 @@ class PageChromeTests(unittest.TestCase):
             rendered = json.dumps(page.layout, default=str)
             self.assertNotIn("accessibility", rendered.lower(), page.__name__)
 
-    def test_footer_keeps_the_portal_version(self):
+    def test_notice_banner_has_version_tag_and_identity_elements(self):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
+            self.assertIn("internal use only", rendered, page.__name__)
             self.assertIn("Version", rendered, page.__name__)
+            self.assertIn("authenticated-user-container", rendered, page.__name__)
+            self.assertIn("authenticated-user-email", rendered, page.__name__)
+
+    def test_footer_keeps_the_copyright_line(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("All Rights Reserved", rendered, page.__name__)
 
     def test_header_uses_the_info_portal_font_awesome_icons(self):
         for page in self.pages:
