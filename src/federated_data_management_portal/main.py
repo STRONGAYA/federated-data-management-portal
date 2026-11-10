@@ -145,7 +145,7 @@ class Dashboard:
                              external_stylesheets=[dbc.themes.BOOTSTRAP])
 
         self.App.layout = self.define_layout()
-        self.App._favicon = 'favicon.ico'
+        self.App._favicon = 'info-portal/favicon.png'
         self.register_callbacks()
 
     def extract_categories_from_semantic_map(self, max_depth=0):
