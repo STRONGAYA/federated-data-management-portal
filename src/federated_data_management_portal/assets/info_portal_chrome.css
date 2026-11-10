@@ -16,6 +16,12 @@
     --border-grey: #d7d7d7;
 }
 
+/* links are plain text in the info portal: inherited colour, no underline */
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
 /* text for screen readers only (e.g. "opens in a new tab"), as in the info portal */
 .visually-hidden {
     position: absolute !important;

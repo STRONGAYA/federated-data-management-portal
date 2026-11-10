@@ -51,15 +51,15 @@ FOOTER_LINKS = [
 # External links open in a new tab
 _EXTERNAL_PROPS = {'target': '_blank', 'rel': 'noopener noreferrer'}
 
-# The info portal appends this icon to every external link, plus a
-# screen-reader-only note that the link opens in a new tab
-_EXTERNAL_ICON = html.I(className='fas fa-arrow-up-right-from-square', **{'aria-hidden': 'true'})
+# External links carry a screen-reader-only note that they open in a new tab
+# (the info portal's header/footer links are plain text: no icon, no
+# underline, inherited colour)
 _NEW_TAB_NOTE = html.Span(' (opens in a new tab)', className='visually-hidden')
 
 
 def _external_children(children):
-    """Append the external-link icon and the new-tab note to link children."""
-    return [*children, _EXTERNAL_ICON, _NEW_TAB_NOTE]
+    """Append the new-tab note to external link children."""
+    return [*children, _NEW_TAB_NOTE]
 
 
 def info_portal_header():
