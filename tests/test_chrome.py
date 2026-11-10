@@ -58,7 +58,7 @@ class PageChromeTests(unittest.TestCase):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
             self.assertIn("internal use only", rendered, page.__name__)
-            self.assertIn("Version", rendered, page.__name__)
+            self.assertIn("Data Management Portal v", rendered, page.__name__)
             self.assertIn("authenticated-user-container", rendered, page.__name__)
             self.assertIn("authenticated-user-email", rendered, page.__name__)
 

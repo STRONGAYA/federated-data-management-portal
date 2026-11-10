@@ -191,12 +191,13 @@ body {
 }
 
 .tile {
-    background-color: #ffffff;
+    background-color: var(--bg-card, #ffffff);
     height: 60%;
     width: 60%;
     alignment: center;
     text-align: center;
-    border-radius: 20px;
+    border: 1px solid var(--border-grey, #d7d7d7);
+    border-radius: 14px;
     padding: 40px;
     margin-top: 40%;
     margin-left: auto;
@@ -325,11 +326,14 @@ body {
     white-space: normal;
 }
 
-.tile-title {
-    font-size: 24px;
-    color: #484848;
-    margin-bottom: 5px;
-    margin-top: 0;
+/* tile and page titles in the info portal's orange, centred style */
+.tile-title,
+.page-title {
+    text-align: center;
+    color: var(--brand-orange-icon, #ef6409);
+    font-size: 1.7333rem;
+    font-weight: 600;
+    margin: 2px 0 18px;
 }
 
 #table-data-availability {
@@ -422,4 +426,89 @@ body {
    download icon dark so it is visible on the white tiles. */
 .modebar-btn svg path {
     fill: #444444 !important;
+}
+
+/* ============================================================
+   Form controls and cards, styled after the STRONG-AYA info portal
+   (web/css/portal.css): white controls with a 1px control border,
+   8px radius, orange accents
+   ============================================================ */
+
+:root {
+    --border-control: #8a8a8a;
+    --bg-card: #ffffff;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* primary action button (e.g. Download CSV) */
+.portal-btn {
+    background: var(--brand-orange, #f7741e);
+    color: var(--on-orange, #1c1c1c);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.8667rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.portal-btn:hover {
+    background: var(--brand-orange-icon, #ef6409);
+}
+
+/* Dash dropdown (react-select) */
+.Select-control {
+    background: #fff;
+    border: 1px solid var(--border-control);
+    border-radius: 8px;
+    font-size: 0.9333rem;
+    color: var(--text-dark, #1c1c1c);
+}
+
+.Select-control:hover,
+.Select.is-focused:not(.is-open) > .Select-control {
+    border-color: var(--brand-orange-icon, #ef6409);
+    box-shadow: none;
+}
+
+.Select-placeholder,
+.Select-value-label {
+    color: var(--text-dark, #1c1c1c);
+}
+
+.Select-menu-outer {
+    border: 1px solid var(--border-control);
+    border-radius: 8px;
+    font-size: 0.9333rem;
+}
+
+.Select-option {
+    color: var(--text-dark, #1c1c1c);
+}
+
+.Select-option.is-focused {
+    background: rgba(247, 116, 30, 0.08);
+    color: var(--brand-orange-text, #be4f07);
+}
+
+/* checkboxes and radio buttons */
+input[type='checkbox'],
+input[type='radio'] {
+    accent-color: var(--brand-orange-icon, #ef6409);
+}
+
+.dash-checklist label,
+.dash-radio-items label {
+    margin-right: 12px;
+}
+
+/* data table header */
+.dash-table .dash-header {
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-grey, #d7d7d7);
 }

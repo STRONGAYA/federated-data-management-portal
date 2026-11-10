@@ -49,7 +49,7 @@ layout = chrome.page_scaffold(
                     columns=[{'name': 'Category', 'id': 'category'},
                              {'name': 'Count', 'id': 'count'}]
                 ),
-                html.Button('Download CSV', id='exploration-csv-download-btn'),
+                html.Button('Download CSV', id='exploration-csv-download-btn', className='portal-btn'),
                 dcc.Download(id='exploration-csv-download')
             ]),
             dcc.Store(id='exploration-csv-store')
