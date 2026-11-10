@@ -135,7 +135,8 @@ a {
     background: var(--brand-orange-icon);
 }
 
-/* the purple banner */
+/* the purple banner: internal-use notice, version tag and (when the auth
+   proxy forwards identity headers) the signed-in user with account actions */
 .notice-banner {
     width: 100%;
     background: var(--brand-purple);
@@ -144,6 +145,16 @@ a {
     padding: 6px 16px;
     font-size: 0.8667rem;
     text-wrap: balance;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 4px 16px;
+}
+
+.notice-version {
+    font-size: 0.8rem;
+    opacity: 0.85;
 }
 
 /* ---------- footer ---------- */

@@ -195,6 +195,19 @@ def info_portal_header():
         ]),
         html.Div(className='notice-banner', children=[
             html.B('Please note: this portal is for internal use only.'),
+            html.Span(f'Version {portal_version()}', className='notice-version'),
+            html.Div(id='authenticated-user-container', className='authenticated-user-container',
+                     hidden=True, children=[
+                html.Span(id='authenticated-user-email', className='authenticated-user-email',
+                          **{'aria-label': 'Signed-in user email'}),
+                html.Div(className='authenticated-user-actions', children=[
+                    html.A('Sign out (switch account)', href='/oauth2/sign_out',
+                           className='authenticated-user-action'),
+                    html.A('Manage Microsoft permissions ↗', href='https://myapps.microsoft.com/',
+                           target='_blank', rel='noopener noreferrer',
+                           className='authenticated-user-action')
+                ])
+            ]),
         ]),
     ])
 
@@ -251,7 +264,6 @@ def info_portal_footer():
             ]),
             html.Div(className='copyright', children=[
                 '© 2026 Strong Aya. All Rights Reserved.',
-                html.Span(f'Version {portal_version()}', className='version-note'),
             ]),
         ]),
     ])

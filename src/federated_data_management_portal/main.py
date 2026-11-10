@@ -185,18 +185,6 @@ class Dashboard:
     def define_layout(self):
         return html.Div([
             dcc.Location(id='url', refresh=False),
-            html.Div(id='authenticated-user-container', className='authenticated-user-container',
-                     hidden=True, children=[
-                html.Span(id='authenticated-user-email', className='authenticated-user-email',
-                          **{'aria-label': 'Signed-in user email'}),
-                html.Div(className='authenticated-user-actions', children=[
-                    html.A('Sign out (switch account)', href='/oauth2/sign_out',
-                           className='authenticated-user-action'),
-                    html.A('Manage Microsoft permissions ↗', href='https://myapps.microsoft.com/',
-                           target='_blank', rel='noopener noreferrer',
-                           className='authenticated-user-action')
-                ])
-            ]),
             dcc.Store(id='store', data=self.dashboard_data),
             dcc.Store(id='aggregate-store', data=self.aggregate_data),
             dcc.Store(id='data-availability-store-1'),
