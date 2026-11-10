@@ -370,6 +370,27 @@ class Icd10DetectionTests(unittest.TestCase):
             dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})), [])
 
 
+class ViewSelectionButtonTests(unittest.TestCase):
+    def test_exploration_page_has_the_info_portal_view_button_and_menu(self):
+        import json as _json
+        import tempfile as _tempfile
+        from pathlib import Path as _Path
+
+        from federated_data_management_portal.main import Dashboard
+        with _tempfile.TemporaryDirectory() as td:
+            _Path(td, "schema.jsonld").write_text("{}")
+            _Path(td, "dashboard.json").write_text(_json.dumps({"2026-01-01T00:00:00": {}}))
+            Dashboard(_Path(td, "schema.jsonld"), _Path(td, "dashboard.json"))
+        import dash
+        from federated_data_management_portal.pages import layout_exploration  # noqa: F401
+
+        rendered = _json.dumps(dash.page_registry["pages.layout_exploration"]["layout"], default=str)
+        for needle in ("vis-btn", "view-selection-btn", "exploration-view-toggle",
+                       "exploration-view-menu", "filter-dropdown", "exploration-view-store",
+                       "view-type-indicator"):
+            self.assertIn(needle, rendered)
+
+
 class ExampleDataExplorationTests(unittest.TestCase):
     def setUp(self):
         raw = load_static_dashboard_data(EXAMPLE_DATA / "dashboard.json")
