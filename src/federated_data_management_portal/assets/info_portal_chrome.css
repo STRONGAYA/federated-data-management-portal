@@ -1,0 +1,288 @@
+/* ============================================================
+   STRONG-AYA Info Portal chrome (header + footer), taken from
+   https://github.com/STRONGAYA/strong-aya-info-portal (web/css/portal.css).
+   Adapted for the data management portal: no dark-mode filters, no
+   accessibility bar, no translation notice, no font-awesome icons
+   (the topbar social links are plain text).
+   ============================================================ */
+
+:root {
+    --brand-orange: #f7741e;
+    --brand-orange-text: #be4f07;
+    --brand-orange-icon: #ef6409;
+    --brand-purple: #7607ff;
+    --on-orange: #1c1c1c;
+    --text-dark: #1c1c1c;
+    --border-grey: #d7d7d7;
+}
+
+/* ---------- header ---------- */
+
+.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    background: #fff;
+    border-bottom: 1px solid var(--border-grey);
+}
+
+.header-topbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--brand-orange);
+    color: var(--on-orange);
+    padding: 6px 40px;
+    font-size: 0.8rem;
+}
+
+.topbar-social {
+    display: flex;
+    gap: 16px;
+}
+
+.topbar-social a,
+.topbar-mail {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--on-orange);
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.topbar-social a:hover,
+.topbar-mail:hover {
+    opacity: 0.8;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 10px 0 10px 40px;
+    background: #fff;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.site-logo img {
+    height: 44px;
+    width: auto;
+    display: block;
+}
+
+.site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 26px;
+    margin: 0 auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.site-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.site-nav a:hover {
+    color: var(--brand-orange-text);
+}
+
+.contact-btn {
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    background: var(--brand-orange);
+    color: var(--on-orange);
+    font-size: 0.8667rem;
+    font-weight: 600;
+    padding: 0 30px;
+    margin: -10px 0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+
+.contact-btn:hover {
+    background: var(--brand-orange-icon);
+}
+
+/* the purple banner */
+.notice-banner {
+    width: 100%;
+    background: var(--brand-purple);
+    color: #fff;
+    text-align: center;
+    padding: 6px 16px;
+    font-size: 0.8667rem;
+    text-wrap: balance;
+}
+
+/* ---------- footer ---------- */
+
+.site-footer {
+    margin-top: 64px;
+    background: url('info-portal/footer@3x.png') center/cover no-repeat, #2a2a2a;
+    color: #fff;
+}
+
+.footer-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 48px 40px 24px;
+}
+
+.footer-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto 32px;
+}
+
+.footer-col h2 {
+    font-size: 1.0667rem;
+    font-weight: 500;
+    letter-spacing: 0.6px;
+    color: #ffa35c;
+    margin: 0 0 12px;
+}
+
+.footer-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.footer-col li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.footer-col li::before {
+    content: url('info-portal/footer-arrow.png');
+    flex: 0 0 auto;
+    line-height: 1;
+    margin-top: 5px;
+}
+
+.footer-col li a {
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #fff;
+    text-decoration: none;
+}
+
+.footer-col li a:hover {
+    color: #ffa35c;
+}
+
+.footer-about {
+    max-width: 280px;
+}
+
+.footer-about img {
+    height: 44px;
+    width: auto;
+    margin-bottom: 14px;
+}
+
+.footer-about p {
+    font-size: 0.8rem;
+    margin: 0 0 12px;
+}
+
+.quick-contact {
+    background: #fff;
+    color: var(--text-dark);
+    border: 1px dashed var(--brand-orange);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-left: auto;
+}
+
+.quick-contact h2 {
+    color: var(--brand-purple);
+}
+
+.quick-contact div {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.funding-statement {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    border-radius: 8px;
+    padding: 20px 26px;
+    font-size: 0.7333rem;
+}
+
+.funding-statement p {
+    margin: 0 0 10px;
+}
+
+.funding-logos {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 14px;
+}
+
+.funding-logos img {
+    height: 42px;
+    width: auto;
+    background: #fff;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.copyright {
+    max-width: 1200px;
+    margin: 24px auto 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    text-align: center;
+    font-size: 0.8rem;
+    letter-spacing: 0.6px;
+    color: #fff;
+    padding-top: 12px;
+}
+
+.copyright .version-note {
+    margin-left: 16px;
+    opacity: 0.8;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 760px) {
+    .header-topbar {
+        padding: 6px 16px;
+    }
+
+    .header-main {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .site-nav {
+        gap: 14px;
+    }
+
+    .quick-contact {
+        margin-left: 0;
+    }
+}
