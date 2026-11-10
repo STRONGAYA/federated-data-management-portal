@@ -1,5 +1,4 @@
 import dash
-import os
 
 import dash_bootstrap_components as dbc
 
@@ -7,36 +6,10 @@ from dash import html, dcc
 
 from federated_data_management_portal import chrome
 
-page_title = 'STRONG-AYA | Data Management Portal'
+dash.register_page(__name__, path='/data-availability', title=chrome.PAGE_TITLE)
 
-aesthetic_title = 'Data management portal'
-
-tile_placeholders = ["0 countries", "0 institutions", "0 AYAs"]
-
-dash.register_page(__name__, path='/data-availability', title=page_title)
-
-layout = html.Div([
-    chrome.info_portal_header(),
-    html.Div([
-        html.Div(id='btn-return', className='btn-return', children=[
-            html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
-                     alt='Arrowhead pointing left',
-                     style={'width': '2.5rem',
-                            'height': '2.5rem'}),
-            dcc.Link('Return to subjects', href='/', className='no-decoration-link')
-        ]),
-        html.H5(id='dashboard-title', className='dashboard-title', children=aesthetic_title),
-        html.Div(id='dashboard', className='dashboard', children=[
-            html.Div(id='tile-1', className='tile-resizeable', children=[
-                html.Div(id='tile-content-1', className='tile-content-resizeable', children=tile_placeholders[0])
-            ]),
-            html.Div(id='tile-2', className='tile-resizeable', children=[
-                html.Div(id='tile-content-2', className='tile-content-resizeable', children=tile_placeholders[1])
-            ]),
-            html.Div(id='tile-3', className='tile-resizeable', children=[
-                html.Div(id='tile-content-3', className='tile-content-resizeable', children=tile_placeholders[2])
-            ])
-        ]),
+layout = chrome.page_scaffold(
+    content=[
         html.Div([
             html.H3(id='availability-title', className='page-title', children='Data availability'),
             dbc.Row([
@@ -44,18 +17,7 @@ layout = html.Div([
                     html.Div(id='tile-4', className='tile tile-4', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-one', 'index': 1},
-                            config={'modeBarButtons': [['toImage']],
-                                'displayModeBar': True,
-
-                                'displaylogo': False,
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'proportions-per-organisation',
-                                    'height': 500,
-                                    'width': 700,
-                                    'scale': 1
-                                }
-                            }
+                            config=chrome.graph_config('proportions-per-organisation', width=700)
                         )
                     ]),
                     width=6, lg=6, md=12, sm=12, xs=12),
@@ -63,18 +25,7 @@ layout = html.Div([
                     html.Div(id='tile-5', className='tile tile-5', children=[
                         dcc.Graph(
                             id={'type': 'dynamic-donut-two', 'index': 2},
-                            config={'modeBarButtons': [['toImage']],
-                                'displayModeBar': True,
-
-                                'displaylogo': False,
-                                'toImageButtonOptions': {
-                                    'format': 'svg',
-                                    'filename': 'proportions-per-country',
-                                    'height': 500,
-                                    'width': 700,
-                                    'scale': 1
-                                }
-                            }
+                            config=chrome.graph_config('proportions-per-country', width=700)
                         )
                     ]),
                     width=6, lg=6, md=12, sm=12, xs=12)
@@ -85,18 +36,7 @@ layout = html.Div([
             html.Div(id='tile-content-8', className='tile-content', children=[
                 dcc.Graph(
                     id='availability-over-time',
-                    config={'modeBarButtons': [['toImage']],
-                        'displayModeBar': True,
-
-                        'displaylogo': False,
-                        'toImageButtonOptions': {
-                            'format': 'svg',
-                            'filename': 'availability-over-time',
-                            'height': 500,
-                            'width': 1100,
-                            'scale': 1
-                        }
-                    }
+                    config=chrome.graph_config('availability-over-time')
                 )
             ])
         ]),
@@ -112,29 +52,15 @@ layout = html.Div([
                 )]),
             html.Div(id='tile-content-6', className='tile-content')
         ]),
-        html.Div(id='btn-subject-a', className='btn-subject-a', children=[
-            html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-left.svg',
-                     alt='Arrowhead pointing left',
-                     style={'width': '2.5rem',
-                            'height': '2.5rem'}),
-            dcc.Link('Plausibility', href='/data-plausibility', className='no-decoration-link')
-        ]),
-        html.Div(id='btn-subject-b', className='btn-subject-b', children=[
-            dcc.Link('Completeness', href='/data-completeness', className='no-decoration-link'),
-            html.Img(src=f'..{os.path.sep}assets{os.path.sep}arrow-right.svg',
-                     alt='Arrowhead pointing right',
-                     style={'width': '2.5rem',
-                            'height': '2.5rem'})
-        ]),
-        html.Div(id='availability-explanation', className='explanation',
-                 children=["Graphics aim to visualise how much data is available per location and "
-                           "explore the existence of expected and "
-                           "possible values between variables with "
-                           "semantic relationships between them.",
-                           html.Br(), html.Br(),
-                           'Availability and semantic consistency is the "Descriptive statistics" Vantage6 algorithm ',
-                           html.Br(),
-                           '(see https://github.com/STRONGAYA/v6-descriptive-statistics)'])
-    ]),
-    chrome.info_portal_footer()
-])
+    ],
+    prev_topic=('Plausibility', '/data-plausibility'),
+    next_topic=('Completeness', '/data-completeness'),
+    explanation=["Graphics aim to visualise how much data is available per location and "
+                 "explore the existence of expected and "
+                 "possible values between variables with "
+                 "semantic relationships between them.",
+                 html.Br(), html.Br(),
+                 'Availability and semantic consistency is the "Descriptive statistics" Vantage6 algorithm ',
+                 html.Br(),
+                 '(see https://github.com/STRONGAYA/v6-descriptive-statistics)']
+)

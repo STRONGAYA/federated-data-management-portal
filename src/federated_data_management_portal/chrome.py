@@ -10,11 +10,118 @@ are intentionally not included.
 
 import os
 
-from dash import html
+from dash import html, dcc
 
 from federated_data_management_portal import portal_version
 
+PAGE_TITLE = 'STRONG-AYA | Data Management Portal'
+AESTHETIC_TITLE = 'Data management portal'
+TILE_PLACEHOLDERS = ["0 countries", "0 institutions", "0 AYAs"]
+
 _ASSET = f'..{os.path.sep}assets{os.path.sep}info-portal{os.path.sep}'
+_ASSETS = f'..{os.path.sep}assets{os.path.sep}'
+_ARROW_STYLE = {'width': '2.5rem', 'height': '2.5rem'}
+
+
+def graph_config(filename, height=500, width=1100):
+    """
+    Standard dcc.Graph config: only the download button in the mode bar,
+    exporting svg with the given filename.
+    """
+    return {
+        'modeBarButtons': [['toImage']],
+        'displayModeBar': True,
+        'displaylogo': False,
+        'toImageButtonOptions': {
+            'format': 'svg',
+            'filename': filename,
+            'height': height,
+            'width': width,
+            'scale': 1,
+        },
+    }
+
+
+def _arrow(direction):
+    return html.Img(src=f'{_ASSETS}arrow-{direction}.svg',
+                    alt=f'Arrowhead pointing {direction}',
+                    style=_ARROW_STYLE)
+
+
+def subject_tile(tile_id, title, image, alt, explanation, href):
+    """
+    A landing-page subject tile linking to a topic page.
+
+    Parameters:
+    tile_id (str): The tile's component id.
+    title (str): The subject title shown on the tile.
+    image (str): The image filename inside assets/.
+    alt (str): The image alt text.
+    explanation (str): The short description under the title.
+    href (str): The topic page path.
+    """
+    return html.Div(id=tile_id, className='subject-tile', children=[
+        dcc.Link(href=href, className='no-decoration-link', children=[
+            html.Div(className='subject-title-container', children=[
+                html.Div(className='subject-title', children=[title])
+            ]),
+            html.Div(className='subject-tile-content', children=[
+                html.Img(src=f'{_ASSETS}{image}', alt=alt, className='subject-image'),
+                html.Div(className='subject-explanation', children=[explanation]),
+            ])
+        ])
+    ])
+
+
+def page_scaffold(content, prev_topic=None, next_topic=None, explanation=None, show_return=True):
+    """
+    Standard page layout shared by all pages: info portal header, optional
+    return-to-subjects button, dashboard title, the three stat tiles, the page
+    content, optional previous/next topic navigation arrows, an optional
+    explanation block, and the info portal footer.
+
+    Parameters:
+    content (list): The page-specific components.
+    prev_topic (tuple, optional): (label, href) for the left navigation arrow.
+    next_topic (tuple, optional): (label, href) for the right navigation arrow.
+    explanation (list, optional): Children of the explanation block.
+    show_return (bool): Whether to show the return-to-subjects button.
+
+    Returns:
+    The page layout as an html.Div.
+    """
+    body = []
+    if show_return:
+        body.append(html.Div(id='btn-return', className='btn-return', children=[
+            _arrow('left'),
+            dcc.Link('Return to subjects', href='/', className='no-decoration-link'),
+        ]))
+    body.append(html.H5(id='dashboard-title', className='dashboard-title', children=AESTHETIC_TITLE))
+    body.append(html.Div(id='dashboard', className='dashboard', children=[
+        html.Div(id=f'tile-{i}', className='tile-resizeable', children=[
+            html.Div(id=f'tile-content-{i}', className='tile-content-resizeable',
+                     children=TILE_PLACEHOLDERS[i - 1])
+        ]) for i in (1, 2, 3)
+    ]))
+    body.append(html.Div(list(content)))
+    if prev_topic:
+        body.append(html.Div(id='btn-subject-a', className='btn-subject-a', children=[
+            _arrow('left'),
+            dcc.Link(prev_topic[0], href=prev_topic[1], className='no-decoration-link'),
+        ]))
+    if next_topic:
+        body.append(html.Div(id='btn-subject-b', className='btn-subject-b', style={'margin-left': '73%'},
+                             children=[
+                                 dcc.Link(next_topic[0], href=next_topic[1], className='no-decoration-link'),
+                                 _arrow('right'),
+                             ]))
+    if explanation is not None:
+        body.append(html.Div(id='page-explanation', className='explanation', children=explanation))
+    return html.Div([
+        info_portal_header(),
+        html.Div(body),
+        info_portal_footer(),
+    ])
 
 # (label, href, font-awesome icon class or None) — icons as in the info portal
 SITE_NAV = [
