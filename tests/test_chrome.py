@@ -64,11 +64,19 @@ class PageChromeTests(unittest.TestCase):
             for icon in ("fa-linkedin-in", "fa-bluesky", "fa-instagram", "fa-envelope", "fa-chevron-down"):
                 self.assertIn(icon, rendered, f"{page.__name__} missing {icon}")
 
-    def test_external_links_carry_the_info_portal_external_icon(self):
+    def test_external_links_are_plain_text_without_an_arrow_icon(self):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
-            self.assertIn("fa-arrow-up-right-from-square", rendered, page.__name__)
+            self.assertNotIn("fa-arrow-up-right-from-square", rendered, page.__name__)
+            # screen-reader-only new-tab note stays
             self.assertIn("opens in a new tab", rendered, page.__name__)
+
+    def test_chrome_css_renders_links_without_underline_or_link_colour(self):
+        css_path = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
+                    / "assets" / "info_portal_chrome.css")
+        css = css_path.read_text(encoding="utf-8")
+        self.assertIn("color: inherit", css)
+        self.assertIn("text-decoration: none", css)
 
     def test_internal_nav_bar_is_removed_from_the_app_layout(self):
         rendered = json.dumps(self.dashboard.App.layout, default=str)
