@@ -27,6 +27,7 @@ class PageChromeTests(unittest.TestCase):
             layout_plausibility,
         )
         cls.pages = (landing, layout_availability, layout_completeness, layout_exploration, layout_plausibility)
+        cls.topic_pages = (layout_availability, layout_completeness, layout_exploration, layout_plausibility)
 
     @classmethod
     def tearDownClass(cls):
@@ -87,6 +88,20 @@ class PageChromeTests(unittest.TestCase):
         favicon = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
                    / "assets" / "info-portal" / "favicon.png")
         self.assertTrue(favicon.exists())
+
+    def test_topic_pages_share_the_scaffold(self):
+        for page in self.topic_pages:
+            rendered = json.dumps(page.layout, default=str)
+            for element in ("btn-return", "dashboard-title", "tile-content-1", "tile-content-2",
+                            "tile-content-3", "btn-subject-a", "btn-subject-b", "page-explanation"):
+                self.assertIn(element, rendered, f"{page.__name__} missing {element}")
+
+    def test_landing_page_has_no_return_button_or_topic_nav(self):
+        rendered = json.dumps(self.pages[0].layout, default=str)
+        self.assertNotIn("btn-return", rendered)
+        self.assertNotIn("btn-subject-a", rendered)
+        self.assertIn("dashboard-title", rendered)
+        self.assertIn("landing-title", rendered)
 
     def test_external_links_open_in_a_new_tab(self):
         for page in self.pages:
