@@ -583,7 +583,8 @@ input[type='radio'] {
 
 .chart-area .plot-download {
     position: absolute;
-    top: 8px;
+    /* below the plot title so it never interferes with it */
+    top: 44px;
     right: 8px;
     z-index: 10;
 }

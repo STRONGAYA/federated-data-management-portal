@@ -42,17 +42,16 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
-            chrome.chart_toolbar(view_switch=('plausibility', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
-            html.Div(className='options-row', children=[
-                dcc.Dropdown(
-                    id='plausibility-variable-dropdown',
-                    className='pill-dropdown',
-                    options=[],
-                    value=[],
-                    multi=True,
-                    placeholder='Variables',
-                    clearable=True
-                )]),
+            chrome.chart_toolbar(leading=html.Div(children=[
+                        dcc.Dropdown(
+                            id='plausibility-variable-dropdown',
+                            className='pill-dropdown',
+                            options=[],
+                            value=[],
+                            multi=True,
+                            placeholder='Variables',
+                            clearable=True
+                        )]), view_switch=('plausibility', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-7', className='tile-content', children=[
                 dcc.Graph(

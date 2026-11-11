@@ -74,12 +74,15 @@ def view_switch_control(prefix, options, default):
     ])
 
 
-def chart_toolbar(align='right', include_csv=False, csv_button_id=None, view_switch=None):
+def chart_toolbar(align='right', include_csv=False, csv_button_id=None, view_switch=None, leading=None):
     """
-    Toolbar row above a chart's divider: optionally a view-switch pill and
-    the download pill. align is 'right' (default) or 'left'.
+    Toolbar row above a chart's divider: optionally a leading control (e.g.
+    the variable dropdown), a view-switch pill and the download pill.
+    align is 'right' (default) or 'left'.
     """
     children = []
+    if leading is not None:
+        children.append(leading)
     if view_switch is not None:
         prefix, options, default = view_switch
         children.append(view_switch_control(prefix, options, default))
