@@ -196,6 +196,12 @@ def info_portal_header():
         html.Div(className='notice-banner', children=[
             html.B('Please note: this portal is for internal use only.'),
             html.Span(f'Data Management Portal v{portal_version()}', className='notice-version'),
+            html.Span([
+                'Suggestions, comments, requests: ',
+                html.A('here', href='https://github.com/STRONGAYA/federated-data-management-portal/issues/new/choose',
+                       **_EXTERNAL_PROPS),
+                ' or in WP update meetings.',
+            ]),
             html.Div(id='authenticated-user-container', className='authenticated-user-container',
                      hidden=True, children=[
                 html.Span(id='authenticated-user-email', className='authenticated-user-email',
