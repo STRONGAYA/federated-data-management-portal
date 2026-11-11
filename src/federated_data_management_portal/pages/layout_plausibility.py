@@ -36,7 +36,6 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Atemporal plausibility', className='tile-title'),
-            chrome.chart_toolbar(view_switch=('plausibility', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
             html.Div(className='options-row', children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
@@ -53,6 +52,7 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
+            chrome.chart_toolbar(view_switch=('plausibility', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-7', className='tile-content', children=[
                 dcc.Graph(

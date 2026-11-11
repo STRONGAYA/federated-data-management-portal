@@ -1678,7 +1678,9 @@ def generate_unavailable_organisation_annotation(domain):
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
-    return _finalize_figure(fig)
+    fig = _finalize_figure(fig)
+    fig.update_layout(hovermode=False)
+    return fig
 
 
 def _empty_annotation_figure(text):
@@ -1707,7 +1709,9 @@ def _empty_annotation_figure(text):
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
     )
-    return _finalize_figure(figure)
+    figure = _finalize_figure(figure)
+    figure.update_layout(hovermode=False)
+    return figure
 
 
 def _schema_prefixes(semantic_map_data):
