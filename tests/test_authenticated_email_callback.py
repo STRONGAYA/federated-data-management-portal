@@ -86,7 +86,9 @@ class AuthenticatedEmailCallbackTests(unittest.TestCase):
             if account_container is not None:
                 break
         self.assertIsNotNone(account_container)
-        sign_out, manage_permissions = account_container.children[1].children
+        actions = next(child for child in account_container.children
+                       if getattr(child, "className", None) == "authenticated-user-actions")
+        sign_out, manage_permissions = actions.children
 
         self.assertEqual(sign_out.href, "/oauth2/sign_out")
         self.assertEqual(sign_out.children, "Sign out (switch account)")

@@ -157,6 +157,17 @@ a {
     opacity: 0.85;
 }
 
+/* centred dot separators between the banner remarks */
+.notice-sep {
+    opacity: 0.6;
+}
+
+/* the 'here' issues link is underlined */
+.notice-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 /* ---------- footer ---------- */
 
 .site-footer {

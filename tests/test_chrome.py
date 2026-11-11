@@ -62,6 +62,19 @@ class PageChromeTests(unittest.TestCase):
             self.assertIn("authenticated-user-container", rendered, page.__name__)
             self.assertIn("authenticated-user-email", rendered, page.__name__)
 
+    def test_notice_banner_links_to_the_repo_issues_page(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("issues/new/choose", rendered, page.__name__)
+            self.assertIn("WP update meetings", rendered, page.__name__)
+            self.assertIn("target='_blank'", rendered, page.__name__)
+            # the 'here' link is underlined
+            self.assertIn("notice-link", rendered, page.__name__)
+            # dot separators between the remarks, version tag last
+            self.assertIn("notice-sep", rendered, page.__name__)
+            self.assertLess(rendered.index("issues/new/choose"), rendered.index("Data Management Portal v"),
+                            page.__name__)
+
     def test_footer_keeps_the_copyright_line(self):
         for page in self.pages:
             rendered = json.dumps(page.layout, default=str)
