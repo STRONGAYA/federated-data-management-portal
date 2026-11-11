@@ -40,8 +40,11 @@ def plot_download_control(include_csv=False, csv_button_id=None):
     are handled by assets/plot-download.js; the CSV option is a normal Dash
     button (csv_button_id) so the existing download callback fires on click.
     """
-    options = [html.Button('Download plot', className='filter-option plot-download-option',
-                          **{'data-action': 'plot', 'data-format': 'svg'})]
+    options = [
+        html.Button(f'Download plot ({fmt.upper()})', className='filter-option plot-download-option',
+                    **{'data-action': 'plot', 'data-format': fmt})
+        for fmt in ('svg', 'png', 'jpeg', 'pdf')
+    ]
     if include_csv:
         options.append(html.Button('Download CSV', id=csv_button_id, className='filter-option'))
     return html.Div(className='filter-wrap plot-download', children=[

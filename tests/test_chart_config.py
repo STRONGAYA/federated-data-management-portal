@@ -114,12 +114,38 @@ class ChartModeBarTests(unittest.TestCase):
         for graph in graphs:
             self.assertIs(graph.config.get("displayModeBar"), False, graph.id)
 
-    def test_every_topic_page_has_a_download_control(self):
+    def test_controls_sit_directly_above_the_divider_in_every_tile(self):
+        def walk(comp):
+            yield comp
+            children = getattr(comp, "children", None)
+            if children is None:
+                return
+            if not isinstance(children, (list, tuple)):
+                children = [children]
+            for child in children:
+                yield from walk(child)
+
+        control_classes = ("chart-toolbar", "filter-bar", "options-row")
+        for page in self.pages[1:]:
+            for comp in walk(page.layout):
+                cls = getattr(comp, "className", "") or ""
+                if "tile" not in cls.split():
+                    continue
+                kids = comp.children if isinstance(comp.children, list) else [comp.children]
+                for i, kid in enumerate(kids):
+                    kcls = getattr(kid, "className", "") or ""
+                    if "tile-divider" in kcls and i > 0:
+                        prev_cls = getattr(kids[i - 1], "className", "") or ""
+                        self.assertTrue(any(c in prev_cls for c in control_classes),
+                                        f"{page.__name__} tile {getattr(comp, 'id', None)}: "
+                                        f"element above the divider is '{prev_cls}'")
+
+    def test_every_topic_page_has_a_download_control_with_formats(self):
         for page in self.pages[1:]:
             rendered = json.dumps(page.layout, default=str)
             self.assertIn("plot-download-btn", rendered, page.__name__)
-            self.assertIn("Download plot", rendered, page.__name__)
-            self.assertIn("data-action='plot'", rendered, page.__name__)
+            for fmt in ("svg", "png", "jpeg", "pdf"):
+                self.assertIn(f"data-format='{fmt}'", rendered, page.__name__)
 
     def test_exploration_page_offers_csv_in_the_download_menu(self):
         rendered = json.dumps(self.pages[3].layout, default=str)
