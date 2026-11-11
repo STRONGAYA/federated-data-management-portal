@@ -387,8 +387,14 @@ class ViewSelectionButtonTests(unittest.TestCase):
         rendered = _json.dumps(dash.page_registry["pages.layout_exploration"]["layout"], default=str)
         for needle in ("vis-btn", "view-selection-btn", "exploration-view-toggle",
                        "exploration-view-menu", "filter-dropdown", "exploration-view-store",
-                       "view-type-indicator"):
+                       "view-type-indicator", "exploration-csv-download-btn"):
             self.assertIn(needle, rendered)
+        # the download button is a pill above the divider (its repr precedes
+        # the first tile-divider, and it carries the vis-btn pill class)
+        self.assertLess(rendered.index("exploration-csv-download-btn"),
+                        rendered.index("tile-divider"))
+        button_repr = rendered[rendered.index("exploration-csv-download-btn"):]
+        self.assertIn("vis-btn", button_repr[:200])
 
 
 class ExampleDataExplorationTests(unittest.TestCase):

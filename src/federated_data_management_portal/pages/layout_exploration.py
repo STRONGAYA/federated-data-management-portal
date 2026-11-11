@@ -42,6 +42,8 @@ layout = chrome.page_scaffold(
                     ]),
                     dcc.Store(id='exploration-view-store', data='pie'),
                 ]),
+                html.Button('Download CSV', id='exploration-csv-download-btn', className='vis-btn'),
+                dcc.Download(id='exploration-csv-download'),
             ]),
             html.Hr(className='tile-divider'),
             dcc.Graph(
@@ -54,8 +56,6 @@ layout = chrome.page_scaffold(
                     columns=[{'name': 'Category', 'id': 'category'},
                              {'name': 'Count', 'id': 'count'}]
                 ),
-                html.Button('Download CSV', id='exploration-csv-download-btn', className='portal-btn'),
-                dcc.Download(id='exploration-csv-download')
             ]),
             dcc.Store(id='exploration-csv-store')
         ]),
