@@ -53,16 +53,20 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-6', className='tile tile-6', children=[
             html.H5('Semantic consistency', className='tile-title'),
-            html.Div(className='options-row', children=[
-                dcc.Dropdown(
-                    id='availability-variable-dropdown',
-                    className='pill-dropdown',
-                    options=[],
-                    value=[],
-                    multi=True,
-                    placeholder='Variables',
-                    clearable=True
-                )]),
+            html.Div(className='chart-toolbar', children=[
+                html.Div(children=[
+                    dcc.Dropdown(
+                        id='availability-variable-dropdown',
+                        className='pill-dropdown',
+                        options=[],
+                        value=[],
+                        multi=True,
+                        placeholder='Variables',
+                        clearable=True
+                    )]),
+                chrome.toolbar_right(
+                    chrome.csv_download_button('availability-table-download-btn', 'availability-table-download')),
+            ]),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-6', className='tile-content')
         ]),

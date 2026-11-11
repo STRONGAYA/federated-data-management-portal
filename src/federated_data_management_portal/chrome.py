@@ -105,6 +105,14 @@ def toolbar_right(*controls):
     return html.Div(className='toolbar-right', children=list(controls))
 
 
+def csv_download_button(button_id, download_id):
+    """A pill 'Download CSV' button plus the dcc.Download it triggers (for tables)."""
+    return html.Div(className='filter-wrap', children=[
+        html.Button('Download CSV', id=button_id, className='vis-btn'),
+        dcc.Download(id=download_id),
+    ])
+
+
 def chart_area(graph):
     """
     Wrap a graph with the download control overlaid at the top right,

@@ -1650,6 +1650,17 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
         return _finalize_figure(fig)
 
 
+def dataframe_to_csv(table_json):
+    """
+    Convert a stored DataFrame JSON string (as kept in data-availability-store-1)
+    to CSV text for download.
+    """
+    frame = pd.read_json(io.StringIO(table_json))
+    # drop the internal per-organisation status helper columns
+    frame = frame.drop(columns=[c for c in frame.columns if c.endswith('_status')])
+    return frame.to_csv(index=False)
+
+
 def build_variable_options(semantic_map_data, present_classes):
     """
     Build the variable-selection dropdown options from the JSON-LD schema.

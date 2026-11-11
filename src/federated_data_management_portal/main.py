@@ -760,6 +760,17 @@ class Dashboard:
         _register_variable_dropdown('plausibility-variable-dropdown')
 
         @self.App.callback(
+            Output('availability-table-download', 'data'),
+            [Input('availability-table-download-btn', 'n_clicks')],
+            [State('data-availability-store-1', 'data')]
+        )
+        def download_availability_table(n_clicks, table_json):
+            """Download the semantic consistency table (stored as DataFrame JSON) as CSV."""
+            if not n_clicks or not table_json:
+                return dash.no_update
+            return dcc.send_string(callbacks.dataframe_to_csv(table_json), 'data-availability.csv')
+
+        @self.App.callback(
             Output('exploration-subset-selection-checkboxes', 'options'),
             [Input('store', 'data')]
         )
