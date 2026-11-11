@@ -34,6 +34,37 @@ class ChartHoverTests(unittest.TestCase):
         self.assertIs(template.layout.xaxis.showspikes, False)
         self.assertIs(template.layout.yaxis.showspikes, False)
 
+
+    def test_every_figure_disables_the_crosshair_at_layout_level(self):
+        import json as _json
+        from pathlib import Path as _Path
+
+        from federated_data_management_portal import callbacks
+
+        example = _Path(__file__).resolve().parent.parent / "example_data"
+        data = _json.loads((example / "dashboard.json").read_text())
+        snapshots = {k: v for k, v in data.items() if k != "aggregate"}
+        aggregate = data["aggregate"]
+        schema = _json.loads((example / "schema.jsonld").read_text())
+        orgs = sorted(snapshots["2026-01-01T00:00:00"].keys())
+
+        figures = [
+            callbacks.generate_donut_chart(snapshots, chart_domain="availability", chart_type="organisation"),
+            callbacks.generate_sample_size_over_time_chart(snapshots),
+            callbacks.generate_sample_size_horizontal_bar(snapshots),
+            callbacks.generate_variable_bar_chart(snapshots, domain="completeness", semantic_map_data=schema),
+            callbacks.generate_distribution_curve_figure(aggregate, "ncit:C156420", schema),
+            callbacks.generate_categorical_pie_figure(snapshots, orgs, "biological_sex", schema),
+            callbacks.generate_categorical_bar_figure(snapshots, orgs, "biological_sex", schema),
+        ]
+        for figure in figures:
+            if isinstance(figure, dict):
+                self.assertIs(figure["layout"]["dragmode"], False, figure)
+                self.assertIs(figure["layout"]["hovermode"], "closest", figure)
+            else:
+                self.assertIs(figure.layout.dragmode, False, figure)
+                self.assertIs(figure.layout.hovermode, "closest", figure)
+
     def test_served_figures_carry_the_template(self):
         import plotly.io as pio
 
