@@ -13,6 +13,7 @@ layout = chrome.page_scaffold(
         html.Div([
             html.H3(id='completeness-title', className='page-title',
                     children='Data completeness'),
+            html.Hr(className='tile-divider'),
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
@@ -34,7 +35,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Variable completeness', className='tile-title'),
-            html.Div(children=[
+            html.Div(className='options-row', children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
                     id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
@@ -42,7 +43,7 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
-            html.Div(children=[
+            html.Div(className='options-row', children=[
                 "Select the organisation(s) you would like to visualise",
                 dcc.Checklist(
                     id='subset-selection-checkboxes', className='subset-selection-checkboxes',
@@ -50,6 +51,7 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
+            html.Hr(className='tile-divider'),
             html.Div(id='tile-content-7', className='tile-content', children=[
                 dcc.Graph(
                     id={'type': 'dynamic-completeness-bar', 'index': 3},

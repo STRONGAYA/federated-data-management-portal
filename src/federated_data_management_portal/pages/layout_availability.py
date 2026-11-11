@@ -12,6 +12,7 @@ layout = chrome.page_scaffold(
     content=[
         html.Div([
             html.H3(id='availability-title', className='page-title', children='Data availability'),
+            html.Hr(className='tile-divider'),
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
@@ -33,6 +34,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-7', children=[
             html.H5('Data availability over time', className='tile-title'),
+            html.Hr(className='tile-divider'),
             html.Div(id='tile-content-8', className='tile-content', children=[
                 dcc.Graph(
                     id='availability-over-time',
@@ -42,7 +44,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-6', className='tile tile-6', children=[
             html.H5('Semantic consistency', className='tile-title'),
-            html.Div(children=[
+            html.Div(className='options-row', children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
                     id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
@@ -50,6 +52,7 @@ layout = chrome.page_scaffold(
                     value=[],
                     labelStyle={'display': 'inline-block'}
                 )]),
+            html.Hr(className='tile-divider'),
             html.Div(id='tile-content-6', className='tile-content')
         ]),
     ],
