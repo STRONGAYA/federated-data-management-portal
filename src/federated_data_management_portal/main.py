@@ -681,9 +681,10 @@ class Dashboard:
 
         @self.App.callback(
             Output('availability-over-time', 'figure'),
-            [Input('store', 'data')]
+            [Input('store', 'data'),
+             Input('availability-over-time-variable-dropdown', 'value')]
         )
-        def update_availability_over_time(descriptive_data):
+        def update_availability_over_time(descriptive_data, variable_selection):
             """
             Callback function to update the data availability over time chart.
 
@@ -698,7 +699,14 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated availability over time chart figure.
             """
-            return callbacks.generate_sample_size_over_time_chart(descriptive_data)
+            _options, var_info = callbacks.build_variable_options(
+                self.global_semantic_map_data, _present_classes(descriptive_data))
+            selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
+            # the over-time chart shows one variable at a time; a category or
+            # empty selection falls back to the overall sample size
+            variable_class = next(iter(selected_classes)) if selected_classes and len(selected_classes) == 1 else None
+            return callbacks.generate_sample_size_over_time_chart(
+                descriptive_data, variable_class=variable_class, semantic_map_data=self.global_semantic_map_data)
 
         def _register_view_switch(prefix):
             """Register the toggle/select callbacks for a 'Select visualisation' pill."""
@@ -747,6 +755,7 @@ class Dashboard:
                 return options, []
 
         _register_variable_dropdown('availability-variable-dropdown')
+        _register_variable_dropdown('availability-over-time-variable-dropdown')
         _register_variable_dropdown('completeness-variable-dropdown')
         _register_variable_dropdown('plausibility-variable-dropdown')
 

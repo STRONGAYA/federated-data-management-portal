@@ -483,7 +483,21 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     return filtered_data, selected_variable_classes
 
 
-def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
+def _get_variable_count(org_data, variable_class):
+    """
+    Count the available data points of one variable in one organisation:
+    categorical counts (excluding 'nan') plus the numerical 'count' statistic.
+    """
+    categorical, numerical = _load_organization_stats(org_data)
+    cat_count = categorical[
+        (categorical['variable'] == variable_class) & (categorical['value'] != 'nan')]['count'].sum()
+    num_count = numerical[
+        (numerical['variable'] == variable_class) & (numerical['statistic'] == 'count')]['value'].sum()
+    return cat_count + num_count
+
+
+def generate_sample_size_over_time_chart(descriptive_data, text="AYA", variable_class=None,
+                                         semantic_map_data=None):
     """
     Generate a stacked bar chart of available sample sizes over time.
 
@@ -528,11 +542,18 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     figure = go.Figure()
     organisation_colors = _organisation_color_map(descriptive_data)
     for org in organisations:
-        sizes = [
-            _get_organization_sample_size(descriptive_data[timestamp][org])
-            if org in descriptive_data[timestamp] else 0
-            for timestamp in timestamps
-        ]
+        if variable_class is not None:
+            sizes = [
+                _get_variable_count(descriptive_data[timestamp][org], variable_class)
+                if org in descriptive_data[timestamp] else 0
+                for timestamp in timestamps
+            ]
+        else:
+            sizes = [
+                _get_organization_sample_size(descriptive_data[timestamp][org])
+                if org in descriptive_data[timestamp] else 0
+                for timestamp in timestamps
+            ]
         figure.add_trace(go.Bar(
             x=dates,
             y=sizes,
@@ -546,7 +567,10 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     totals = [0] * len(timestamps)
     for timestamp_index, timestamp in enumerate(timestamps):
         for org in descriptive_data[timestamp]:
-            totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
+            if variable_class is not None:
+                totals[timestamp_index] += _get_variable_count(descriptive_data[timestamp][org], variable_class)
+            else:
+                totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
     figure.update_layout(
         annotations=[
             dict(
@@ -558,7 +582,8 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             )
             for date, total in zip(dates, totals)
         ],
-        title=f'Available {text} data points over time',
+        title=(f'Available data points for {_readable_variable_name(variable_class, semantic_map_data)} over time'
+               if variable_class is not None else f'Available {text} data points over time'),
         hoverlabel=dict(font_family='Poppins, sans-serif'),
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
