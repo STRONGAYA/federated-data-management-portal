@@ -205,6 +205,7 @@ def info_portal_header():
             html.Div(id='authenticated-user-container', className='authenticated-user-container',
                      hidden=True, children=[
                 html.Span('·', className='notice-sep', **{'aria-hidden': 'true'}),
+                html.Span('Signed in as ', className='authenticated-user-label'),
                 html.Span(id='authenticated-user-email', className='authenticated-user-email',
                           **{'aria-label': 'Signed-in user email'}),
                 html.Div(className='authenticated-user-actions', children=[
