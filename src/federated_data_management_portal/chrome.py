@@ -87,6 +87,22 @@ def chart_toolbar(align='right', include_csv=False, csv_button_id=None, view_swi
     return html.Div(className=f'chart-toolbar {align}', children=children)
 
 
+def toolbar_right(*controls):
+    """Right-aligned group of controls (view switch, download) in a filter row."""
+    return html.Div(className='toolbar-right', children=list(controls))
+
+
+def chart_area(graph):
+    """
+    Wrap a graph with the download control overlaid at the top right,
+    inside the plotting area.
+    """
+    return html.Div(className='chart-area', children=[
+        plot_download_control(),
+        graph,
+    ])
+
+
 def _arrow(direction):
     return html.Img(src=f'{_ASSETS}arrow-{direction}.svg',
                     alt=f'Arrowhead pointing {direction}',

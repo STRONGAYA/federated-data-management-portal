@@ -15,20 +15,18 @@ layout = chrome.page_scaffold(
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
-                        chrome.chart_toolbar(align='left'),
-                        dcc.Graph(
+                        chrome.chart_area(dcc.Graph(
                             id={'type': 'dynamic-donut-one', 'index': 1},
                             config=chrome.graph_config('proportions-per-organisation', width=700)
-                        )
+                        ))
                     ]),
                     width=6, lg=6, md=12, sm=12, xs=12),
                 dbc.Col(
                     html.Div(id='tile-5', className='tile tile-5', children=[
-                        chrome.chart_toolbar(align='left'),
-                        dcc.Graph(
+                        chrome.chart_area(dcc.Graph(
                             id={'type': 'dynamic-donut-two', 'index': 2},
                             config=chrome.graph_config('proportions-per-country', width=700)
-                        )
+                        ))
                     ]),
                     width=6, lg=6, md=12, sm=12, xs=12)
             ])

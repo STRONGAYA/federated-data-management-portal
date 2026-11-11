@@ -568,9 +568,28 @@ input[type='radio'] {
     position: relative;
 }
 
-/* push the download control to the right end of its row */
-.plot-download {
+/* right-aligned group of controls (view switch + download) in a filter row */
+.toolbar-right {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* download button overlaid top-right inside the plotting area */
+.chart-area {
+    position: relative;
+}
+
+.chart-area .plot-download {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+
+.chart-area .plot-download .filter-dropdown {
+    right: 0;
 }
 
 .visualisation-selector {
