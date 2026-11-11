@@ -568,6 +568,11 @@ input[type='radio'] {
     position: relative;
 }
 
+/* push the download control to the right end of its row */
+.plot-download {
+    margin-left: auto;
+}
+
 .visualisation-selector {
     display: flex;
     justify-content: flex-end;
