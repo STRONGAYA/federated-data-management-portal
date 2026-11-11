@@ -33,8 +33,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-7', children=[
             html.H5('Data availability over time', className='tile-title'),
-            chrome.chart_toolbar(),
-            html.Div(className='options-row', children=[
+            chrome.chart_toolbar(leading=html.Div(children=[
                 dcc.Dropdown(
                     id='availability-over-time-variable-dropdown',
                     className='pill-dropdown',
@@ -43,7 +42,7 @@ layout = chrome.page_scaffold(
                     multi=True,
                     placeholder='Variables',
                     clearable=True
-                )]),
+                )])),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-8', className='tile-content', children=[
                 dcc.Graph(
