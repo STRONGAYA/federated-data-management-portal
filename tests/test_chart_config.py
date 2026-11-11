@@ -144,8 +144,9 @@ class ChartModeBarTests(unittest.TestCase):
         for page in self.pages[1:]:
             rendered = json.dumps(page.layout, default=str)
             self.assertIn("plot-download-btn", rendered, page.__name__)
-            for fmt in ("svg", "png", "jpeg", "pdf"):
+            for fmt in ("svg", "png", "jpeg"):
                 self.assertIn(f"data-format='{fmt}'", rendered, page.__name__)
+            self.assertNotIn("data-format='pdf'", rendered, page.__name__)
 
     def test_exploration_page_offers_csv_in_the_download_menu(self):
         rendered = json.dumps(self.pages[3].layout, default=str)
