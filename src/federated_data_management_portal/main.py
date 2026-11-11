@@ -912,7 +912,9 @@ class Dashboard:
             variables = sorted(numerical['variable'].unique()) if not numerical.empty else []
             options = [{'label': callbacks._readable_variable_name(variable, self.global_semantic_map_data),
                         'value': variable} for variable in variables]
-            return options, (variables[0] if variables else None)
+            # no default selection: the dropdown shows its 'Numerical variable'
+            # placeholder and the graph stays empty until the user picks one
+            return options, None
 
         @self.App.callback(
             [Output('exploration-distribution-graph', 'figure'),

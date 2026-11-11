@@ -18,6 +18,23 @@ from datetime import datetime
 names_to_capitalise = ["eortc", "hads"]
 
 
+def _finalize_figure(figure):
+    """
+    Disable the hover cross/anchor on a chart: no drag crosshair cursor
+    (dragmode off) and no hover spikelines, on top of the template defaults.
+    Accepts both go.Figure objects and plain dict figures.
+    """
+    if isinstance(figure, dict):
+        layout = figure.setdefault('layout', {})
+        layout['dragmode'] = False
+        layout['hovermode'] = 'closest'
+        return figure
+    figure.update_layout(dragmode=False, hovermode='closest')
+    figure.update_xaxes(showspikes=False)
+    figure.update_yaxes(showspikes=False)
+    return figure
+
+
 def _load_stats_frame(raw_stats, expected_columns):
     """
     Load a JSON statistics string into a DataFrame with the expected columns.
@@ -501,7 +518,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             paper_bgcolor='rgba(0,0,0,0)',
             height=400,
         )
-        return figure
+        return _finalize_figure(figure)
 
     timestamps = sorted(descriptive_data.keys())
     organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
@@ -555,7 +572,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
         legend=dict(orientation='h', yanchor='bottom', y=-0.35, xanchor='center', x=0.5),
     )
 
-    return figure
+    return _finalize_figure(figure)
 
 
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
@@ -627,6 +644,8 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
             'data': data,
             'layout': {
                 'title': f'Number of {text}s per organisation',
+                'dragmode': False,
+                'hovermode': 'closest',
                 'barmode': 'stack',
                 'plot_bgcolor': 'rgba(0,0,0,0)',
                 'paper_bgcolor': 'rgba(0,0,0,0)',
@@ -648,7 +667,7 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
                 'annotations': annotations
             }
         }
-        return figure
+        return _finalize_figure(figure)
 
 
 def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA"):
@@ -1262,7 +1281,7 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
             ),
         )
 
-        return figure
+        return _finalize_figure(figure)
 
 
 def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
@@ -1595,7 +1614,7 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             )
         )
 
-        return fig
+        return _finalize_figure(fig)
 
 
 def generate_unavailable_organisation_annotation(domain):
@@ -1625,7 +1644,7 @@ def generate_unavailable_organisation_annotation(domain):
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
-    return fig
+    return _finalize_figure(fig)
 
 
 def _empty_annotation_figure(text):
@@ -1654,7 +1673,7 @@ def _empty_annotation_figure(text):
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
     )
-    return figure
+    return _finalize_figure(figure)
 
 
 def _schema_prefixes(semantic_map_data):
@@ -1852,7 +1871,7 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         xaxis=dict(title=label),
         yaxis=dict(title='Density', rangemode='tozero'),
     )
-    return figure
+    return _finalize_figure(figure)
 
 
 def format_distribution_stats(aggregate_data, variable):
@@ -1923,7 +1942,7 @@ def _donut_figure(labels, values):
         paper_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
     )
-    return figure
+    return _finalize_figure(figure)
 
 
 # Special dropdown value for the ICD-10 binned cancer type groups
@@ -2056,7 +2075,7 @@ def generate_categorical_bar_figure(descriptive_data, selection, variable, seman
         xaxis=dict(title=f'Number of {text}s', rangemode='tozero'),
         yaxis=dict(title=None, automargin=True),
     )
-    return figure
+    return _finalize_figure(figure)
 
 
 def format_categorical_csv(labels, values):

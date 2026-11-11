@@ -9,7 +9,7 @@ dash.register_page(__name__, path='/data-exploration', title=chrome.PAGE_TITLE)
 layout = chrome.page_scaffold(
     content=[
         html.Div(id='tile-exploration-categorical', className='tile tile-7', children=[
-            html.H5('Variable info', className='tile-title'),
+            html.H5('Categorical variables', className='tile-title'),
             html.Div(className='options-row', children=[
                 "Select the organisation(s) for this chart",
                 dcc.Checklist(
@@ -60,18 +60,18 @@ layout = chrome.page_scaffold(
             dcc.Store(id='exploration-csv-store')
         ]),
         html.Div(id='tile-exploration-distributions', className='tile tile-7', children=[
-            html.H5('Data distributions', className='tile-title'),
+            html.H5('Numerical variables', className='tile-title'),
             html.Div(className='explanation', children=[
                 "Based on the central aggregate result across all organisations; "
                 "the organisation selection above does not apply here."
             ]),
-            html.Div(children=[
-                "Select the variable you would like to visualise",
+            html.Div(className='options-row', children=[
                 dcc.Dropdown(
                     id='exploration-variable-dropdown',
                     className='pill-dropdown',
                     options=[],
                     value=None,
+                    placeholder='Numerical variable',
                     clearable=False
                 )]),
             html.Hr(className='tile-divider'),
