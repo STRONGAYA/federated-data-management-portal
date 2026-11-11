@@ -105,18 +105,22 @@ class ChartModeBarTests(unittest.TestCase):
     def graphs(self):
         return [graph for page in self.pages for graph in find_graphs(page.layout)]
 
-    def test_every_chart_shows_only_the_download_button(self):
+    def test_every_chart_hides_the_modebar(self):
+        # plot downloads go through the 'Download plot' pill + dropdown
+        # (chrome.plot_download_control), not the plotly mode bar
         graphs = self.graphs()
 
         self.assertGreater(len(graphs), 0)
         for graph in graphs:
-            self.assertEqual(graph.config.get("modeBarButtons"), [["toImage"]], graph.id)
-            self.assertIs(graph.config.get("displayModeBar"), True, graph.id)
-            self.assertIs(graph.config.get("displaylogo"), False, graph.id)
+            self.assertIs(graph.config.get("displayModeBar"), False, graph.id)
 
-    def test_every_chart_has_a_download_filename(self):
-        for graph in self.graphs():
-            self.assertIn("filename", graph.config.get("toImageButtonOptions", {}), graph.id)
+    def test_every_topic_page_has_a_plot_download_control(self):
+        for page in self.pages[1:]:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("plot-download-btn", rendered, page.__name__)
+            self.assertIn("plot-download-option", rendered, page.__name__)
+            for fmt in ("svg", "png", "jpeg", "pdf"):
+                self.assertIn(f"data-format='{fmt}'", rendered, page.__name__)
 
 
 if __name__ == "__main__":
