@@ -43,9 +43,13 @@
             }
             var gd = node ? node.querySelector('.js-plotly-plot') : null;
             if (gd && window.Plotly) {
+                // capture the full rendered plot (axes, titles, margins included)
+                var full = gd._fullLayout || {};
                 window.Plotly.downloadImage(gd, {
                     format: option.getAttribute('data-format') || 'svg',
                     filename: 'plot',
+                    width: full.width || undefined,
+                    height: full.height || undefined,
                     scale: 2
                 });
             }
