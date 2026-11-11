@@ -551,6 +551,13 @@ input[type='radio'] {
     margin: 0 24px;
 }
 
+/* top-right toolbar above a chart's divider (plot download pill) */
+.chart-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 24px;
+}
+
 .visualisation-selector {
     display: flex;
     justify-content: flex-end;

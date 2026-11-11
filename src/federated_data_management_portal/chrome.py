@@ -25,21 +25,35 @@ _ARROW_STYLE = {'width': '2.5rem', 'height': '2.5rem'}
 
 def graph_config(filename, height=500, width=1100):
     """
-    Standard dcc.Graph config: only the download button in the mode bar,
-    exporting svg with the given filename.
+    Standard dcc.Graph config. The mode bar is hidden: plot downloads go
+    through the 'Download plot' pill button (plot_download_control) instead.
     """
     return {
-        'modeBarButtons': [['toImage']],
-        'displayModeBar': True,
-        'displaylogo': False,
-        'toImageButtonOptions': {
-            'format': 'svg',
-            'filename': filename,
-            'height': height,
-            'width': width,
-            'scale': 1,
-        },
+        'displayModeBar': False,
     }
+
+
+def plot_download_control():
+    """
+    A 'Download plot' pill button (styled like the view selector) with a
+    dropdown menu of image formats. Clicking an option downloads the plot
+    of the surrounding tile via assets/plot-download.js.
+    """
+    return html.Div(className='filter-wrap plot-download', children=[
+        html.Button(['Download plot ', html.I(className='fas fa-chevron-down')],
+                    className='vis-btn plot-download-btn'),
+        html.Div(className='filter-dropdown plot-download-menu', hidden=True, children=[
+            html.Button('SVG', className='filter-option plot-download-option', **{'data-format': 'svg'}),
+            html.Button('PNG', className='filter-option plot-download-option', **{'data-format': 'png'}),
+            html.Button('JPEG', className='filter-option plot-download-option', **{'data-format': 'jpeg'}),
+            html.Button('PDF', className='filter-option plot-download-option', **{'data-format': 'pdf'}),
+        ]),
+    ])
+
+
+def chart_toolbar():
+    """Top-right toolbar row above a chart's divider, holding the download control."""
+    return html.Div(className='chart-toolbar', children=[plot_download_control()])
 
 
 def _arrow(direction):

@@ -44,6 +44,7 @@ layout = chrome.page_scaffold(
                 ]),
                 html.Button('Download CSV', id='exploration-csv-download-btn', className='vis-btn'),
                 dcc.Download(id='exploration-csv-download'),
+                chrome.plot_download_control(),
             ]),
             html.Hr(className='tile-divider'),
             dcc.Graph(
@@ -74,6 +75,7 @@ layout = chrome.page_scaffold(
                     placeholder='Numerical variable',
                     clearable=False
                 )]),
+            chrome.chart_toolbar(),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-exploration-distribution', className='tile-content', children=[
                 dcc.Graph(

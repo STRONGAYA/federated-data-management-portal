@@ -12,6 +12,7 @@ layout = chrome.page_scaffold(
     content=[
         html.Div([
             html.H3(id='availability-title', className='page-title', children='Data availability'),
+            chrome.chart_toolbar(),
             html.Hr(className='tile-divider'),
             dbc.Row([
                 dbc.Col(
@@ -34,6 +35,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-7', children=[
             html.H5('Data availability over time', className='tile-title'),
+            chrome.chart_toolbar(),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-8', className='tile-content', children=[
                 dcc.Graph(

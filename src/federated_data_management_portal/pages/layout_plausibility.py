@@ -13,6 +13,7 @@ layout = chrome.page_scaffold(
         html.Div([
             html.H3(id='plausibility-title', className='page-title',
                     children='Data plausibility'),
+            chrome.chart_toolbar(),
             html.Hr(className='tile-divider'),
             dbc.Row([
                 dbc.Col(
@@ -35,6 +36,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Atemporal plausibility', className='tile-title'),
+            chrome.chart_toolbar(),
             html.Div(className='options-row', children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(
