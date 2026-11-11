@@ -45,7 +45,7 @@ def plot_download_control(include_csv=False, csv_button_id=None, icon_only=False
     options = [
         html.Button(f'Download plot ({fmt.upper()})', className='filter-option plot-download-option',
                     **{'data-action': 'plot', 'data-format': fmt})
-        for fmt in ('svg', 'png', 'jpeg')
+        for fmt in ('svg', 'png')
     ]
     if include_csv:
         options.append(html.Button('Download CSV', id=csv_button_id, className='filter-option'))
