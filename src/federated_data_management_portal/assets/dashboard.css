@@ -468,13 +468,11 @@ button {
     background: var(--brand-orange-icon, #ef6409);
 }
 
-/* Dash dropdowns (dash-dropdown markup), info portal control look */
+/* Dash dropdowns: the bordered box is the .dash-dropdown root itself
+   (className lands on it), the menu is .dash-dropdown-content */
 .dash-dropdown {
     width: auto;
     min-width: 260px;
-}
-
-.dash-dropdown-trigger {
     background: #fff;
     border: 1px solid var(--border-control);
     border-radius: 8px;
@@ -482,9 +480,10 @@ button {
     color: var(--text-dark, #1c1c1c);
 }
 
-.dash-dropdown-trigger:hover,
-.dash-dropdown:focus-within .dash-dropdown-trigger {
+.dash-dropdown:hover,
+.dash-dropdown:focus {
     border-color: var(--brand-orange-icon, #ef6409);
+    outline: none;
 }
 
 .dash-dropdown-value,
@@ -492,7 +491,7 @@ button {
     color: var(--text-dark, #1c1c1c);
 }
 
-.dash-dropdown-options {
+.dash-dropdown-content {
     border: 1px solid var(--border-control);
     border-radius: 8px;
     font-size: 0.9333rem;
@@ -608,22 +607,27 @@ input[type='radio'] {
     font-weight: 600;
 }
 
-/* the other dropdowns styled like the view selector pill */
-.pill-dropdown .dash-dropdown-trigger {
+/* the other dropdowns styled like the view selector pill: the className
+   lands on the .dash-dropdown root, so round the root itself */
+.pill-dropdown {
     border-radius: 20px;
+}
+
+.pill-dropdown .dash-dropdown-trigger {
     padding: 8px 18px;
+    min-height: 0;
     font-size: 0.8667rem;
 }
 
-.pill-dropdown .dash-dropdown-options {
+.pill-dropdown .dash-dropdown-content {
     border-radius: 14px;
 }
 
-/* subtle horizontal line below the option rows, with the graph underneath
-   (as in the info portal's .tile-divider) */
+/* subtle horizontal line below the option rows, with the graph underneath;
+   spans the same width as the options row (no side margins) */
 .tile-divider {
     border: none;
     border-top: 1px solid var(--border-grey, #d7d7d7);
     opacity: 0.6;
-    margin: 22px 48px;
+    margin: 12px 0;
 }
