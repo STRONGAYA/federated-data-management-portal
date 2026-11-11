@@ -35,12 +35,14 @@ layout = chrome.page_scaffold(
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Atemporal plausibility', className='tile-title'),
             html.Div(className='options-row', children=[
-                "Select the subset(s) you would like to visualise",
-                dcc.Checklist(
-                    id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
+                dcc.Dropdown(
+                    id='plausibility-variable-dropdown',
+                    className='pill-dropdown',
                     options=[],
                     value=[],
-                    labelStyle={'display': 'inline-block'}
+                    multi=True,
+                    placeholder='Variables',
+                    clearable=True
                 )]),
             html.Div(className='options-row', children=[
                 "Select the organisation(s) you would like to visualise",

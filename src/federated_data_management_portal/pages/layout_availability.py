@@ -45,12 +45,14 @@ layout = chrome.page_scaffold(
         html.Div(id='tile-6', className='tile tile-6', children=[
             html.H5('Semantic consistency', className='tile-title'),
             html.Div(className='options-row', children=[
-                "Select the subset(s) you would like to visualise",
-                dcc.Checklist(
-                    id='subset-prefix-selection-checkboxes', className='subset-selection-checkboxes',
+                dcc.Dropdown(
+                    id='availability-variable-dropdown',
+                    className='pill-dropdown',
                     options=[],
                     value=[],
-                    labelStyle={'display': 'inline-block'}
+                    multi=True,
+                    placeholder='Variables',
+                    clearable=True
                 )]),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-6', className='tile-content')

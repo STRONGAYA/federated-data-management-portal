@@ -433,6 +433,84 @@ class VariableDonutViewTests(unittest.TestCase):
                 self.assertIn(needle, rendered, module)
 
 
+NESTED_SCHEMA = {
+    "schema": {
+        "prefixes": {"ncit": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#"},
+        "variables": {
+            "eortc_qlq_c30_q1": {
+                "class": "ncit:C1", "dataType": "categorical",
+                "schemaReconstruction": [
+                    {"@type": "schema:ClassNode", "class": "ncit:OUT", "aestheticLabel": "Outcome"},
+                    {"@type": "schema:ClassNode", "class": "ncit:QLQC30", "aestheticLabel": "EORTC QLQ-C30"},
+                ],
+            },
+            "eortc_qlq_c30_q2": {
+                "class": "ncit:C2", "dataType": "categorical",
+                "schemaReconstruction": [
+                    {"@type": "schema:ClassNode", "class": "ncit:OUT", "aestheticLabel": "Outcome"},
+                    {"@type": "schema:ClassNode", "class": "ncit:QLQC30", "aestheticLabel": "EORTC QLQ-C30"},
+                ],
+            },
+            "biological_sex": {
+                "class": "ncit:C28421", "dataType": "categorical",
+                "schemaReconstruction": [
+                    {"@type": "schema:ClassNode", "class": "ncit:DEM", "aestheticLabel": "Demographic"},
+                ],
+            },
+        },
+    }
+}
+
+
+class VariableSelectionDropdownTests(unittest.TestCase):
+    def test_categories_come_first_with_nested_labels(self):
+        options, var_info = callbacks.build_variable_options(
+            NESTED_SCHEMA, {"ncit:C1", "ncit:C2", "ncit:C28421"})
+
+        labels = [o["label"] for o in options]
+        # top-level categories first, nested category indented under its parent
+        self.assertEqual(labels[0], "Outcome")
+        self.assertIn("Outcome > EORTC QLQ-C30", labels)
+        self.assertLess(labels.index("Outcome"), labels.index("Outcome > EORTC QLQ-C30"))
+        self.assertIn("Demographic", labels)
+        # variables come after all categories
+        self.assertIn("Biological Sex", labels)
+        cat_count = sum(1 for o in options if o["value"].startswith("cat:"))
+        self.assertTrue(all(o["value"].startswith("cat:") for o in options[:cat_count]))
+        self.assertTrue(all(o["value"].startswith("var:") for o in options[cat_count:]))
+
+    def test_category_selection_expands_to_all_variables_in_it(self):
+        _options, var_info = callbacks.build_variable_options(
+            NESTED_SCHEMA, {"ncit:C1", "ncit:C2", "ncit:C28421"})
+
+        classes = callbacks.resolve_variable_selection(["cat:ncit:QLQC30"], var_info)
+        self.assertEqual(classes, {"ncit:C1", "ncit:C2"})
+
+        classes = callbacks.resolve_variable_selection(["cat:ncit:OUT"], var_info)
+        self.assertEqual(classes, {"ncit:C1", "ncit:C2"})
+
+        classes = callbacks.resolve_variable_selection(["var:biological_sex"], var_info)
+        self.assertEqual(classes, {"ncit:C28421"})
+
+        self.assertIsNone(callbacks.resolve_variable_selection([], var_info))
+
+    def test_bar_chart_filters_by_selected_classes(self):
+        import json as _json
+        from pathlib import Path as _Path
+
+        example = _Path(__file__).resolve().parent.parent / "example_data"
+        data = _json.loads((example / "dashboard.json").read_text())
+        snapshots = {k: v for k, v in data.items() if k != "aggregate"}
+        schema = _json.loads((example / "schema.jsonld").read_text())
+
+        full = callbacks.generate_variable_bar_chart(snapshots, domain="completeness", semantic_map_data=schema)
+        filtered = callbacks.generate_variable_bar_chart(
+            snapshots, domain="completeness", semantic_map_data=schema, selected_classes={"ncit:C28421"})
+
+        self.assertGreater(len(full.data[0].x), len(filtered.data[0].x))
+        self.assertEqual(list(filtered.data[0].x), ["Biological Sex"])
+
+
 class ExampleDataExplorationTests(unittest.TestCase):
     def setUp(self):
         raw = load_static_dashboard_data(EXAMPLE_DATA / "dashboard.json")

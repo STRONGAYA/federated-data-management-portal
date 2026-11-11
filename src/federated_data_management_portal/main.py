@@ -126,6 +126,19 @@ def split_aggregate_section(dashboard_data):
     return snapshots, aggregate_section
 
 
+
+
+def _present_classes(descriptive_data):
+    """Collect the variable class codes present in the latest snapshot."""
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    present = set()
+    for org_data in latest_data.values():
+        categorical, numerical = callbacks._load_organization_stats(org_data)
+        present.update(categorical['variable'].unique())
+        present.update(numerical['variable'].unique())
+    return present
+
+
 class Dashboard:
     def __init__(self, schema_file_path, dashboard_data_file_path):
         """
@@ -154,40 +167,6 @@ class Dashboard:
         self.App.layout = self.define_layout()
         self.App._favicon = 'info-portal/favicon.png'
         self.register_callbacks()
-
-    def extract_categories_from_semantic_map(self, max_depth=0):
-        """
-        Extract categories from schemaReconstruction hierarchy for filtering.
-        
-        Parameters:
-        max_depth (int): Maximum depth to traverse in schemaReconstruction (default: 2)
-        
-        Returns:
-        list: List of unique category labels with their corresponding values for filtering
-        """
-        categories = set()
-        
-        schema = self.global_semantic_map_data.get('schema', {})
-        variables = schema.get('variables', {})
-        if not variables:
-            return []
-            
-        for variable_name, variable_data in variables.items():
-            if 'schemaReconstruction' in variable_data and variable_data['schemaReconstruction']:
-                # Process each level in schemaReconstruction up to max_depth
-                # Only look at ClassNode items (not UnitNodes) within the specified depth
-                for level, reconstruction_item in enumerate(variable_data['schemaReconstruction']):
-                    if level >= max_depth:
-                        break
-                    
-                    if (reconstruction_item.get('@type') == 'schema:ClassNode' and 
-                        'aestheticLabel' in reconstruction_item and
-                        reconstruction_item.get('placement') != 'before'):
-                        # Remove underscores and format the aesthetic label nicely
-                        aesthetic_label = reconstruction_item['aestheticLabel'].replace('_', ' ')
-                        categories.add(f" {aesthetic_label}")
-        
-        return sorted(list(categories))
 
     def define_layout(self):
         return html.Div([
@@ -517,9 +496,9 @@ class Dashboard:
             [Output('tile-content-6', 'children'),
              Output('data-availability-store-1', 'data')],
             [Input('store', 'data'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('availability-variable-dropdown', 'value')]
         )
-        def update_data_availability_table(descriptive_data, prefix_selection):
+        def update_data_availability_table(descriptive_data, variable_selection):
             """
             Callback function to update the data availability table.
 
@@ -536,27 +515,24 @@ class Dashboard:
             Returns:
             The result of the function from the `callbacks` module.
             """
-            try:
-                # Create filtered copies to avoid modifying originals
-                _descriptive_data, selected_variables = callbacks.filter_descriptive_data_by_semantic_map_categories(descriptive_data,
-                                                                  prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
-            except ValueError:
-                _descriptive_data = copy.deepcopy(descriptive_data)
-                selected_variables = set()
+            _options, var_info = callbacks.build_variable_options(
+                self.global_semantic_map_data, _present_classes(descriptive_data))
+            selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
             # Filter global semantic_map data
             filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
-            if prefix_selection and selected_variables:
+            if selected_classes is not None:
                 variables_to_remove = []
                 for variable_name, variable_data in filtered_semantic_map['schema']['variables'].items():
-                    if variable_data.get('class') not in selected_variables:
+                    if variable_data.get('class') not in selected_classes:
                         variables_to_remove.append(variable_name)
 
                 for variable_name in variables_to_remove:
                     filtered_semantic_map['schema']['variables'].pop(variable_name)
 
             # Generate table with filtered data
-            df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)
+            df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, descriptive_data,
+                                                                       selected_classes=selected_classes)
             return dash_table, df.to_json()
 
         @self.App.callback(
@@ -614,25 +590,13 @@ class Dashboard:
                     selected_organisations, selected_countries)
 
         @self.App.callback(
-            Output('subset-prefix-selection-checkboxes', 'options'),
-            Output('subset-prefix-selection-checkboxes', 'value'),
-            [Input('store', 'data')]
-        )
-        def update_table_prefix_options(descriptive_data):
-            """Updates the prefix selection options with categories extracted from semantic_map."""
-            # Extract categories dynamically from semantic_map
-            semantic_map_categories = self.extract_categories_from_semantic_map(max_depth=self.max_depth)
-            prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in semantic_map_categories]
-            return prefix_options, []
-
-        @self.App.callback(
             Output({'type': 'dynamic-completeness-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value'),
+             Input('completeness-variable-dropdown', 'value'),
              Input('completeness-view-store', 'data')]
         )
-        def update_variable_completeness_info(descriptive_data, selection, prefix_selection, view):
+        def update_variable_completeness_info(descriptive_data, selection, variable_selection, view):
             """
             Callback function to update the completeness chart.
 
@@ -657,13 +621,16 @@ class Dashboard:
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
 
-                # Filter data based on selected prefixes
-                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _options, var_info = callbacks.build_variable_options(
+                    self.global_semantic_map_data, _present_classes(_descriptive_data))
+                selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
                 if view == 'pie':
                     return callbacks.generate_variable_donut_chart(_descriptive_data, domain='completeness',
                                                                    semantic_map_data=self.global_semantic_map_data)
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness', semantic_map_data=self.global_semantic_map_data)
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness',
+                                                             semantic_map_data=self.global_semantic_map_data,
+                                                             selected_classes=selected_classes)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
 
@@ -671,10 +638,10 @@ class Dashboard:
             Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value'),
+             Input('plausibility-variable-dropdown', 'value'),
              Input('plausibility-view-store', 'data')]
         )
-        def update_variable_plausibility_info(descriptive_data, selection, prefix_selection, view):
+        def update_variable_plausibility_info(descriptive_data, selection, variable_selection, view):
             """
             Callback function to update the plausibility chart.
 
@@ -699,13 +666,16 @@ class Dashboard:
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
 
-                # Filter data based on selected prefixes
-                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _options, var_info = callbacks.build_variable_options(
+                    self.global_semantic_map_data, _present_classes(_descriptive_data))
+                selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
                 if view == 'pie':
                     return callbacks.generate_variable_donut_chart(_descriptive_data, domain='plausibility',
                                                                    semantic_map_data=self.global_semantic_map_data)
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility', semantic_map_data=self.global_semantic_map_data)
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility',
+                                                             semantic_map_data=self.global_semantic_map_data,
+                                                             selected_classes=selected_classes)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
 
@@ -759,6 +729,26 @@ class Dashboard:
 
         _register_view_switch('completeness')
         _register_view_switch('plausibility')
+
+        def _register_variable_dropdown(dropdown_id):
+            """Populate a variable-selection dropdown (categories first, then variables)."""
+            @self.App.callback(
+                [Output(dropdown_id, 'options'), Output(dropdown_id, 'value')],
+                [Input('store', 'data')]
+            )
+            def _update_variable_options(descriptive_data):
+                latest_data = descriptive_data[max(descriptive_data.keys())]
+                present = set()
+                for org_data in latest_data.values():
+                    categorical, numerical = callbacks._load_organization_stats(org_data)
+                    present.update(categorical['variable'].unique())
+                    present.update(numerical['variable'].unique())
+                options, _var_info = callbacks.build_variable_options(self.global_semantic_map_data, present)
+                return options, []
+
+        _register_variable_dropdown('availability-variable-dropdown')
+        _register_variable_dropdown('completeness-variable-dropdown')
+        _register_variable_dropdown('plausibility-variable-dropdown')
 
         @self.App.callback(
             Output('exploration-subset-selection-checkboxes', 'options'),

@@ -670,7 +670,8 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
         return _finalize_figure(figure)
 
 
-def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA"):
+def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA",
+                                    selected_classes=None):
     """
     Function to generate a DataFrame and a list of tooltips for FAIR data availability.
 
@@ -740,6 +741,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     for variable in variable_info.keys():
         org_variable_counts = {}
         variable_class = _variable_info[variable].get("class")
+        if selected_classes is not None and variable_class not in selected_classes:
+            continue
 
         for organisation in organizations:
             org_data = descriptive_data_most_recent[organisation]
@@ -1284,7 +1287,8 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
         return _finalize_figure(figure)
 
 
-def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
+def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None,
+                                selected_classes=None):
     """
     Function to generate a bar chart for data completeness or plausibility.
 
@@ -1391,6 +1395,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                     total_unavailable[var] += missing_count
 
                     completeness_info[org].update({var: (total_count, missing_count)})
+
+            if selected_classes is not None:
+                total_available = {k: v for k, v in total_available.items() if k in selected_classes}
+                total_unavailable = {k: v for k, v in total_unavailable.items() if k in selected_classes}
 
             # Create DataFrame for visualization with human-readable variable names
             readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
@@ -1615,6 +1623,91 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
         )
 
         return _finalize_figure(fig)
+
+
+def build_variable_options(semantic_map_data, present_classes):
+    """
+    Build the variable-selection dropdown options from the JSON-LD schema.
+
+    Schema categories come from the schemaReconstruction ClassNodes, in tree
+    order: top-level categories first, nested ones (e.g. 'EORTC QLQ-C30' under
+    'Outcome') indented under their parent with ' > '. Category values are
+    'cat:<class code>' and select every variable whose reconstruction path
+    contains that class. Individual variables (present in the data) follow,
+    with values 'var:<variable name>'.
+
+    Parameters:
+    semantic_map_data (dict): The JSON-LD schema.
+    present_classes (set): The variable class codes present in the data.
+
+    Returns:
+    tuple: (options, var_info) where var_info maps variable name to
+           (class code, reconstruction path of class codes).
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    present = set(present_classes)
+
+    cat_labels = {}
+    var_info = {}
+    for var_name, var_data in variables.items():
+        cls = var_data.get('class')
+        path = []
+        for node in var_data.get('schemaReconstruction') or []:
+            if (node.get('@type') == 'schema:ClassNode' and node.get('aestheticLabel')
+                    and node.get('placement') != 'before'):
+                cat_labels.setdefault(node.get('class'), node['aestheticLabel'])
+                path.append(node.get('class'))
+        var_info[var_name] = (cls, path)
+
+    cat_options = []
+    seen = set()
+
+    def add_category(code, prefix):
+        if code in seen or code not in cat_labels:
+            return
+        seen.add(code)
+        label = cat_labels[code]
+        cat_options.append({'label': f'{prefix}{label}', 'value': f'cat:{code}'})
+        for _var_name, (_cls, path) in var_info.items():
+            if code in path:
+                idx = path.index(code)
+                if idx + 1 < len(path):
+                    add_category(path[idx + 1], prefix + label + ' > ')
+
+    for _var_name, (_cls, path) in var_info.items():
+        if path:
+            add_category(path[0], '')
+
+    var_options = [
+        {'label': _readable_variable_name(var_info[v][0], semantic_map_data), 'value': f'var:{v}'}
+        for v in sorted(var_info) if var_info[v][0] in present
+    ]
+    return cat_options + var_options, var_info
+
+
+def resolve_variable_selection(selection, var_info):
+    """
+    Expand a variable-selection dropdown value (list of 'cat:<code>' /
+    'var:<name>') to the set of variable class codes to show.
+
+    Returns:
+    set: The selected class codes, or None when nothing is selected (no filter).
+    """
+    if not selection:
+        return None
+    classes = set()
+    for item in selection:
+        if item.startswith('cat:'):
+            code = item[4:]
+            for _var_name, (cls, path) in var_info.items():
+                if code in path:
+                    classes.add(cls)
+        elif item.startswith('var:'):
+            var_name = item[4:]
+            if var_name in var_info:
+                classes.add(var_info[var_name][0])
+    return classes or None
 
 
 def generate_variable_donut_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
