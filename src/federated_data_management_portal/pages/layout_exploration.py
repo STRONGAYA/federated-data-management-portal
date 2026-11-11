@@ -65,16 +65,18 @@ layout = chrome.page_scaffold(
                 "Based on the central aggregate result across all organisations; "
                 "the organisation selection above does not apply here."
             ]),
-            html.Div(className='options-row', children=[
-                dcc.Dropdown(
-                    id='exploration-variable-dropdown',
-                    className='pill-dropdown',
-                    options=[],
-                    value=None,
-                    placeholder='Numerical variable',
-                    clearable=False
-                )]),
-            chrome.chart_toolbar(),
+            html.Div(className='filter-bar', children=[
+                html.Div(children=[
+                    dcc.Dropdown(
+                        id='exploration-variable-dropdown',
+                        className='pill-dropdown',
+                        options=[],
+                        value=None,
+                        placeholder='Numerical variable',
+                        clearable=False
+                    )]),
+                chrome.plot_download_control(),
+            ]),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-exploration-distribution', className='tile-content', children=[
                 dcc.Graph(
