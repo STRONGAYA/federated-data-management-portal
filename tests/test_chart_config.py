@@ -114,13 +114,17 @@ class ChartModeBarTests(unittest.TestCase):
         for graph in graphs:
             self.assertIs(graph.config.get("displayModeBar"), False, graph.id)
 
-    def test_every_topic_page_has_a_plot_download_control(self):
+    def test_every_topic_page_has_a_download_control(self):
         for page in self.pages[1:]:
             rendered = json.dumps(page.layout, default=str)
             self.assertIn("plot-download-btn", rendered, page.__name__)
-            self.assertIn("plot-download-option", rendered, page.__name__)
-            for fmt in ("svg", "png", "jpeg", "pdf"):
-                self.assertIn(f"data-format='{fmt}'", rendered, page.__name__)
+            self.assertIn("Download plot", rendered, page.__name__)
+            self.assertIn("data-action='plot'", rendered, page.__name__)
+
+    def test_exploration_page_offers_csv_in_the_download_menu(self):
+        rendered = json.dumps(self.pages[3].layout, default=str)
+        self.assertIn("Download CSV", rendered)
+        self.assertIn("exploration-csv-download-btn", rendered)
 
 
 if __name__ == "__main__":

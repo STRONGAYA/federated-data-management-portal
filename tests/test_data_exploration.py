@@ -389,12 +389,48 @@ class ViewSelectionButtonTests(unittest.TestCase):
                        "exploration-view-menu", "filter-dropdown", "exploration-view-store",
                        "view-type-indicator", "exploration-csv-download-btn"):
             self.assertIn(needle, rendered)
-        # the download button is a pill above the divider (its repr precedes
-        # the first tile-divider, and it carries the vis-btn pill class)
-        self.assertLess(rendered.index("exploration-csv-download-btn"),
+        # one unified download button (plot + csv) above the divider
+        self.assertIn("plot-download-btn", rendered)
+        self.assertIn("Download plot", rendered)
+        self.assertIn("Download CSV", rendered)
+        self.assertLess(rendered.index("plot-download-btn"),
                         rendered.index("tile-divider"))
-        button_repr = rendered[rendered.index("exploration-csv-download-btn"):]
-        self.assertIn("vis-btn", button_repr[:200])
+
+
+class VariableDonutViewTests(unittest.TestCase):
+    def test_donut_view_aggregates_the_latest_snapshot(self):
+        import json as _json
+        from pathlib import Path as _Path
+
+        example = _Path(__file__).resolve().parent.parent / "example_data"
+        data = _json.loads((example / "dashboard.json").read_text())
+        snapshots = {k: v for k, v in data.items() if k != "aggregate"}
+
+        for domain, first_label in (("completeness", "Complete AYA data points"),
+                                    ("plausibility", "Plausible AYA data points")):
+            figure = callbacks.generate_variable_donut_chart(snapshots, domain=domain)
+            self.assertEqual(figure.data[0].type, "pie")
+            self.assertEqual(list(figure.data[0].labels)[0], first_label)
+            self.assertEqual(sum(figure.data[0].values), sum(figure.data[0].values))
+            self.assertGreater(sum(figure.data[0].values), 0)
+
+    def test_bar_tiles_have_a_view_switch(self):
+        import json as _json
+        import tempfile as _tempfile
+        from pathlib import Path as _Path
+
+        from federated_data_management_portal.main import Dashboard
+        with _tempfile.TemporaryDirectory() as td:
+            _Path(td, "schema.jsonld").write_text("{}")
+            _Path(td, "dashboard.json").write_text(_json.dumps({"2026-01-01T00:00:00": {}}))
+            Dashboard(_Path(td, "schema.jsonld"), _Path(td, "dashboard.json"))
+        import dash
+        for module in ("pages.layout_completeness", "pages.layout_plausibility"):
+            rendered = _json.dumps(dash.page_registry[module]["layout"], default=str)
+            prefix = module.rsplit("_", 1)[1]
+            for needle in (f"{prefix}-view-toggle", f"{prefix}-view-menu", f"{prefix}-view-store",
+                           "Select visualisation", "Bar chart", "Pie chart"):
+                self.assertIn(needle, rendered, module)
 
 
 class ExampleDataExplorationTests(unittest.TestCase):
