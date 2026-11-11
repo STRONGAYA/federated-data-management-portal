@@ -555,7 +555,17 @@ input[type='radio'] {
 .chart-toolbar {
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
     margin: 0 24px;
+}
+
+.chart-toolbar.left {
+    justify-content: flex-start;
+}
+
+/* anchor for the absolutely positioned dropdown menus */
+.filter-wrap {
+    position: relative;
 }
 
 .visualisation-selector {

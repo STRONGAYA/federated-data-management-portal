@@ -33,27 +33,55 @@ def graph_config(filename, height=500, width=1100):
     }
 
 
-def plot_download_control():
+def plot_download_control(include_csv=False, csv_button_id=None):
     """
-    A 'Download plot' pill button (styled like the view selector) with a
-    dropdown menu of image formats. Clicking an option downloads the plot
-    of the surrounding tile via assets/plot-download.js.
+    One 'Download' pill button (styled like the view selector) whose dropdown
+    leads to 'Download plot' and, optionally, 'Download CSV'. Plot downloads
+    are handled by assets/plot-download.js; the CSV option is a normal Dash
+    button (csv_button_id) so the existing download callback fires on click.
     """
+    options = [html.Button('Download plot', className='filter-option plot-download-option',
+                          **{'data-action': 'plot', 'data-format': 'svg'})]
+    if include_csv:
+        options.append(html.Button('Download CSV', id=csv_button_id, className='filter-option'))
     return html.Div(className='filter-wrap plot-download', children=[
-        html.Button(['Download plot ', html.I(className='fas fa-chevron-down')],
+        html.Button(['Download ', html.I(className='fas fa-chevron-down')],
                     className='vis-btn plot-download-btn'),
-        html.Div(className='filter-dropdown plot-download-menu', hidden=True, children=[
-            html.Button('SVG', className='filter-option plot-download-option', **{'data-format': 'svg'}),
-            html.Button('PNG', className='filter-option plot-download-option', **{'data-format': 'png'}),
-            html.Button('JPEG', className='filter-option plot-download-option', **{'data-format': 'jpeg'}),
-            html.Button('PDF', className='filter-option plot-download-option', **{'data-format': 'pdf'}),
-        ]),
+        html.Div(className='filter-dropdown plot-download-menu', hidden=True, children=options),
     ])
 
 
-def chart_toolbar():
-    """Top-right toolbar row above a chart's divider, holding the download control."""
-    return html.Div(className='chart-toolbar', children=[plot_download_control()])
+def view_switch_control(prefix, options, default):
+    """
+    A 'Select visualisation' pill with a dropdown menu of view options,
+    like on the exploration page. options is a list of (value, label) pairs.
+    """
+    return html.Div(className='filter-wrap visualisation-selector', children=[
+        html.Button(['Select visualisation ',
+                     html.Span(id=f'{prefix}-view-indicator', className='view-type-indicator',
+                               children=f'({default[1]})'),
+                     html.I(className='fas fa-chevron-down')],
+                    id=f'{prefix}-view-toggle', className='vis-btn view-selection-btn'),
+        html.Div(id=f'{prefix}-view-menu', className='filter-dropdown', hidden=True, children=[
+            html.Button(label, id=f'{prefix}-view-{value}',
+                        className='filter-option current' if value == default[0] else 'filter-option')
+            for value, label in options
+        ]),
+        dcc.Store(id=f'{prefix}-view-store', data=default[0]),
+    ])
+
+
+def chart_toolbar(align='right', include_csv=False, csv_button_id=None, view_switch=None):
+    """
+    Toolbar row above a chart's divider: optionally a view-switch pill and
+    the download pill. align is 'right' (default) or 'left'.
+    """
+    children = []
+    if view_switch is not None:
+        prefix, options, default = view_switch
+        children.append(view_switch_control(prefix, options, default))
+    children.append(plot_download_control(include_csv=include_csv, csv_button_id=csv_button_id))
+    return html.Div(className=f'chart-toolbar {align}', children=children)
 
 
 def _arrow(direction):

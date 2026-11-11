@@ -13,11 +13,10 @@ layout = chrome.page_scaffold(
         html.Div([
             html.H3(id='completeness-title', className='page-title',
                     children='Data completeness'),
-            chrome.chart_toolbar(),
-            html.Hr(className='tile-divider'),
             dbc.Row([
                 dbc.Col(
                     html.Div(id='tile-4', className='tile tile-4', children=[
+                        chrome.chart_toolbar(align='left'),
                         dcc.Graph(
                             id={'type': 'dynamic-donut-three', 'index': 1},
                             config=chrome.graph_config('missing-per-organisation', width=700)
@@ -26,6 +25,7 @@ layout = chrome.page_scaffold(
                     width=6, lg=6, md=12, sm=12, xs=12),
                 dbc.Col(
                     html.Div(id='tile-5', className='tile tile-5', children=[
+                        chrome.chart_toolbar(align='left'),
                         dcc.Graph(
                             id={'type': 'dynamic-donut-four', 'index': 2},
                             config=chrome.graph_config('missing-per-country', width=700)
@@ -36,7 +36,7 @@ layout = chrome.page_scaffold(
         ]),
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Variable completeness', className='tile-title'),
-            chrome.chart_toolbar(),
+            chrome.chart_toolbar(view_switch=('completeness', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
             html.Div(className='options-row', children=[
                 "Select the subset(s) you would like to visualise",
                 dcc.Checklist(

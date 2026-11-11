@@ -1,8 +1,9 @@
 /**
- * "Download plot" pill buttons: clicking the button toggles its format
- * dropdown; clicking an option downloads the plot of the surrounding tile
- * via Plotly.downloadImage. Purely delegated, so it works for any number of
- * charts without per-chart ids or Dash callbacks.
+ * "Download" pill buttons: clicking the button toggles its dropdown menu;
+ * clicking a 'Download plot' option downloads the plot of the surrounding
+ * tile via Plotly.downloadImage. ('Download CSV' options are plain Dash
+ * buttons and fire their own callback.) Purely delegated, so it works for
+ * any number of charts without per-chart ids or Dash callbacks.
  */
 (function () {
     'use strict';
@@ -26,12 +27,14 @@
             return;
         }
 
-        var option = event.target.closest('.plot-download-option');
+        var option = event.target.closest('.plot-download-menu .filter-option');
         if (option) {
-            var wrap = option.closest('.plot-download');
-            var menu = wrap ? wrap.querySelector('.plot-download-menu') : null;
+            var menu = option.closest('.plot-download-menu');
             if (menu) {
                 menu.hidden = true;
+            }
+            if (option.getAttribute('data-action') !== 'plot') {
+                return; // e.g. Download CSV: handled by its Dash callback
             }
             // walk up to the nearest ancestor that contains a plotly graph
             var node = option.parentElement;

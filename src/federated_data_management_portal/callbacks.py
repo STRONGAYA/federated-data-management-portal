@@ -1617,6 +1617,40 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
         return _finalize_figure(fig)
 
 
+def generate_variable_donut_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
+    """
+    Donut of the overall complete/incomplete (completeness) or plausible/implausible
+    (plausibility) share, aggregated over all organisations and variables of the
+    latest snapshot. Used as the alternative view of the variable bar charts.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _finalize_figure(_empty_annotation_figure(f'No {text} data available'))
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    total_available = 0
+    total_unavailable = 0
+    for org in latest_data:
+        categorical_data, numerical_data = _load_organization_stats(latest_data[org])
+        if domain == 'completeness':
+            total_available += categorical_data[categorical_data['value'] != 'nan']['count'].sum()
+            total_available += numerical_data[numerical_data['statistic'] == 'count']['value'].sum()
+            total_unavailable += categorical_data[categorical_data['value'] == 'nan']['count'].sum()
+            total_unavailable += numerical_data[numerical_data['statistic'] == 'nan']['value'].sum()
+        else:
+            implausible_cat = categorical_data[categorical_data['value'] == 'outliers']['count'].sum()
+            implausible_num = numerical_data[numerical_data['statistic'] == 'outliers']['value'].sum()
+            total_available += categorical_data['count'].sum() - implausible_cat
+            total_available += numerical_data[numerical_data['statistic'] == 'count']['value'].sum() - implausible_num
+            total_unavailable += implausible_cat + implausible_num
+    if domain == 'completeness':
+        labels = [f'Complete {text} data points', f'Incomplete {text} data points']
+    else:
+        labels = [f'Plausible {text} data points', f'Implausible {text} data points']
+    return _finalize_figure(_donut_figure(labels, [total_available, total_unavailable]))
+
+
 def generate_unavailable_organisation_annotation(domain):
     """
     Generate a Plotly figure with a centered annotation.

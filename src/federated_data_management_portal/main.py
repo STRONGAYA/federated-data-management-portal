@@ -629,9 +629,10 @@ class Dashboard:
             Output({'type': 'dynamic-completeness-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('subset-prefix-selection-checkboxes', 'value'),
+             Input('completeness-view-store', 'data')]
         )
-        def update_variable_completeness_info(descriptive_data, selection, prefix_selection):
+        def update_variable_completeness_info(descriptive_data, selection, prefix_selection, view):
             """
             Callback function to update the completeness chart.
 
@@ -659,6 +660,9 @@ class Dashboard:
                 # Filter data based on selected prefixes
                 _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
+                if view == 'pie':
+                    return callbacks.generate_variable_donut_chart(_descriptive_data, domain='completeness',
+                                                                   semantic_map_data=self.global_semantic_map_data)
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness', semantic_map_data=self.global_semantic_map_data)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
@@ -667,9 +671,10 @@ class Dashboard:
             Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('subset-prefix-selection-checkboxes', 'value'),
+             Input('plausibility-view-store', 'data')]
         )
-        def update_variable_plausibility_info(descriptive_data, selection, prefix_selection):
+        def update_variable_plausibility_info(descriptive_data, selection, prefix_selection, view):
             """
             Callback function to update the plausibility chart.
 
@@ -697,6 +702,9 @@ class Dashboard:
                 # Filter data based on selected prefixes
                 _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
 
+                if view == 'pie':
+                    return callbacks.generate_variable_donut_chart(_descriptive_data, domain='plausibility',
+                                                                   semantic_map_data=self.global_semantic_map_data)
                 return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility', semantic_map_data=self.global_semantic_map_data)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
@@ -721,6 +729,36 @@ class Dashboard:
             plotly.graph_objs._figure.Figure: The updated availability over time chart figure.
             """
             return callbacks.generate_sample_size_over_time_chart(descriptive_data)
+
+        def _register_view_switch(prefix):
+            """Register the toggle/select callbacks for a 'Select visualisation' pill."""
+            @self.App.callback(
+                Output(f'{prefix}-view-menu', 'hidden'),
+                [Input(f'{prefix}-view-toggle', 'n_clicks')]
+            )
+            def _toggle_view_menu(n_clicks):
+                return (n_clicks or 0) % 2 == 0
+
+            @self.App.callback(
+                [Output(f'{prefix}-view-store', 'data'),
+                 Output(f'{prefix}-view-menu', 'hidden'),
+                 Output(f'{prefix}-view-indicator', 'children'),
+                 Output(f'{prefix}-view-bar', 'className'),
+                 Output(f'{prefix}-view-pie', 'className')],
+                [Input(f'{prefix}-view-bar', 'n_clicks'),
+                 Input(f'{prefix}-view-pie', 'n_clicks')]
+            )
+            def _select_view(bar_clicks, pie_clicks):
+                ctx = dash.callback_context
+                view = 'bar'
+                if ctx.triggered:
+                    view = ctx.triggered[0]['prop_id'].split('.')[0].replace(f'{prefix}-view-', '')
+                labels = {'bar': '(Bar chart)', 'pie': '(Pie chart)'}
+                classes = {v: 'filter-option current' if v == view else 'filter-option' for v in ('bar', 'pie')}
+                return view, True, labels[view], classes['bar'], classes['pie']
+
+        _register_view_switch('completeness')
+        _register_view_switch('plausibility')
 
         @self.App.callback(
             Output('exploration-subset-selection-checkboxes', 'options'),

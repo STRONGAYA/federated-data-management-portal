@@ -42,9 +42,8 @@ layout = chrome.page_scaffold(
                     ]),
                     dcc.Store(id='exploration-view-store', data='pie'),
                 ]),
-                html.Button('Download CSV', id='exploration-csv-download-btn', className='vis-btn'),
+                chrome.plot_download_control(include_csv=True, csv_button_id='exploration-csv-download-btn'),
                 dcc.Download(id='exploration-csv-download'),
-                chrome.plot_download_control(),
             ]),
             html.Hr(className='tile-divider'),
             dcc.Graph(
