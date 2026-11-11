@@ -33,12 +33,14 @@ def graph_config(filename, height=500, width=1100):
     }
 
 
-def plot_download_control(include_csv=False, csv_button_id=None):
+def plot_download_control(include_csv=False, csv_button_id=None, icon_only=False):
     """
     One 'Download' pill button (styled like the view selector) whose dropdown
     leads to 'Download plot' and, optionally, 'Download CSV'. Plot downloads
     are handled by assets/plot-download.js; the CSV option is a normal Dash
     button (csv_button_id) so the existing download callback fires on click.
+    With icon_only=True the button is just the download icon (narrower),
+    for overlaying inside a plotting area.
     """
     options = [
         html.Button(f'Download plot ({fmt.upper()})', className='filter-option plot-download-option',
@@ -47,9 +49,14 @@ def plot_download_control(include_csv=False, csv_button_id=None):
     ]
     if include_csv:
         options.append(html.Button('Download CSV', id=csv_button_id, className='filter-option'))
+    if icon_only:
+        button = html.Button(html.I(className='fas fa-download'), className='vis-btn plot-download-btn icon-only',
+                             **{'aria-label': 'Download', 'title': 'Download'})
+    else:
+        button = html.Button(['Download ', html.I(className='fas fa-chevron-down')],
+                             className='vis-btn plot-download-btn')
     return html.Div(className='filter-wrap plot-download', children=[
-        html.Button(['Download ', html.I(className='fas fa-chevron-down')],
-                    className='vis-btn plot-download-btn'),
+        button,
         html.Div(className='filter-dropdown plot-download-menu', hidden=True, children=options),
     ])
 
@@ -101,7 +108,7 @@ def chart_area(graph):
     inside the plotting area.
     """
     return html.Div(className='chart-area', children=[
-        plot_download_control(),
+        plot_download_control(icon_only=True),
         graph,
     ])
 

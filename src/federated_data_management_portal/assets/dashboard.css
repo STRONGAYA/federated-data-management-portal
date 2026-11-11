@@ -589,6 +589,11 @@ input[type='radio'] {
     z-index: 10;
 }
 
+/* icon-only download button: narrower, same pill style */
+.plot-download-btn.icon-only {
+    padding: 8px 12px;
+}
+
 .chart-area .plot-download .filter-dropdown {
     right: 0;
 }
