@@ -43,7 +43,7 @@ def plot_download_control(include_csv=False, csv_button_id=None, icon_only=False
     for overlaying inside a plotting area.
     """
     options = [
-        html.Button(f'Download plot ({fmt.upper()})', className='filter-option plot-download-option',
+        html.Button(f'Download plot as {fmt.upper()}', className='filter-option plot-download-option',
                     **{'data-action': 'plot', 'data-format': fmt})
         for fmt in ('svg', 'png')
     ]
