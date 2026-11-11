@@ -87,13 +87,16 @@ def chart_toolbar(align='right', include_csv=False, csv_button_id=None, view_swi
     the variable dropdown), a view-switch pill and the download pill.
     align is 'right' (default) or 'left'.
     """
+    trailing = []
+    if view_switch is not None:
+        prefix, options, default = view_switch
+        trailing.append(view_switch_control(prefix, options, default))
+    trailing.append(plot_download_control(include_csv=include_csv, csv_button_id=csv_button_id))
     children = []
     if leading is not None:
         children.append(leading)
-    if view_switch is not None:
-        prefix, options, default = view_switch
-        children.append(view_switch_control(prefix, options, default))
-    children.append(plot_download_control(include_csv=include_csv, csv_button_id=csv_button_id))
+    # the buttons stay grouped at the right end of the row
+    children.append(html.Div(className='toolbar-right', children=trailing))
     return html.Div(className=f'chart-toolbar {align}', children=children)
 
 
