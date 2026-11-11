@@ -35,6 +35,15 @@ layout = chrome.page_scaffold(
         html.Div(id='tile-7', className='tile tile-6', children=[
             html.H5('Variable completeness', className='tile-title'),
             html.Div(className='options-row', children=[
+                "Select the organisation(s) you would like to visualise",
+                dcc.Checklist(
+                    id='subset-selection-checkboxes', className='subset-selection-checkboxes',
+                    options=[],
+                    value=[],
+                    labelStyle={'display': 'inline-block'}
+                )]),
+            chrome.chart_toolbar(view_switch=('completeness', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
+            html.Div(className='options-row', children=[
                 dcc.Dropdown(
                     id='completeness-variable-dropdown',
                     className='pill-dropdown',
@@ -44,15 +53,6 @@ layout = chrome.page_scaffold(
                     placeholder='Variables',
                     clearable=True
                 )]),
-            html.Div(className='options-row', children=[
-                "Select the organisation(s) you would like to visualise",
-                dcc.Checklist(
-                    id='subset-selection-checkboxes', className='subset-selection-checkboxes',
-                    options=[],
-                    value=[],
-                    labelStyle={'display': 'inline-block'}
-                )]),
-            chrome.chart_toolbar(view_switch=('completeness', [('bar', 'Bar chart'), ('pie', 'Pie chart')], ('bar', 'Bar chart'))),
             html.Hr(className='tile-divider'),
             html.Div(id='tile-content-7', className='tile-content', children=[
                 dcc.Graph(
