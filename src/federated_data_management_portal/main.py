@@ -780,7 +780,9 @@ class Dashboard:
             if callbacks.detect_icd10_variables_in_data(descriptive_data):
                 options.append({'label': 'Grouped cancer types (ICD-10 blocks)',
                                 'value': callbacks.CANCER_GROUPS_VARIABLE})
-            return options, (options[0]['value'] if options else None)
+            # no default selection: the dropdown shows its 'Categorical variable'
+            # placeholder until the user picks a variable
+            return options, None
 
         @self.App.callback(
             Output('exploration-view-menu', 'hidden'),

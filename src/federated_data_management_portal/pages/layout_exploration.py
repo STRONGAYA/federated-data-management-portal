@@ -10,7 +10,7 @@ layout = chrome.page_scaffold(
     content=[
         html.Div(id='tile-exploration-categorical', className='tile tile-7', children=[
             html.H5('Variable info', className='tile-title'),
-            html.Div(children=[
+            html.Div(className='options-row', children=[
                 "Select the organisation(s) for this chart",
                 dcc.Checklist(
                     id='exploration-subset-selection-checkboxes', className='subset-selection-checkboxes',
@@ -20,12 +20,12 @@ layout = chrome.page_scaffold(
                 )]),
             html.Div(className='filter-bar', children=[
                 html.Div(children=[
-                    "Select the categorical variable",
                     dcc.Dropdown(
                         id='exploration-categorical-variable',
                         className='pill-dropdown',
                         options=[],
                         value=None,
+                        placeholder='Categorical variable',
                         clearable=False
                     )]),
                 html.Div(className='filter-wrap visualisation-selector', children=[
