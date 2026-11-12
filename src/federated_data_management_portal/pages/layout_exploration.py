@@ -96,9 +96,9 @@ layout = chrome.page_scaffold(
     ],
     prev_topic=('Plausibility', '/data-plausibility'),
     next_topic=('Availability', '/data-availability'),
-    explanation=["Graphics aim to visualise the aggregate data distributions as density curves "
-                 "reconstructed from the federated quartiles and IQR, and key variable "
-                 "characteristics such as the biological sex balance and the grouped cancer types.",
+    explanation=["These graphics show the overall data distributions as curves reconstructed "
+                 "from the federated quartiles and IQR, and key variable characteristics such as "
+                 "the biological sex balance and the grouped cancer types.",
                  html.Br(), html.Br(),
                  'Distributions and variable info are based on the "Descriptive statistics" Vantage6 '
                  'algorithm ',

@@ -77,8 +77,8 @@ layout = chrome.page_scaffold(
     ],
     prev_topic=('Availability', '/data-availability'),
     next_topic=('Plausibility', '/data-plausibility'),
-    explanation=['The shown graphics aim to portray the absence of data at a single moment in time '
-                 'without reference to its structure or plausibility.',
+    explanation=['These graphics show how much data is missing at a single point in time, '
+                 'without judging its structure or plausibility.',
                  html.Br(), html.Br(),
                  'Data completeness is based on the "Descriptive statistics" Vantage6 algorithm ',
                  html.Br(),

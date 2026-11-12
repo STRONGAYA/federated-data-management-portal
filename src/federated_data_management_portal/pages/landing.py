@@ -9,6 +9,7 @@ dash.register_page(__name__, path='/', title=chrome.PAGE_TITLE)
 layout = chrome.page_scaffold(
     content=[
         html.H3(id='landing-title', className='page-title', children='Explore the following subjects'),
+        html.Div(className='subject-grid', children=[
         chrome.subject_tile(
             'availability-tile', 'Availability and Semantic Consistency', 'scatter-basic.svg',
             'A simple scatter plot',
@@ -27,17 +28,17 @@ layout = chrome.page_scaffold(
         chrome.subject_tile(
             'plausibility-tile', 'Plausibility', 'scatter-outlier.svg',
             'A simple scatter plot with highlighted outlier',
-            "Explore the believability or truthfulness of data values "
-            "by assessing the acceptable variable value range and "
-            "distribution in both atemporal as temporal data fields.",
+            "Explore how believable the data values are, based on the "
+            "acceptable value range of each variable.",
             '/data-plausibility'),
         chrome.subject_tile(
-            'exploration-tile', 'Data exploration', 'scatter-exploration.svg',
+            'exploration-tile', 'Data exploration', 'scatter-outlier.svg',
             'A simple scatter plot with a highlighted outlier point',
             "Explore the aggregate data distributions via the federated "
             "quartiles and IQR, and key variable characteristics such as "
             "the biological sex balance and the grouped cancer types.",
             '/data-exploration'),
+        ]),
     ],
     show_return=False,
 )

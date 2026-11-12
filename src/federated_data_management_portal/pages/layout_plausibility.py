@@ -76,10 +76,9 @@ layout = chrome.page_scaffold(
         ]),
     ],
     prev_topic=('Completeness', '/data-completeness'),
-    next_topic=('Data exploration', '/data-exploration'),
-    explanation=['The shown graphics aim to portray the believability or truthfulness of data values '
-                 'by assessing the acceptable variable value range and '
-                 'distribution in both atemporal as temporal data fields.',
+    next_topic=('Exploration', '/data-exploration'),
+    explanation=['These graphics show how believable the data values are, based on the '
+                 'acceptable value range of each variable.',
                  html.Br(), html.Br(),
                  'Data plausibility is based on the "Descriptive statistics" Vantage6 algorithm ',
                  html.Br(),

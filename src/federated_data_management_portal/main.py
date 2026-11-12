@@ -580,6 +580,12 @@ class Dashboard:
             country_options = [dict(t) for t in {tuple(d.items()) for d in country_options}]
 
             # Update selected organisations and countries based on the selections
+            ctx = dash.callback_context
+            # initial call has empty triggered; store changes start with 'store'
+            initial_load = (not ctx.triggered) or ctx.triggered[0]['prop_id'].startswith('store')
+            if initial_load and not selected_organisations and not selected_countries:
+                # initial load: select all organisations by default
+                selected_organisations = sorted(latest_data.keys())
             if selected_organisations:
                 selected_countries = list(set([latest_data[org]['country'] for org in selected_organisations]))
             elif selected_countries:
@@ -771,22 +777,32 @@ class Dashboard:
             return dcc.send_string(callbacks.dataframe_to_csv(table_json), 'data-availability.csv')
 
         @self.App.callback(
-            Output('exploration-subset-selection-checkboxes', 'options'),
-            [Input('store', 'data')]
+            [Output('exploration-subset-selection-checkboxes', 'options'),
+             Output('exploration-subset-selection-checkboxes', 'value')],
+            [Input('store', 'data'),
+             Input('exploration-subset-selection-checkboxes', 'value')]
         )
-        def update_exploration_checkboxes(descriptive_data):
+        def update_exploration_checkboxes(descriptive_data, current_selection):
             """
             Callback function to populate the organisation selection checkboxes on
             the data exploration page with the organisations of the latest snapshot.
+            All organisations are selected by default on initial load.
 
             Parameters:
             descriptive_data (dict): The data stored in the 'store' component.
+            current_selection (list): The currently selected organisations.
 
             Returns:
             list: A list of dictionaries representing the checkbox options.
+            list: The selected organisations (all of them on initial load).
             """
             latest_data = descriptive_data[max(descriptive_data.keys())]
-            return [{'label': org, 'value': org} for org in sorted(latest_data.keys())]
+            options = [{'label': org, 'value': org} for org in sorted(latest_data.keys())]
+            ctx = dash.callback_context
+            initial_load = (not ctx.triggered) or ctx.triggered[0]['prop_id'].startswith('store')
+            if initial_load:
+                return options, sorted(latest_data.keys())
+            return options, current_selection
 
         @self.App.callback(
             [Output('exploration-categorical-variable', 'options'),

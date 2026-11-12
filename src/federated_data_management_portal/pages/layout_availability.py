@@ -73,10 +73,8 @@ layout = chrome.page_scaffold(
     ],
     prev_topic=('Plausibility', '/data-plausibility'),
     next_topic=('Completeness', '/data-completeness'),
-    explanation=["Graphics aim to visualise how much data is available per location and "
-                 "explore the existence of expected and "
-                 "possible values between variables with "
-                 "semantic relationships between them.",
+    explanation=["These graphics show how much data each location has made available, and "
+                 "whether the expected values appear in semantically related variables.",
                  html.Br(), html.Br(),
                  'Availability and semantic consistency is the "Descriptive statistics" Vantage6 algorithm ',
                  html.Br(),
