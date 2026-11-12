@@ -12,6 +12,12 @@ The version of the deployed portal is shown in the footer of every page. Release
 
 https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
 
+## How was this work funded?
+
+This work and the associated scientific publication ([https://doi.org/10.3389/fams.2026.1981705](https://doi.org/10.3389/fams.2026.1981705)) were predominantly
+supported by the European Union's Horizon 2020 research and innovation programme through _The STRONG-AYA Initiative_
+(Grant agreement ID: 101057482).
+
 ## Data files
 
 The Compose setup expects two files outside the repository:
