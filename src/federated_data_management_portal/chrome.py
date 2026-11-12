@@ -20,7 +20,6 @@ TILE_PLACEHOLDERS = ["0 countries", "0 institutions", "0 AYAs"]
 
 _ASSET = f'..{os.path.sep}assets{os.path.sep}info-portal{os.path.sep}'
 _ASSETS = f'..{os.path.sep}assets{os.path.sep}'
-_ARROW_STYLE = {'width': '2.5rem', 'height': '2.5rem'}
 
 
 def graph_config(filename, height=500, width=1100):
@@ -127,7 +126,7 @@ def chart_area(graph):
 def _arrow(direction):
     return html.Img(src=f'{_ASSETS}arrow-{direction}.svg',
                     alt=f'Arrowhead pointing {direction}',
-                    style=_ARROW_STYLE)
+                    className=f'nav-arrow nav-arrow-{direction}')
 
 
 def subject_tile(tile_id, title, image, alt, explanation, href):
@@ -160,7 +159,8 @@ def page_scaffold(content, prev_topic=None, next_topic=None, explanation=None, s
     Standard page layout shared by all pages: info portal header, optional
     return-to-subjects button, dashboard title, the three stat tiles, the page
     content, optional previous/next topic navigation arrows, an optional
-    explanation block, and the info portal footer.
+    explanation block (placed between the navigation arrows when there are
+    any), and the info portal footer.
 
     Parameters:
     content (list): The page-specific components.
@@ -175,8 +175,8 @@ def page_scaffold(content, prev_topic=None, next_topic=None, explanation=None, s
     body = []
     if show_return:
         body.append(html.Div(id='btn-return', className='btn-return', children=[
-            _arrow('left'),
-            dcc.Link('Return to subjects', href='/', className='no-decoration-link'),
+            dcc.Link([_arrow('left'), 'Return to subjects'], href='/',
+                     className='no-decoration-link nav-link'),
         ]))
     body.append(html.H5(id='dashboard-title', className='dashboard-title', children=AESTHETIC_TITLE))
     body.append(html.Div(id='dashboard', className='dashboard', children=[
@@ -186,19 +186,27 @@ def page_scaffold(content, prev_topic=None, next_topic=None, explanation=None, s
         ]) for i in (1, 2, 3)
     ]))
     body.append(html.Div(list(content)))
-    if prev_topic:
-        body.append(html.Div(id='btn-subject-a', className='btn-subject-a', children=[
-            _arrow('left'),
-            dcc.Link(prev_topic[0], href=prev_topic[1], className='no-decoration-link'),
-        ]))
-    if next_topic:
-        body.append(html.Div(id='btn-subject-b', className='btn-subject-b', style={'margin-left': '73%'},
-                             children=[
-                                 dcc.Link(next_topic[0], href=next_topic[1], className='no-decoration-link'),
-                                 _arrow('right'),
-                             ]))
-    if explanation is not None:
-        body.append(html.Div(id='page-explanation', className='explanation', children=explanation))
+    explanation_block = (html.Div(id='page-explanation', className='explanation', children=explanation)
+                         if explanation is not None else None)
+    if prev_topic or next_topic:
+        nav_children = []
+        if prev_topic:
+            nav_children.append(html.Div(id='btn-subject-a', className='btn-subject-a', children=[
+                dcc.Link([_arrow('left'), prev_topic[0]], href=prev_topic[1],
+                         className='no-decoration-link nav-link'),
+            ]))
+        if explanation_block is not None:
+            # the explanation sits between the prev/next arrows, which centre on it vertically
+            nav_children.append(explanation_block)
+        if next_topic:
+            nav_children.append(html.Div(id='btn-subject-b', className='btn-subject-b', children=[
+                dcc.Link([next_topic[0], _arrow('right')], href=next_topic[1],
+                         className='no-decoration-link nav-link'),
+            ]))
+        # prev/next row at the bottom of the page, like the info portal's topic-nav
+        body.append(html.Div(className='topic-nav', children=nav_children))
+    elif explanation_block is not None:
+        body.append(explanation_block)
     return html.Div([
         info_portal_header(),
         html.Div(body),

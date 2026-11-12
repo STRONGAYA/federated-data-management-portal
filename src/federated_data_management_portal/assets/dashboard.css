@@ -174,27 +174,123 @@ body {
     cursor: pointer;
 }
 
-.btn-subject-a {
+/* the whole nav button (arrow + label) is the link; the padding lives on the
+   button div so it enlarges the clickable area without shifting the link */
+.topic-nav .btn-subject-a,
+.topic-nav .btn-subject-b {
+    padding: 10px 14px;
+    margin: -10px -14px;
+}
+
+/* the return button is absolutely positioned: compensate the padding in its
+   existing margins so it stays where it was */
+.btn-return {
+    padding: 10px 14px;
+    margin-top: calc(3% - 10px);
+    margin-left: calc(20% - 14px);
+}
+
+/* Arrow and label share one inline line, and the arrow is placed relative to
+   the label's baseline: its centre sits 0.25em above it, the middle of the
+   Poppins ink from ascender top (0.75em) to descender bottom (0.25em), so the
+   label sits exactly between the arrow's top and bottom tips. At 16px that is
+   a whole number of pixels from the baseline, so the browser rounds arrow and
+   text the same way wherever the row lands on the pixel grid; centring on the
+   line box or x-height left the arrow up to 1px high on some pages.
+   vertical-align on an image positions its bottom edge, hence the minus half
+   the arrow height. */
+.btn-return .nav-link,
+.btn-subject-a .nav-link,
+.btn-subject-b .nav-link {
+    --nav-arrow-height: 2.5rem;
+    display: block;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.nav-link .nav-arrow {
+    height: var(--nav-arrow-height);
+    width: auto;
+    vertical-align: calc(0.25em - var(--nav-arrow-height) / 2);
+}
+
+.nav-link .nav-arrow-left {
+    margin-right: 8px;
+}
+
+.nav-link .nav-arrow-right {
+    margin-left: 8px;
+}
+
+/* centre the label within the bottom nav buttons: horizontally via
+   text-align, vertically via a 44px line box */
+.topic-nav .nav-link {
+    /* size the arrow to the text so arrow and label read as one line */
+    --nav-arrow-height: 1.25em;
+    text-align: center;
+    line-height: 44px;
+}
+
+/* prev/next topic navigation row at the bottom of the page, as in the
+   info portal's .topic-nav: previous at the left edge, next at the right,
+   and the page explanation in between, with the arrows vertically centred
+   on it. Fixed columns keep the explanation page-centred even when the two
+   labels differ in length; the middle column takes about 37% of the page,
+   close to the 40% the explanation had below the row. */
+.topic-nav {
+    display: grid;
+    grid-template-columns: 1fr 4fr 1fr;
+    align-items: center;
+    column-gap: 32px;
+    margin: 32px 20% 8px;
+}
+
+.topic-nav .btn-subject-a {
+    grid-column: 1;
+    justify-self: start;
+}
+
+.topic-nav .btn-subject-b {
+    grid-column: 3;
+    justify-self: end;
+}
+
+.topic-nav .explanation {
+    grid-column: 2;
+    width: auto;
+    margin: 0;
+}
+
+/* on narrow screens the middle column would be too thin to read: keep the
+   arrows on one row and put the explanation below them */
+@media (max-width: 760px) {
+    .topic-nav {
+        grid-template-columns: 1fr 1fr;
+        row-gap: 16px;
+    }
+
+    .topic-nav .btn-subject-b {
+        grid-column: 2;
+    }
+
+    .topic-nav .explanation {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+
+.btn-subject-a,
+.btn-subject-b {
+    display: flex;
+    align-items: center;
     opacity: 75%;
     color: #484848;
-    position: absolute;
     font-size: 16px;
-    margin-top: 4.25%;
-    margin-left: 20%;
-    margin-bottom: 5%;
     cursor: pointer;
 }
 
 .btn-subject-b {
     text-align: right;
-    opacity: 75%;
-    color: #484848;
-    position: absolute;
-    font-size: 16px;
-    margin-top: 4%;
-    margin-left: 71%;
-    margin-bottom: 5%;
-    cursor: pointer;
 }
 
 .tile {
@@ -259,6 +355,28 @@ body {
     width: 100%;
 }
 
+
+/* landing page: the subject tiles in a 2x2 grid */
+.subject-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.subject-grid .subject-tile {
+    width: 100%;
+    height: auto;
+    min-height: 260px;
+    margin-top: 0;
+}
+
+@media (max-width: 760px) {
+    .subject-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
 .subject-tile {
     background-color: #ffffff;

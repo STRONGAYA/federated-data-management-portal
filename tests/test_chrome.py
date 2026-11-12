@@ -117,6 +117,23 @@ class PageChromeTests(unittest.TestCase):
                             "tile-content-3", "btn-subject-a", "btn-subject-b", "page-explanation"):
                 self.assertIn(element, rendered, f"{page.__name__} missing {element}")
 
+    def test_explanation_sits_between_the_topic_nav_arrows(self):
+        def find_by_class(component, class_name):
+            if getattr(component, "className", None) == class_name:
+                return component
+            children = getattr(component, "children", None)
+            for child in children if isinstance(children, list) else [children]:
+                found = find_by_class(child, class_name) if hasattr(child, "children") else None
+                if found is not None:
+                    return found
+            return None
+
+        for page in self.topic_pages:
+            topic_nav = find_by_class(page.layout, "topic-nav")
+            self.assertIsNotNone(topic_nav, page.__name__)
+            self.assertEqual([child.id for child in topic_nav.children],
+                             ["btn-subject-a", "page-explanation", "btn-subject-b"], page.__name__)
+
     def test_landing_page_has_no_return_button_or_topic_nav(self):
         rendered = json.dumps(self.pages[0].layout, default=str)
         self.assertNotIn("btn-return", rendered)
