@@ -285,12 +285,15 @@ class DistributionFigureTests(unittest.TestCase):
             self.assertAlmostEqual(float(points.min()), q1)
             self.assertAlmostEqual(float(points.max()), q3)
             self.assertIn(median, set(np.round(points, 9)))
-        self.assertEqual(list(figure.layout.yaxis2.ticktext), ["Org B", "Org A"])
-        self.assertEqual(len(figure.layout.shapes), 1)
-        # the median tick matches the aggregate whisker caps also in the two-row layout
-        median_shape = figure.layout.shapes[0]
-        self.assertAlmostEqual(median_shape.y0, 0.32)
-        self.assertAlmostEqual(median_shape.y1, 0.68)
+        # both organisations share one country here, so the axis also carries it,
+        # with an empty gap level between the groups
+        self.assertEqual(list(figure.layout.yaxis2.ticktext), ["Testland", "", "Org B", "Org A"])
+        # shapes: the median tick on the whisker row plus the group separator
+        median_shapes = [shape for shape in figure.layout.shapes if shape.yref == "y"]
+        self.assertEqual(len(median_shapes), 1)
+        self.assertAlmostEqual(median_shapes[0].y0, 0.32)
+        self.assertAlmostEqual(median_shapes[0].y1, 0.68)
+        self.assertEqual(len([s for s in figure.layout.shapes if s.yref == "y2"]), 1)
 
         plain = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
@@ -314,6 +317,130 @@ class DistributionFigureTests(unittest.TestCase):
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
         self.assertEqual(len(figure.layout.annotations), 0)
+
+    def test_organisations_and_countries_share_one_axis_with_a_separator(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [30.0, 32.5, 38.75, 18.0])),
+            "Org B": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [29.0, 31.0, 36.0, 16.0])),
+            "Org C": organisation(country="Otherland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [20.0, 22.0, 24.0, 10.0])),
+        })
+
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA, descriptive)
+
+        # all strip whiskers (3 organisations + 2 countries) live on the same y axis
+        strip_traces = [trace for trace in figure.data if trace.yaxis == "y2"]
+        self.assertEqual(len(strip_traces), 5)
+        # one shared vertical axis: organisations on top, an empty gap level,
+        # then countries (ticktext is indexed by tick value, i.e. bottom to top)
+        self.assertEqual(list(figure.layout.yaxis2.ticktext),
+                         ["Testland", "Otherland", "", "Org C", "Org B", "Org A"])
+        # a subtle dotted separator exactly between the two groups: the empty
+        # level's centre (level 2) is equidistant from the lowest organisation
+        # (level 3) and the highest country (level 1)
+        separators = [shape for shape in figure.layout.shapes if shape.yref == "y2"]
+        self.assertEqual(len(separators), 1)
+        self.assertEqual(separators[0].line.dash, "dot")
+        self.assertAlmostEqual(separators[0].y0, 2.0)
+        self.assertAlmostEqual(separators[0].y0 - 1, 3 - separators[0].y0)  # even spacing
+        # 'Organisations' and 'Countries' sit on the same vertical axis, outside
+        # the plot area in the right margin (paper x = 1, anchored left)
+        labels = {annotation.text: annotation for annotation in figure.layout.annotations}
+        self.assertEqual(set(labels), {"Organisations", "Countries"})
+        self.assertEqual(labels["Organisations"].x, labels["Countries"].x)
+        self.assertEqual(labels["Organisations"].x, 1.0)
+        self.assertEqual(labels["Organisations"].xref, "paper")
+        self.assertEqual(labels["Organisations"].xanchor, "left")
+        self.assertEqual(labels["Organisations"].yref, "y2")
+        self.assertEqual(labels["Countries"].yref, "y2")
+        self.assertGreaterEqual(figure.layout.margin.r, 100)  # room for the labels
+        # the whisker row and the strip row sit directly on top of each other
+        row_gap = figure.layout.yaxis.domain[0] - figure.layout.yaxis2.domain[1]
+        self.assertLessEqual(abs(row_gap), 0.005)
+        # and the row padding is trimmed: little empty space around the whiskers
+        self.assertEqual(list(figure.layout.yaxis.range), [0.3, 1])
+        n_levels = 6  # 3 organisations + 2 countries + 1 gap level
+        self.assertEqual(list(figure.layout.yaxis2.range), [-0.3, n_levels - 0.7])
+        # country whiskers carry the estimate note in the hover
+        country_trace = [trace for trace in strip_traces if trace.name == "Testland"][0]
+        self.assertIn("weighted by their counts", country_trace.hovertemplate)
+        self.assertIn("Estimated", country_trace.hovertemplate)
+        self.assertIn("not a recorded value", country_trace.hovertemplate)
+        for trace in strip_traces:
+            x = np.asarray(trace.x, dtype=float)
+            points = x[~np.isnan(x)]
+            self.assertEqual(len(set(np.round(points, 9))), 3)
+        # the x-axis title sits on the strip row
+        self.assertIsNone(figure.layout.xaxis.title.text)
+        self.assertEqual(figure.layout.xaxis2.title.text, "Age At Diagnosis")
+
+
+class CountryQuartilesTests(unittest.TestCase):
+    def test_organisations_by_country_groups_the_latest_snapshot(self):
+        descriptive = dashboard_data({
+            "Org B": organisation(country="Testland"),
+            "Org A": organisation(country="Testland"),
+            "Org C": organisation(country="Otherland"),
+        })
+
+        self.assertEqual(callbacks.organisations_by_country(descriptive),
+                         {"Otherland": ["Org C"], "Testland": ["Org A", "Org B"]})
+        self.assertEqual(callbacks.organisations_by_country({}), {})
+
+    def test_country_quartiles_combine_organisations_weighted_by_count(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [30.0, 32.5, 38.75, 18.0])),
+            "Org B": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [29.0, 31.0, 36.0, 16.0])),
+            "Org C": organisation(country="Otherland", numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [20.0, 22.0, 24.0, 10.0])),
+        })
+
+        countries = callbacks._country_quartiles(descriptive, "ncit:C156420")
+
+        self.assertEqual([c["country"] for c in countries], ["Otherland", "Testland"])
+        testland = countries[1]
+        self.assertAlmostEqual(testland["q1"], (18 * 30.0 + 16 * 29.0) / 34)
+        self.assertAlmostEqual(testland["median"], (18 * 32.5 + 16 * 31.0) / 34)
+        self.assertAlmostEqual(testland["q3"], (18 * 38.75 + 16 * 36.0) / 34)
+        self.assertEqual(testland["count"], 34.0)
+        self.assertEqual(testland["organisations"], 2)
+        otherland = countries[0]
+        self.assertEqual((otherland["q1"], otherland["median"], otherland["q3"]), (20.0, 22.0, 24.0))
+
+    def test_country_quartiles_fall_back_to_equal_weights_without_counts(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 38.75])),
+            "Org B": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [29.0, 31.0, 36.0])),
+        })
+
+        countries = callbacks._country_quartiles(descriptive, "ncit:C156420")
+
+        self.assertEqual(len(countries), 1)
+        self.assertAlmostEqual(countries[0]["q1"], 29.5)
+        self.assertAlmostEqual(countries[0]["median"], 31.75)
+        self.assertAlmostEqual(countries[0]["q3"], 37.375)
+        self.assertIsNone(countries[0]["count"])
+
+    def test_country_quartiles_skip_organisations_without_quartiles(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 38.75])),
+            "Org B": organisation(country="Testland", numerical=numerical_stats(
+                ["ncit:C156420"], ["count"], [5.0])),
+        })
+
+        countries = callbacks._country_quartiles(descriptive, "ncit:C156420")
+
+        self.assertEqual(len(countries), 1)
+        self.assertEqual(countries[0]["organisations"], 1)
+        self.assertEqual(callbacks._country_quartiles(descriptive, "ncit:C999"), [])
 
 
 class FormatDistributionStatsTests(unittest.TestCase):
@@ -469,6 +596,124 @@ class CategoricalValueCountsTests(unittest.TestCase):
             ["Org A"], "tumour_location", SCHEMA))
 
 
+class CategoricalCountryBreakdownTests(unittest.TestCase):
+    def test_counts_are_broken_down_per_country_and_value(self):
+        data = dashboard_data({
+            "Org A": organisation(country="Testland", categorical=SEX_CATEGORICAL),
+            "Org B": organisation(country="Testland", categorical=categorical_stats(
+                ["ncit:C28421"], ["ncit:C20197"], [100])),
+            "Org C": organisation(country="Otherland", categorical=categorical_stats(
+                ["ncit:C28421", "ncit:C28421"], ["ncit:C20197", "ncit:C16576"], [7, 3])),
+        })
+
+        countries, categories, counts = callbacks.categorical_country_breakdown(
+            data, "biological_sex", SCHEMA)
+
+        # Testland total 117 > Otherland total 10; 'outliers' excluded
+        self.assertEqual(countries, ["Testland", "Otherland"])
+        self.assertEqual(categories, ["Male", "Female", "Missing"])
+        self.assertEqual(counts["Male"], [110, 7])
+        self.assertEqual(counts["Female"], [5, 3])
+        self.assertEqual(counts["Missing"], [2, 0])
+
+    def test_returns_none_without_variable_or_matching_data(self):
+        data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
+
+        self.assertIsNone(callbacks.categorical_country_breakdown(data, None, SCHEMA))
+        self.assertIsNone(callbacks.categorical_country_breakdown({}, "biological_sex", SCHEMA))
+        self.assertIsNone(callbacks.categorical_country_breakdown(data, "tumour_location", SCHEMA))
+
+    def test_selection_limits_the_organisations_included(self):
+        data = dashboard_data({
+            "Org A": organisation(country="Testland", categorical=SEX_CATEGORICAL),
+            "Org B": organisation(country="Otherland", categorical=categorical_stats(
+                ["ncit:C28421"], ["ncit:C20197"], [100])),
+        })
+
+        countries, categories, counts = callbacks.categorical_country_breakdown(
+            data, "biological_sex", SCHEMA, selection=["Org A"])
+
+        # only Org A's country appears, with Org A's counts
+        self.assertEqual(countries, ["Testland"])
+        self.assertEqual(counts["Male"], [10])
+        self.assertIsNone(callbacks.categorical_country_breakdown(
+            data, "biological_sex", SCHEMA, selection=[]))
+
+    def test_country_breakdown_figure_is_one_stacked_bar_per_country(self):
+        data = dashboard_data({
+            "Org A": organisation(country="Testland", categorical=SEX_CATEGORICAL),
+            "Org B": organisation(country="Otherland", categorical=categorical_stats(
+                ["ncit:C28421", "ncit:C28421"], ["ncit:C20197", "ncit:C16576"], [30, 10])),
+        })
+
+        figure = callbacks.generate_categorical_country_breakdown_figure(
+            data, "biological_sex", SCHEMA)
+
+        self.assertEqual(figure.layout.barmode, "stack")
+        # one trace per category value
+        self.assertEqual({trace.name for trace in figure.data}, {"Male", "Female", "Missing"})
+        self.assertTrue(all(trace.orientation == "h" for trace in figure.data))
+        # largest country (Otherland, 40) on top
+        self.assertEqual(list(figure.data[0].y), ["Testland", "Otherland"])
+        male = [trace for trace in figure.data if trace.name == "Male"][0]
+        self.assertEqual(list(male.x), [10, 30])  # aligned with the y order: Testland, Otherland
+        # the legend sits centred above the plot, and margin autoexpand grows
+        # the top margin to fit it, so it can never overlap the plot or x-axis
+        self.assertEqual(figure.layout.legend.y, 1.02)
+        self.assertEqual(figure.layout.legend.yanchor, "bottom")
+        self.assertEqual(figure.layout.legend.x, 0.5)
+        self.assertEqual(figure.layout.legend.xanchor, "center")
+        self.assertIs(figure.layout.margin.autoexpand, True)
+        self.assertIsNone(figure.layout.margin.t)
+        self.assertLessEqual(figure.layout.margin.b, 40)
+
+    def test_country_breakdown_figure_annotations(self):
+        data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
+
+        no_variable = callbacks.generate_categorical_country_breakdown_figure(data, None, SCHEMA)
+        self.assertIn("Select a variable", no_variable.layout.annotations[0].text)
+        no_data = callbacks.generate_categorical_country_breakdown_figure({}, "biological_sex", SCHEMA)
+        self.assertIn("No AYA data available", no_data.layout.annotations[0].text)
+        no_selection = callbacks.generate_categorical_country_breakdown_figure(
+            data, "biological_sex", SCHEMA, selection=[])
+        self.assertIn("Select an organisation", no_selection.layout.annotations[0].text)
+
+    def test_country_breakdown_figure_can_stack_proportions(self):
+        data = dashboard_data({
+            "Org A": organisation(country="Testland", categorical=SEX_CATEGORICAL),
+            "Org B": organisation(country="Otherland", categorical=categorical_stats(
+                ["ncit:C28421", "ncit:C28421"], ["ncit:C20197", "ncit:C16576"], [30, 10])),
+        })
+
+        figure = callbacks.generate_categorical_country_breakdown_figure(
+            data, "biological_sex", SCHEMA, proportions=True)
+
+        self.assertEqual(figure.layout.barmode, "stack")
+        self.assertEqual(list(figure.layout.xaxis.range), [0, 1])
+        self.assertEqual(figure.layout.xaxis.tickformat, ".0%")
+        # each country's segments sum to 1
+        totals = {}
+        for trace in figure.data:
+            for country, value in zip(trace.y, trace.x):
+                totals[country] = totals.get(country, 0.0) + value
+        self.assertEqual(set(totals), {"Testland", "Otherland"})
+        for total in totals.values():
+            self.assertAlmostEqual(total, 1.0)
+
+    def test_country_csv_has_a_header_and_quoted_rows(self):
+        csv_text = callbacks.format_categorical_country_csv(
+            ["Testland", 'Other "land"'], ["Male", "Female"],
+            {"Male": [10, 30], "Female": [5, 10]})
+
+        self.assertEqual(csv_text.splitlines(), [
+            "country,category,count",
+            '"Testland","Male",10',
+            '"Testland","Female",5',
+            '"Other ""land""","Male",30',
+            '"Other ""land""","Female",10',
+        ])
+
+
 class CategoricalFigureTests(unittest.TestCase):
     def test_pie_figure_is_a_donut_without_title(self):
         data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
@@ -478,6 +723,14 @@ class CategoricalFigureTests(unittest.TestCase):
         self.assertEqual(figure.data[0].type, "pie")
         self.assertIsNone(figure.layout.title.text)
         self.assertEqual(list(figure.data[0].labels), ["Male", "Female", "Missing"])
+        # the legend sits centred above the plot, and margin autoexpand grows
+        # the top margin to fit it, so it can never overlap the chart
+        self.assertEqual(figure.layout.legend.y, 1.02)
+        self.assertEqual(figure.layout.legend.yanchor, "bottom")
+        self.assertEqual(figure.layout.legend.x, 0.5)
+        self.assertEqual(figure.layout.legend.xanchor, "center")
+        self.assertIs(figure.layout.margin.autoexpand, True)
+        self.assertIsNone(figure.layout.margin.t)  # not fixed: plotly sizes it
 
     def test_bar_figure_is_horizontal_with_the_largest_bar_on_top(self):
         data = dashboard_data({"Org A": organisation(categorical=SEX_CATEGORICAL)})
@@ -485,6 +738,8 @@ class CategoricalFigureTests(unittest.TestCase):
         figure = callbacks.generate_categorical_bar_figure(data, ["Org A"], "biological_sex", SCHEMA)
 
         self.assertEqual(figure.data[0].orientation, "h")
+        # single series: the y labels name the categories, so no legend
+        self.assertIs(figure.data[0].showlegend, False)
         values = list(figure.data[0].x)
         self.assertEqual(values, sorted(values))
         self.assertEqual(list(figure.data[0].y)[-1], "Male")
@@ -544,12 +799,59 @@ class ViewSelectionButtonTests(unittest.TestCase):
                        "exploration-view-menu", "filter-dropdown", "exploration-view-store",
                        "view-type-indicator", "exploration-csv-download-btn"):
             self.assertIn(needle, rendered)
-        # one unified download button (plot + csv) above the divider
+        # one unified download button (plot + csv) in the per-organisation
+        # section, between the tile divider and the chart
         self.assertIn("plot-download-btn", rendered)
         self.assertIn("Download plot", rendered)
         self.assertIn("Download CSV", rendered)
-        self.assertLess(rendered.index("plot-download-btn"),
-                        rendered.index("tile-divider"))
+        self.assertLess(rendered.index("tile-divider"),
+                        rendered.index("plot-download-btn"))
+        self.assertLess(rendered.index("exploration-view-toggle"),
+                        rendered.index("exploration-categorical-graph"))
+
+    def test_exploration_page_has_two_categorical_plots_with_labels(self):
+        import json as _json
+        import tempfile as _tempfile
+        from pathlib import Path as _Path
+
+        from federated_data_management_portal.main import Dashboard
+        with _tempfile.TemporaryDirectory() as td:
+            _Path(td, "schema.jsonld").write_text("{}")
+            _Path(td, "dashboard.json").write_text(_json.dumps({"2026-01-01T00:00:00": {}}))
+            Dashboard(_Path(td, "schema.jsonld"), _Path(td, "dashboard.json"))
+        import dash
+        from federated_data_management_portal.pages import layout_exploration  # noqa: F401
+
+        rendered = _json.dumps(dash.page_registry["pages.layout_exploration"]["layout"], default=str)
+        self.assertIn("exploration-categorical-graph", rendered)
+        self.assertIn("exploration-categorical-graph-country", rendered)
+        # each plot carries a small label
+        self.assertIn("exploration-plot-label", rendered)
+        self.assertIn("Selected organisations", rendered)
+        self.assertIn("Per country (selected organisations)", rendered)
+        # the org section has its own controls row, label on the left, between
+        # the tile divider and the org chart
+        self.assertLess(rendered.index("tile-divider"),
+                        rendered.index("exploration-view-toggle"))
+        self.assertLess(rendered.index("Selected organisations"),
+                        rendered.index("exploration-view-toggle"))
+        # no country dropdown remains
+        self.assertNotIn("exploration-country-dropdown", rendered)
+        # the per-country chart sits below the org chart, separated by a subtle
+        # dotted line, and has its own view selector and download button
+        self.assertLess(rendered.index("exploration-categorical-graph"),
+                        rendered.index("exploration-categorical-divider"))
+        self.assertLess(rendered.index("exploration-categorical-divider"),
+                        rendered.index("exploration-categorical-graph-country"))
+        for needle in ("exploration-country-view-toggle", "exploration-country-view-menu",
+                       "exploration-country-view-store", "exploration-country-view-bar",
+                       "exploration-country-view-percent", "exploration-country-view-csv",
+                       "exploration-country-csv-download-btn", "Proportions",
+                       "exploration-categorical-country-csv-table"):
+            self.assertIn(needle, rendered)
+        # the country controls sit below the dotted line, next to the country chart
+        self.assertLess(rendered.index("exploration-categorical-divider"),
+                        rendered.index("exploration-country-view-toggle"))
 
     def test_exploration_page_has_the_distribution_warnings_div(self):
         import json as _json
@@ -720,7 +1022,8 @@ class ExampleDataExplorationTests(unittest.TestCase):
             self.aggregate_data, "ncit:C156420", self.schema, self.dashboard_data)
 
         strip_traces = [trace for trace in figure.data if trace.yaxis == "y2"]
-        self.assertEqual(len(strip_traces), 3)
+        self.assertEqual(len(strip_traces), 5)  # 3 organisations + 2 countries
+        self.assertEqual(len([t for t in strip_traces if t.name.startswith("Mare ")]), 3)
         x_range = list(figure.layout.xaxis.range)
         self.assertAlmostEqual(x_range[0], 27.95)
         self.assertAlmostEqual(x_range[1], 40.55)
@@ -728,6 +1031,22 @@ class ExampleDataExplorationTests(unittest.TestCase):
         tail_x = np.asarray(figure.data[1].x, dtype=float)
         self.assertAlmostEqual(float(np.nanmin(tail_x)), 27.95)
         self.assertAlmostEqual(float(np.nanmax(tail_x)), 40.55)
+
+    def test_example_figure_has_one_country_whisker_per_country_on_the_shared_axis(self):
+        figure = callbacks.generate_distribution_figure(
+            self.aggregate_data, "ncit:C156420", self.schema, self.dashboard_data)
+
+        strip_traces = [trace for trace in figure.data if trace.yaxis == "y2"]
+        country_names = {"Far side of the Moon", "Near side of the Moon"}
+        country_traces = [trace for trace in strip_traces if trace.name in country_names]
+        self.assertEqual(len(country_traces), 2)
+        self.assertEqual(list(figure.layout.yaxis2.ticktext),
+                         ["Near side of the Moon", "Far side of the Moon", "",
+                          "Mare Serenitatis", "Mare Moscoviense", "Mare Imbrium"])
+        # the country whiskers stay within the padded x-range
+        x_range = list(figure.layout.xaxis.range)
+        self.assertAlmostEqual(x_range[0], 27.95)
+        self.assertAlmostEqual(x_range[1], 40.55)
 
     def test_sex_counts_sum_the_latest_snapshot(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())

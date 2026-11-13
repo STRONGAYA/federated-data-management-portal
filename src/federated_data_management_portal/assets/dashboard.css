@@ -683,6 +683,28 @@ input[type='radio'] {
     margin: 0 24px;
 }
 
+/* the per-organisation and per-country sections each hold their controls row
+   and their chart, full width inside the tile */
+.exploration-categorical-section > .dash-graph,
+.exploration-country-section > .dash-graph {
+    margin: 0 24px;
+}
+
+.exploration-plot-label {
+    font-size: small;
+    color: #6c6c6c;
+    margin: 0 0 0 4px;
+}
+
+/* subtle dotted line separating the per-country section from the
+   per-organisation chart within the same tile */
+.exploration-categorical-divider {
+    border: none;
+    border-top: 1px dotted #b8b8b8;
+    opacity: 0.7;
+    margin: 16px 24px 8px;
+}
+
 /* toolbar above a chart's divider: leading control left, buttons right */
 .chart-toolbar {
     display: flex;
