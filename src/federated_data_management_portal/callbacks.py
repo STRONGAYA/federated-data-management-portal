@@ -1,12 +1,14 @@
 import copy
 import io
 import json
+import math
 import re
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+import simple_icd_10 as icd10
 
 from collections import defaultdict
 from dash import dash_table
@@ -14,6 +16,23 @@ from dash import html
 from datetime import datetime
 
 names_to_capitalise = ["eortc", "hads"]
+
+
+def _finalize_figure(figure):
+    """
+    Disable the hover cross/anchor on a chart: no drag crosshair cursor
+    (dragmode off) and no hover spikelines, on top of the template defaults.
+    Accepts both go.Figure objects and plain dict figures.
+    """
+    if isinstance(figure, dict):
+        layout = figure.setdefault('layout', {})
+        layout['dragmode'] = False
+        layout['hovermode'] = 'closest'
+        return figure
+    figure.update_layout(dragmode=False, hovermode='closest')
+    figure.update_xaxes(showspikes=False)
+    figure.update_yaxes(showspikes=False)
+    return figure
 
 
 def _load_stats_frame(raw_stats, expected_columns):
@@ -464,7 +483,21 @@ def filter_descriptive_data_by_semantic_map_categories(descriptive_data, selecte
     return filtered_data, selected_variable_classes
 
 
-def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
+def _get_variable_count(org_data, variable_class):
+    """
+    Count the available data points of one variable in one organisation:
+    categorical counts (excluding 'nan') plus the numerical 'count' statistic.
+    """
+    categorical, numerical = _load_organization_stats(org_data)
+    cat_count = categorical[
+        (categorical['variable'] == variable_class) & (categorical['value'] != 'nan')]['count'].sum()
+    num_count = numerical[
+        (numerical['variable'] == variable_class) & (numerical['statistic'] == 'count')]['value'].sum()
+    return cat_count + num_count
+
+
+def generate_sample_size_over_time_chart(descriptive_data, text="AYA", variable_class=None,
+                                         semantic_map_data=None):
     """
     Generate a stacked bar chart of available sample sizes over time.
 
@@ -499,7 +532,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             paper_bgcolor='rgba(0,0,0,0)',
             height=400,
         )
-        return figure
+        return _finalize_figure(figure)
 
     timestamps = sorted(descriptive_data.keys())
     organisations = sorted({org for snapshot in descriptive_data.values() for org in snapshot})
@@ -509,11 +542,18 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     figure = go.Figure()
     organisation_colors = _organisation_color_map(descriptive_data)
     for org in organisations:
-        sizes = [
-            _get_organization_sample_size(descriptive_data[timestamp][org])
-            if org in descriptive_data[timestamp] else 0
-            for timestamp in timestamps
-        ]
+        if variable_class is not None:
+            sizes = [
+                _get_variable_count(descriptive_data[timestamp][org], variable_class)
+                if org in descriptive_data[timestamp] else 0
+                for timestamp in timestamps
+            ]
+        else:
+            sizes = [
+                _get_organization_sample_size(descriptive_data[timestamp][org])
+                if org in descriptive_data[timestamp] else 0
+                for timestamp in timestamps
+            ]
         figure.add_trace(go.Bar(
             x=dates,
             y=sizes,
@@ -527,7 +567,10 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
     totals = [0] * len(timestamps)
     for timestamp_index, timestamp in enumerate(timestamps):
         for org in descriptive_data[timestamp]:
-            totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
+            if variable_class is not None:
+                totals[timestamp_index] += _get_variable_count(descriptive_data[timestamp][org], variable_class)
+            else:
+                totals[timestamp_index] += _get_organization_sample_size(descriptive_data[timestamp][org])
     figure.update_layout(
         annotations=[
             dict(
@@ -539,7 +582,8 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
             )
             for date, total in zip(dates, totals)
         ],
-        title=f'Available {text} data points over time',
+        title=(f'Available data points for {_readable_variable_name(variable_class, semantic_map_data)} over time'
+               if variable_class is not None else f'Available {text} data points over time'),
         hoverlabel=dict(font_family='Poppins, sans-serif'),
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
@@ -553,7 +597,7 @@ def generate_sample_size_over_time_chart(descriptive_data, text="AYA"):
         legend=dict(orientation='h', yanchor='bottom', y=-0.35, xanchor='center', x=0.5),
     )
 
-    return figure
+    return _finalize_figure(figure)
 
 
 def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
@@ -625,6 +669,8 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
             'data': data,
             'layout': {
                 'title': f'Number of {text}s per organisation',
+                'dragmode': False,
+                'hovermode': 'closest',
                 'barmode': 'stack',
                 'plot_bgcolor': 'rgba(0,0,0,0)',
                 'paper_bgcolor': 'rgba(0,0,0,0)',
@@ -646,10 +692,11 @@ def generate_sample_size_horizontal_bar(descriptive_data, text="AYA"):
                 'annotations': annotations
             }
         }
-        return figure
+        return _finalize_figure(figure)
 
 
-def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA"):
+def generate_fair_data_availability(global_semantic_map_data, descriptive_data, text="AYA",
+                                    selected_classes=None):
     """
     Function to generate a DataFrame and a list of tooltips for FAIR data availability.
 
@@ -719,6 +766,8 @@ def generate_fair_data_availability(global_semantic_map_data, descriptive_data, 
     for variable in variable_info.keys():
         org_variable_counts = {}
         variable_class = _variable_info[variable].get("class")
+        if selected_classes is not None and variable_class not in selected_classes:
+            continue
 
         for organisation in organizations:
             org_data = descriptive_data_most_recent[organisation]
@@ -1260,10 +1309,11 @@ def generate_donut_chart(descriptive_data, text="AYA", chart_domain='availabilit
             ),
         )
 
-        return figure
+        return _finalize_figure(figure)
 
 
-def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
+def generate_variable_bar_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None,
+                                selected_classes=None):
     """
     Function to generate a bar chart for data completeness or plausibility.
 
@@ -1370,6 +1420,10 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
                     total_unavailable[var] += missing_count
 
                     completeness_info[org].update({var: (total_count, missing_count)})
+
+            if selected_classes is not None:
+                total_available = {k: v for k, v in total_available.items() if k in selected_classes}
+                total_unavailable = {k: v for k, v in total_unavailable.items() if k in selected_classes}
 
             # Create DataFrame for visualization with human-readable variable names
             readable_variables = [get_readable_variable_name(var) for var in total_available.keys()]
@@ -1593,7 +1647,137 @@ def generate_variable_bar_chart(descriptive_data, domain='completeness', text="A
             )
         )
 
-        return fig
+        return _finalize_figure(fig)
+
+
+def dataframe_to_csv(table_json):
+    """
+    Convert a stored DataFrame JSON string (as kept in data-availability-store-1)
+    to CSV text for download.
+    """
+    frame = pd.read_json(io.StringIO(table_json))
+    # drop the internal per-organisation status helper columns
+    frame = frame.drop(columns=[c for c in frame.columns if c.endswith('_status')])
+    return frame.to_csv(index=False)
+
+
+def build_variable_options(semantic_map_data, present_classes):
+    """
+    Build the variable-selection dropdown options from the JSON-LD schema.
+
+    Schema categories come from the schemaReconstruction ClassNodes, in tree
+    order: top-level categories first, nested ones (e.g. 'EORTC QLQ-C30' under
+    'Outcome') indented under their parent with ' > '. Category values are
+    'cat:<class code>' and select every variable whose reconstruction path
+    contains that class. Individual variables (present in the data) follow,
+    with values 'var:<variable name>'.
+
+    Parameters:
+    semantic_map_data (dict): The JSON-LD schema.
+    present_classes (set): The variable class codes present in the data.
+
+    Returns:
+    tuple: (options, var_info) where var_info maps variable name to
+           (class code, reconstruction path of class codes).
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    present = set(present_classes)
+
+    cat_labels = {}
+    var_info = {}
+    for var_name, var_data in variables.items():
+        cls = var_data.get('class')
+        path = []
+        for node in var_data.get('schemaReconstruction') or []:
+            if (node.get('@type') == 'schema:ClassNode' and node.get('aestheticLabel')
+                    and node.get('placement') != 'before'):
+                cat_labels.setdefault(node.get('class'), node['aestheticLabel'])
+                path.append(node.get('class'))
+        var_info[var_name] = (cls, path)
+
+    cat_options = []
+    seen = set()
+
+    def add_category(code, prefix):
+        if code in seen or code not in cat_labels:
+            return
+        seen.add(code)
+        label = cat_labels[code]
+        cat_options.append({'label': f'{prefix}{label}', 'value': f'cat:{code}'})
+        for _var_name, (_cls, path) in var_info.items():
+            if code in path:
+                idx = path.index(code)
+                if idx + 1 < len(path):
+                    add_category(path[idx + 1], prefix + label + ' > ')
+
+    for _var_name, (_cls, path) in var_info.items():
+        if path:
+            add_category(path[0], '')
+
+    var_options = [
+        {'label': _readable_variable_name(var_info[v][0], semantic_map_data), 'value': f'var:{v}'}
+        for v in sorted(var_info) if var_info[v][0] in present
+    ]
+    return cat_options + var_options, var_info
+
+
+def resolve_variable_selection(selection, var_info):
+    """
+    Expand a variable-selection dropdown value (list of 'cat:<code>' /
+    'var:<name>') to the set of variable class codes to show.
+
+    Returns:
+    set: The selected class codes, or None when nothing is selected (no filter).
+    """
+    if not selection:
+        return None
+    classes = set()
+    for item in selection:
+        if item.startswith('cat:'):
+            code = item[4:]
+            for _var_name, (cls, path) in var_info.items():
+                if code in path:
+                    classes.add(cls)
+        elif item.startswith('var:'):
+            var_name = item[4:]
+            if var_name in var_info:
+                classes.add(var_info[var_name][0])
+    return classes or None
+
+
+def generate_variable_donut_chart(descriptive_data, domain='completeness', text="AYA", semantic_map_data=None):
+    """
+    Donut of the overall complete/incomplete (completeness) or plausible/implausible
+    (plausibility) share, aggregated over all organisations and variables of the
+    latest snapshot. Used as the alternative view of the variable bar charts.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _finalize_figure(_empty_annotation_figure(f'No {text} data available'))
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    total_available = 0
+    total_unavailable = 0
+    for org in latest_data:
+        categorical_data, numerical_data = _load_organization_stats(latest_data[org])
+        if domain == 'completeness':
+            total_available += categorical_data[categorical_data['value'] != 'nan']['count'].sum()
+            total_available += numerical_data[numerical_data['statistic'] == 'count']['value'].sum()
+            total_unavailable += categorical_data[categorical_data['value'] == 'nan']['count'].sum()
+            total_unavailable += numerical_data[numerical_data['statistic'] == 'nan']['value'].sum()
+        else:
+            implausible_cat = categorical_data[categorical_data['value'] == 'outliers']['count'].sum()
+            implausible_num = numerical_data[numerical_data['statistic'] == 'outliers']['value'].sum()
+            total_available += categorical_data['count'].sum() - implausible_cat
+            total_available += numerical_data[numerical_data['statistic'] == 'count']['value'].sum() - implausible_num
+            total_unavailable += implausible_cat + implausible_num
+    if domain == 'completeness':
+        labels = [f'Complete {text} data points', f'Incomplete {text} data points']
+    else:
+        labels = [f'Plausible {text} data points', f'Implausible {text} data points']
+    return _finalize_figure(_donut_figure(labels, [total_available, total_unavailable]))
 
 
 def generate_unavailable_organisation_annotation(domain):
@@ -1623,4 +1807,580 @@ def generate_unavailable_organisation_annotation(domain):
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
+    fig = _finalize_figure(fig)
+    fig.update_layout(hovermode=False)
     return fig
+
+
+def _empty_annotation_figure(text):
+    """
+    Generate a Plotly figure with a single centered annotation and no axes.
+
+    Parameters:
+    text (str): The message to display.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The annotation figure.
+    """
+    figure = go.Figure()
+    figure.update_layout(
+        annotations=[dict(
+            text=text,
+            font=dict(family='Poppins, sans-serif', size=20),
+            showarrow=False,
+            x=0.5, y=0.5, xref='paper', yref='paper',
+            xanchor='center', yanchor='middle',
+        )],
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=400,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+    figure = _finalize_figure(figure)
+    figure.update_layout(hovermode=False)
+    return figure
+
+
+def _schema_prefixes(semantic_map_data):
+    """Return the schema prefixes, always including the ncit prefix."""
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    prefixes = dict(schema.get('prefixes', {}))
+    if 'ncit' not in prefixes:
+        prefixes['ncit'] = r'http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#'
+    return prefixes
+
+
+def _expand_prefix(code, prefixes):
+    """Expand a prefixed ontology code (e.g. 'ncit:C28421') to its full URI."""
+    if not isinstance(code, str):
+        return code
+    for prefix, uri in prefixes.items():
+        if prefix + ':' in code:
+            return code.replace(prefix + ':', uri, 1)
+    return code
+
+
+def _readable_variable_name(ontology_code, semantic_map_data=None):
+    """
+    Map an ontology class code to the human-readable schema variable name.
+
+    Falls back to a formatted version of the code itself when the code is not
+    part of the schema.
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    prefixes = _schema_prefixes(semantic_map_data)
+    expanded_code = _expand_prefix(ontology_code, prefixes)
+    for var_key, var_data in variables.items():
+        var_class = var_data.get('class', '')
+        if var_class == ontology_code or _expand_prefix(var_class, prefixes) == expanded_code:
+            return var_key.replace('_', ' ').upper() if any(
+                name in var_key for name in names_to_capitalise) else var_key.replace('_', ' ').title()
+    return ontology_code.replace('_', ' ').upper() if any(
+        name in ontology_code for name in names_to_capitalise) else ontology_code.replace('_', ' ').title()
+
+
+def _variable_class(variable_name, semantic_map_data=None):
+    """Resolve a schema variable name to its ontology class code."""
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    if variable_name in variables:
+        return variables[variable_name].get('class', variable_name)
+    return variable_name
+
+
+def _value_label(value, variable_class, semantic_map_data=None):
+    """
+    Map a categorical value code to its valueMapping term label.
+
+    Falls back to the raw value when no term targets it.
+    """
+    schema = semantic_map_data.get('schema', {}) if semantic_map_data else {}
+    variables = schema.get('variables', {})
+    prefixes = _schema_prefixes(semantic_map_data)
+    expanded_value = _expand_prefix(value, prefixes)
+    expanded_class = _expand_prefix(variable_class, prefixes)
+    for var_data in variables.values():
+        var_class = var_data.get('class', '')
+        if var_class != variable_class and _expand_prefix(var_class, prefixes) != expanded_class:
+            continue
+        for term_key, term_data in var_data.get('valueMapping', {}).get('terms', {}).items():
+            target = term_data.get('targetClass', '')
+            if target == value or _expand_prefix(target, prefixes) == expanded_value:
+                return term_key.replace('_', ' ').title()
+    return str(value)
+
+
+def load_aggregate_stats(aggregate_data):
+    """
+    Load the categorical and numerical statistics of the latest central aggregate snapshot.
+
+    Accepts both the 'categorical'/'numerical' keys and the vantage6-native
+    'categorical_general_statistics'/'numerical_general_statistics' keys, so raw
+    central task exports also work.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data, keyed by
+                           ISO timestamp.
+
+    Returns:
+    tuple: The (categorical, numerical) DataFrames of the latest aggregate snapshot,
+           empty when no aggregate data is present.
+    """
+    categorical = _load_stats_frame(None, ['variable', 'value', 'count'])
+    numerical = _load_stats_frame(None, ['variable', 'statistic', 'value'])
+    if not aggregate_data:
+        return categorical, numerical
+    latest = aggregate_data[max(aggregate_data.keys())]
+    if not isinstance(latest, dict):
+        return categorical, numerical
+    categorical_raw = latest.get('categorical', latest.get('categorical_general_statistics'))
+    numerical_raw = latest.get('numerical', latest.get('numerical_general_statistics'))
+    categorical = _load_stats_frame(categorical_raw, ['variable', 'value', 'count']).dropna(subset=['variable'])
+    numerical = _load_stats_frame(numerical_raw, ['variable', 'statistic', 'value']).dropna(subset=['variable'])
+    return categorical, numerical
+
+
+# For a normal distribution the IQR spans q1..q3 = mu +/- z*sigma with z ~ 0.6745
+_QUARTILE_Z = 0.6744897501960817
+# Number of evenly spaced grid points the density curve is evaluated on
+_CURVE_GRID_POINTS = 500
+
+
+def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_data=None):
+    """
+    Generate a density curve of one continuous variable, reconstructed from the
+    central aggregate quartiles (q1, median, q3).
+
+    The central v6-descriptive-statistics result carries the federated q1, median
+    and q3 per variable (the algorithm removes min and max), so the distribution
+    is modelled from the quartiles alone: a log-normal when the quartiles are
+    right-skewed and strictly positive (the log transform makes it normal), a
+    normal otherwise. In both cases sigma follows from the IQR = q3 - q1 via
+    IQR = 2*z*sigma. The curve is evaluated on a dense, evenly spaced grid, the
+    IQR band (q1..q3) is shaded and the median is marked.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable to plot.
+    semantic_map_data (dict, optional): The semantic map used for the variable label.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The density curve, or an annotation figure when
+                                      no aggregate result or quartiles are available.
+    """
+    if not aggregate_data:
+        return _empty_annotation_figure('No central aggregate result available')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise its distribution')
+    label = _readable_variable_name(variable, semantic_map_data)
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    stats = dict(zip(rows['statistic'], rows['value']))
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return _empty_annotation_figure(f'No quartile statistics available for {label}')
+
+    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    iqr = q3 - q1
+    if iqr <= 0:
+        return _empty_annotation_figure(f'Degenerate IQR of 0 for {label}')
+
+    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
+    if right_skewed:
+        # Log transform: the log-normal median is exp(mu) and its log-scale
+        # quartiles are mu +/- z*sigma, so sigma = ln(q3/q1) / (2*z)
+        mu = math.log(median)
+        sigma = math.log(q3 / q1) / (2 * _QUARTILE_Z)
+        x = np.linspace(math.exp(mu - 4 * sigma), math.exp(mu + 4 * sigma), _CURVE_GRID_POINTS)
+        y = np.exp(-((np.log(x) - mu) ** 2) / (2 * sigma ** 2)) / (x * sigma * math.sqrt(2 * math.pi))
+    else:
+        mu = median
+        sigma = iqr / (2 * _QUARTILE_Z)
+        x_lo = max(0.0, mu - 4 * sigma) if q1 > 0 else mu - 4 * sigma
+        x = np.linspace(x_lo, mu + 4 * sigma, _CURVE_GRID_POINTS)
+        y = np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
+
+    curve_color = pio.templates[pio.templates.default].layout.colorway[0]
+    figure = go.Figure(go.Scatter(
+        x=x,
+        y=y,
+        mode='lines',
+        fill='tozeroy',
+        name=label,
+        line=dict(color=curve_color, width=2),
+        hovertemplate=(
+            f"<b>{label}</b><br>"
+            "Value: <b>%{x:.2f}</b><br>"
+            "Density: <b>%{y:.4f}</b><extra></extra>"
+        ),
+    ))
+
+    # Shade the IQR band and mark the median
+    figure.add_shape(
+        type='rect', x0=q1, x1=q3, y0=0, y1=1, yref='paper',
+        fillcolor=f'rgba(72, 72, 72, 0.15)', line=dict(width=0),
+    )
+    figure.add_shape(
+        type='line', x0=median, x1=median, y0=0, y1=1, yref='paper',
+        line=dict(color='#484848', width=2, dash='dash'),
+    )
+
+    figure.update_layout(
+        title=f'Federated distribution of {label}',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=400,
+        margin=dict(l=60, r=20, t=40, b=40),
+        xaxis=dict(title=label),
+        yaxis=dict(title='Density', rangemode='tozero'),
+    )
+    return _finalize_figure(figure)
+
+
+def format_distribution_stats(aggregate_data, variable):
+    """
+    Format the quartile statistics of one variable from the central aggregate
+    result as a one-line summary (Q1, median, Q3, IQR, mean, std, n, transform),
+    rendered next to the distribution curve instead of inside the graph.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    str: The summary line, or an empty string when no quartiles are available.
+    """
+    if not aggregate_data or not variable:
+        return ''
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    stats = dict(zip(rows['statistic'], rows['value']))
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return ''
+
+    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    iqr = q3 - q1
+    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
+    text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
+    if 'mean' in stats:
+        text += f' | Mean: {float(stats["mean"]):.2f}'
+    if 'std' in stats:
+        text += f' | Std: {float(stats["std"]):.2f}'
+    if 'count' in stats:
+        text += f' | n: {float(stats["count"]):.0f}'
+    text += ' (log-transformed)' if right_skewed else ' (normal)'
+    return text
+
+
+def _donut_figure(labels, values):
+    """
+    Build a donut (pie with a hole) figure from parallel label/value lists.
+
+    The figure carries no title on purpose: the tile around the chart provides it.
+
+    Parameters:
+    labels (list): The sector labels.
+    values (list): The sector values.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut figure.
+    """
+    figure = go.Figure(data=[
+        dict(
+            labels=labels,
+            values=values,
+            type='pie',
+            hole=.56,
+            name='',
+            textinfo='value',
+            hovertemplate=("<b>%{label}</b><br>"
+                           "Count: <b>%{value}</b><br>"
+                           "Proportion: <b>%{percent}</b><extra></extra>"),
+        )
+    ])
+    figure.update_layout(
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
+    )
+    return _finalize_figure(figure)
+
+
+# Special dropdown value for the ICD-10 binned cancer type groups
+CANCER_GROUPS_VARIABLE = 'cancer_groups'
+
+
+def categorical_value_counts(descriptive_data, selection, variable, semantic_map_data=None):
+    """
+    Aggregate the counts of one categorical variable over the selected organisations
+    in the latest snapshot.
+
+    variable is a schema variable name (e.g. 'biological_sex'), resolved to its
+    ontology class via the semantic map, or the special value 'cancer_groups',
+    which bins all ICD-10 coded variables into ICD-10 blocks. Value labels come
+    from the schema valueMapping terms when available; the bookkeeping 'outliers'
+    value is excluded and 'nan' is labelled 'Missing'.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; each key is a timestamp and each
+                             value maps organisations to their statistics.
+    selection (list): The selected organisation names.
+    variable (str): The schema variable name, or 'cancer_groups'.
+    semantic_map_data (dict, optional): The semantic map used for labels.
+
+    Returns:
+    tuple: (labels, values) sorted by count descending, or None when there is
+           nothing to show.
+    """
+    if not descriptive_data or not selection or not variable:
+        return None
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    frames = []
+    for org in selection:
+        if org in latest_data:
+            categorical, _ = _load_organization_stats(latest_data[org])
+            frames.append(categorical)
+    if not frames:
+        return None
+    combined = pd.concat(frames, ignore_index=True)
+
+    if variable == CANCER_GROUPS_VARIABLE:
+        blocks = bin_icd10_blocks(combined)
+        if blocks.empty:
+            return None
+        blocks = blocks.sort_values('count', ascending=False).reset_index(drop=True)
+        labels = []
+        for block in blocks['block']:
+            try:
+                description = icd10.get_description(block)
+            except Exception:
+                description = None
+            labels.append(f'{block} - {description}' if description else str(block))
+        return labels, [float(count) for count in blocks['count']]
+
+    variable_class = _variable_class(variable, semantic_map_data)
+    counts = defaultdict(float)
+    rows = combined[combined['variable'] == variable_class]
+    for value, count in zip(rows['value'], rows['count']):
+        if str(value).lower() == 'outliers':
+            continue
+        counts[value] += count
+    if not counts:
+        return None
+    items = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+    labels = ['Missing' if str(value).lower() == 'nan'
+              else _value_label(value, variable_class, semantic_map_data) for value, _ in items]
+    return labels, [count for _, count in items]
+
+
+def generate_categorical_pie_figure(descriptive_data, selection, variable, semantic_map_data=None, text="AYA"):
+    """
+    Generate a donut chart of the counts of one categorical variable (see
+    categorical_value_counts). The figure has no title; the tile around the
+    chart provides it.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The donut chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise')
+    counts = categorical_value_counts(descriptive_data, selection, variable, semantic_map_data)
+    if counts is None:
+        return _empty_annotation_figure('No data available for the selected organisations and variable')
+    return _donut_figure(*counts)
+
+
+def generate_categorical_bar_figure(descriptive_data, selection, variable, semantic_map_data=None, text="AYA"):
+    """
+    Generate a horizontal bar chart of the counts of one categorical variable
+    (see categorical_value_counts), largest bar on top. The figure has no title;
+    the tile around the chart provides it.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The bar chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise')
+    counts = categorical_value_counts(descriptive_data, selection, variable, semantic_map_data)
+    if counts is None:
+        return _empty_annotation_figure('No data available for the selected organisations and variable')
+
+    labels, values = counts
+    # ascending order so the largest bar ends up on top
+    order = sorted(range(len(values)), key=lambda i: values[i])
+    labels = [labels[i] for i in order]
+    values = [values[i] for i in order]
+
+    figure = go.Figure(go.Bar(
+        x=values,
+        y=labels,
+        orientation='h',
+        hovertemplate=("<b>%{y}</b><br>"
+                       "Count: <b>%{x}</b><extra></extra>"),
+    ))
+    figure.update_layout(
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=max(400, len(labels) * 28 + 200),
+        margin=dict(l=260, r=20, t=20, b=40),
+        xaxis=dict(title=f'Number of {text}s', rangemode='tozero'),
+        yaxis=dict(title=None, automargin=True),
+    )
+    return _finalize_figure(figure)
+
+
+def format_categorical_csv(labels, values):
+    """
+    Format categorical counts as CSV text with a 'category,count' header.
+
+    Parameters:
+    labels (list): The category labels.
+    values (list): The counts.
+
+    Returns:
+    str: The CSV text.
+    """
+    lines = ['category,count']
+    for label, value in zip(labels, values):
+        safe_label = str(label).replace('"', '""')
+        lines.append(f'"{safe_label}",{value:g}')
+    return '\n'.join(lines) + '\n'
+
+
+# Values that are bookkeeping rows rather than actual categories
+SPECIAL_CATEGORICAL_VALUES = ['na', 'outliers', '']
+
+
+def _get_icd10_block(code):
+    """
+    Determine the ICD-10 block (e.g. 'C50-C50') that the given ICD-10 code belongs to.
+
+    Parameters:
+    code: The ICD-10 code (e.g. 'C50.9').
+
+    Returns:
+    str: The block code, or None if the code is not a valid ICD-10 item.
+    """
+    try:
+        code = str(code).strip()
+        if not code or not icd10.is_valid_item(code):
+            return None
+        if icd10.is_block(code):
+            return code
+        # Walk up the ancestors (from closest to furthest) until we find the block
+        for ancestor in icd10.get_ancestors(code):
+            if icd10.is_block(ancestor):
+                return ancestor
+        return None
+    except Exception:
+        return None
+
+
+def detect_icd10_variables(categorical_df, minimum_valid_fraction=0.5):
+    """
+    Detect which categorical variables actually contain ICD-10 codes.
+
+    The variable holding the ICD-10 codes cannot reliably be recognised by its
+    name, so it is detected by the shape of its values: at least
+    minimum_valid_fraction of a variable's non-bookkeeping values must be valid
+    ICD-10 items.
+
+    Parameters:
+    categorical_df (pd.DataFrame): Categorical statistics with 'variable', 'value'
+                                   and 'count' columns.
+    minimum_valid_fraction (float): Minimum fraction of valid ICD-10 items required.
+
+    Returns:
+    list: The variable codes that contain ICD-10 codes.
+    """
+    icd10_variables = []
+    if categorical_df.empty:
+        return icd10_variables
+    for variable, var_rows in categorical_df.groupby('variable', sort=False):
+        values = var_rows['value'].dropna()
+        values = values[~values.astype(str).str.strip().str.lower().isin(SPECIAL_CATEGORICAL_VALUES)]
+        if values.empty:
+            continue
+        valid_count = sum(_get_icd10_block(value) is not None for value in values)
+        if valid_count and valid_count / len(values) >= minimum_valid_fraction:
+            icd10_variables.append(variable)
+    return icd10_variables
+
+
+def bin_icd10_blocks(categorical_df):
+    """
+    Aggregate ICD-10 coded categorical values into block-level counts.
+
+    Mirrors add_binned_icd10_categories from the vantage6-sandbox
+    run-descriptive-statistics notebook: ICD-10 variables are detected by value
+    shape and each code is mapped to its ICD-10 block.
+
+    Parameters:
+    categorical_df (pd.DataFrame): Categorical statistics with 'variable', 'value'
+                                   and 'count' columns.
+
+    Returns:
+    pd.DataFrame: Columns 'block' and 'count', summed per block; empty when no
+                  ICD-10 coded values are present.
+    """
+    blocks = pd.DataFrame(columns=['block', 'count'])
+    for variable in detect_icd10_variables(categorical_df):
+        var_rows = categorical_df[categorical_df['variable'] == variable].copy()
+        var_rows = var_rows[
+            ~var_rows['value'].astype(str).str.strip().str.lower().isin(SPECIAL_CATEGORICAL_VALUES)
+            & var_rows['value'].notna()
+        ]
+        if var_rows.empty:
+            continue
+        var_rows['block'] = var_rows['value'].apply(_get_icd10_block)
+        var_rows = var_rows[var_rows['block'].notna()]
+        if var_rows.empty:
+            continue
+        var_rows['count'] = pd.to_numeric(var_rows['count'], errors='coerce')
+        grouped = var_rows.groupby('block')['count'].sum().reset_index()
+        grouped.columns = ['block', 'count']
+        blocks = pd.concat([blocks, grouped], ignore_index=True)
+    if blocks.empty:
+        return blocks
+    return blocks.groupby('block')['count'].sum().reset_index()
+
+
+def detect_icd10_variables_in_data(descriptive_data):
+    """
+    Detect ICD-10 coded categorical variables across all organisations of the
+    latest snapshot. Used to decide whether the 'cancer_groups' dropdown option
+    should be offered.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; each key is a timestamp and each
+                             value maps organisations to their statistics.
+
+    Returns:
+    list: The variable codes that contain ICD-10 codes.
+    """
+    if not descriptive_data:
+        return []
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    frames = []
+    for org_data in latest_data.values():
+        categorical, _ = _load_organization_stats(org_data)
+        frames.append(categorical)
+    if not frames:
+        return []
+    return detect_icd10_variables(pd.concat(frames, ignore_index=True))

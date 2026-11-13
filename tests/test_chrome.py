@@ -1,0 +1,154 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from federated_data_management_portal.main import Dashboard
+
+
+class PageChromeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Constructing the app imports and registers the page layouts.
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        data_dir = Path(cls.temp_dir.name)
+        schema_path = data_dir / "schema.jsonld"
+        dashboard_path = data_dir / "dashboard.json"
+        schema_path.write_text(json.dumps({}), encoding="utf-8")
+        dashboard_path.write_text(json.dumps({"2026-01-01T00:00:00": {}}), encoding="utf-8")
+
+        cls.dashboard = Dashboard(schema_path, dashboard_path)
+
+        from federated_data_management_portal.pages import (
+            landing,
+            layout_availability,
+            layout_completeness,
+            layout_exploration,
+            layout_plausibility,
+        )
+        cls.pages = (landing, layout_availability, layout_completeness, layout_exploration, layout_plausibility)
+        cls.topic_pages = (layout_availability, layout_completeness, layout_exploration, layout_plausibility)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp_dir.cleanup()
+
+    def test_every_page_uses_the_info_portal_header_and_footer(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("site-header", rendered, page.__name__)
+            self.assertIn("site-footer", rendered, page.__name__)
+            self.assertIn("header-topbar", rendered, page.__name__)
+            self.assertIn("header-main", rendered, page.__name__)
+            self.assertIn("site-nav", rendered, page.__name__)
+            self.assertIn("contact-btn", rendered, page.__name__)
+
+    def test_every_page_has_the_internal_use_notice_banner(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("notice-banner", rendered, page.__name__)
+            self.assertIn("internal use only", rendered, page.__name__)
+
+    def test_no_accessibility_controls_are_included(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertNotIn("accessibility", rendered.lower(), page.__name__)
+
+    def test_notice_banner_has_version_tag_and_identity_elements(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("internal use only", rendered, page.__name__)
+            self.assertIn("Data Management Portal v", rendered, page.__name__)
+            self.assertIn("authenticated-user-container", rendered, page.__name__)
+            self.assertIn("authenticated-user-email", rendered, page.__name__)
+
+    def test_notice_banner_links_to_the_repo_issues_page(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("issues/new/choose", rendered, page.__name__)
+            self.assertIn("WP update meetings", rendered, page.__name__)
+            self.assertIn("target='_blank'", rendered, page.__name__)
+            # the 'here' link is underlined
+            self.assertIn("notice-link", rendered, page.__name__)
+            # dot separators between the remarks, version tag last
+            self.assertIn("notice-sep", rendered, page.__name__)
+            self.assertLess(rendered.index("issues/new/choose"), rendered.index("Data Management Portal v"),
+                            page.__name__)
+
+    def test_footer_keeps_the_copyright_line(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertIn("All Rights Reserved", rendered, page.__name__)
+
+    def test_header_uses_the_info_portal_font_awesome_icons(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            for icon in ("fa-linkedin-in", "fa-bluesky", "fa-instagram", "fa-envelope", "fa-chevron-down"):
+                self.assertIn(icon, rendered, f"{page.__name__} missing {icon}")
+
+    def test_external_links_are_plain_text_without_an_arrow_icon(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            self.assertNotIn("fa-arrow-up-right-from-square", rendered, page.__name__)
+            # screen-reader-only new-tab note stays
+            self.assertIn("opens in a new tab", rendered, page.__name__)
+
+    def test_chrome_css_renders_links_without_underline_or_link_colour(self):
+        css_path = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
+                    / "assets" / "info-portal-chrome.css")
+        css = css_path.read_text(encoding="utf-8")
+        self.assertIn("color: inherit", css)
+        self.assertIn("text-decoration: none", css)
+
+    def test_internal_nav_bar_is_removed_from_the_app_layout(self):
+        rendered = json.dumps(self.dashboard.App.layout, default=str)
+        self.assertNotIn("Missing Data", rendered)
+
+    def test_tab_icon_is_the_info_portal_favicon(self):
+        self.assertEqual(self.dashboard.App._favicon, "info-portal/favicon.png")
+        favicon = (Path(__file__).resolve().parent.parent / "src" / "federated_data_management_portal"
+                   / "assets" / "info-portal" / "favicon.png")
+        self.assertTrue(favicon.exists())
+
+    def test_topic_pages_share_the_scaffold(self):
+        for page in self.topic_pages:
+            rendered = json.dumps(page.layout, default=str)
+            for element in ("btn-return", "dashboard-title", "tile-content-1", "tile-content-2",
+                            "tile-content-3", "btn-subject-a", "btn-subject-b", "page-explanation"):
+                self.assertIn(element, rendered, f"{page.__name__} missing {element}")
+
+    def test_explanation_sits_between_the_topic_nav_arrows(self):
+        def find_by_class(component, class_name):
+            if getattr(component, "className", None) == class_name:
+                return component
+            children = getattr(component, "children", None)
+            for child in children if isinstance(children, list) else [children]:
+                found = find_by_class(child, class_name) if hasattr(child, "children") else None
+                if found is not None:
+                    return found
+            return None
+
+        for page in self.topic_pages:
+            topic_nav = find_by_class(page.layout, "topic-nav")
+            self.assertIsNotNone(topic_nav, page.__name__)
+            self.assertEqual([child.id for child in topic_nav.children],
+                             ["btn-subject-a", "page-explanation", "btn-subject-b"], page.__name__)
+
+    def test_landing_page_has_no_return_button_or_topic_nav(self):
+        rendered = json.dumps(self.pages[0].layout, default=str)
+        self.assertNotIn("btn-return", rendered)
+        self.assertNotIn("btn-subject-a", rendered)
+        self.assertIn("dashboard-title", rendered)
+        self.assertIn("landing-title", rendered)
+
+    def test_external_links_open_in_a_new_tab(self):
+        for page in self.pages:
+            rendered = json.dumps(page.layout, default=str)
+            # every external (https) link in the chrome carries target=_blank
+            self.assertIn("target='_blank'", rendered, page.__name__)
+            self.assertIn("rel='noopener noreferrer'", rendered, page.__name__)
+            self.assertIn("https://strongaya.eu/", rendered, page.__name__)
+
+
+if __name__ == "__main__":
+    unittest.main()

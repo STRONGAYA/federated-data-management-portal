@@ -9,16 +9,26 @@ import dash_bootstrap_components as dbc
 import plotly.io as pio
 
 from dash.dependencies import MATCH
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash import html, dcc
 from flask import request
 
 from federated_data_management_portal import callbacks
 from federated_data_management_portal.auth import authenticated_email_from_headers
 
-pio.templates.default = 'seaborn'
+# Own template based on seaborn, with the hover crosshair disabled:
+# dragmode=False removes the crosshair cursor (and drag-zoom) on every
+# chart, and spikes are explicitly off
+pio.templates['portal'] = copy.deepcopy(pio.templates['seaborn'])
+pio.templates.default = 'portal'
+pio.templates['portal'].layout.dragmode = False
+pio.templates['portal'].layout.xaxis.showspikes = False
+pio.templates['portal'].layout.yaxis.showspikes = False
 page_title = 'STRONG-AYA | Data Management Portal'
 PACKAGE_ROOT = Path(__file__).resolve().parent
+
+# Reserved top-level key holding the central (aggregating) task results
+AGGREGATE_SECTION_KEY = 'aggregate'
 
 
 def load_json_file(json_file_path):
@@ -58,23 +68,75 @@ def load_static_dashboard_data(dashboard_data_file_path):
           "categorical": "{...}",
           "numerical": "{...}"
         }
+      },
+      "aggregate": {
+        "2026-01-01T00:00:00": {
+          "categorical": "{...}",
+          "numerical": "{...}"
+        }
       }
     }
 
     Top-level keys must be ISO timestamps so exported dashboard snapshots retain
-    when the data was generated.
+    when the data was generated. The reserved 'aggregate' key is the one
+    exception: it holds the central (aggregating) task results, itself keyed by
+    ISO timestamps.
     """
     dashboard_data = load_json_file(dashboard_data_file_path)
 
     if not isinstance(dashboard_data, dict):
         raise SystemExit('Dashboard data JSON must contain an object at the top level.')
 
-    invalid_timestamp_keys = [key for key in dashboard_data.keys() if not is_timestamp_key(key)]
+    invalid_timestamp_keys = [key for key in dashboard_data.keys()
+                              if key != AGGREGATE_SECTION_KEY and not is_timestamp_key(key)]
     if invalid_timestamp_keys:
         keys = ', '.join(str(key) for key in invalid_timestamp_keys[:3])
         raise SystemExit(f'Dashboard data top-level keys must be ISO timestamps. Invalid key(s): {keys}')
 
+    aggregate_section = dashboard_data.get(AGGREGATE_SECTION_KEY, {})
+    if not isinstance(aggregate_section, dict):
+        raise SystemExit(f'The "{AGGREGATE_SECTION_KEY}" section must contain an object keyed by ISO timestamps.')
+    invalid_aggregate_keys = [key for key in aggregate_section.keys() if not is_timestamp_key(key)]
+    if invalid_aggregate_keys:
+        keys = ', '.join(str(key) for key in invalid_aggregate_keys[:3])
+        raise SystemExit(f'The "{AGGREGATE_SECTION_KEY}" section keys must be ISO timestamps. Invalid key(s): {keys}')
+
     return dashboard_data
+
+
+def split_aggregate_section(dashboard_data):
+    """
+    Split the reserved top-level 'aggregate' section from the timestamped
+    organisation snapshots.
+
+    Existing callbacks iterate over the top-level keys as timestamps, so the
+    central aggregate results are kept apart and served through their own store.
+
+    Parameters:
+    dashboard_data (dict): The full dashboard data including the optional
+                           'aggregate' section.
+
+    Returns:
+    tuple: (snapshots, aggregate_section) where snapshots maps ISO timestamps to
+           organisation data and aggregate_section maps ISO timestamps to the
+           central results.
+    """
+    aggregate_section = dashboard_data.get(AGGREGATE_SECTION_KEY, {})
+    snapshots = {key: value for key, value in dashboard_data.items() if key != AGGREGATE_SECTION_KEY}
+    return snapshots, aggregate_section
+
+
+
+
+def _present_classes(descriptive_data):
+    """Collect the variable class codes present in the latest snapshot."""
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    present = set()
+    for org_data in latest_data.values():
+        categorical, numerical = callbacks._load_organization_stats(org_data)
+        present.update(categorical['variable'].unique())
+        present.update(numerical['variable'].unique())
+    return present
 
 
 class Dashboard:
@@ -91,7 +153,8 @@ class Dashboard:
         dashboard_data_file_path (str): The path to the static dashboard data JSON file.
         """
         self.global_semantic_map_data = load_json_file(schema_file_path)
-        self.dashboard_data = load_static_dashboard_data(dashboard_data_file_path)
+        self.dashboard_data, self.aggregate_data = split_aggregate_section(
+            load_static_dashboard_data(dashboard_data_file_path))
 
         # Set default max_depth for semantic_map category extraction
         self.max_depth = 1
@@ -102,64 +165,15 @@ class Dashboard:
                              external_stylesheets=[dbc.themes.BOOTSTRAP])
 
         self.App.layout = self.define_layout()
-        self.App._favicon = 'favicon.ico'
+        self.App._favicon = 'info-portal/favicon.png'
         self.register_callbacks()
-
-    def extract_categories_from_semantic_map(self, max_depth=0):
-        """
-        Extract categories from schemaReconstruction hierarchy for filtering.
-        
-        Parameters:
-        max_depth (int): Maximum depth to traverse in schemaReconstruction (default: 2)
-        
-        Returns:
-        list: List of unique category labels with their corresponding values for filtering
-        """
-        categories = set()
-        
-        schema = self.global_semantic_map_data.get('schema', {})
-        variables = schema.get('variables', {})
-        if not variables:
-            return []
-            
-        for variable_name, variable_data in variables.items():
-            if 'schemaReconstruction' in variable_data and variable_data['schemaReconstruction']:
-                # Process each level in schemaReconstruction up to max_depth
-                # Only look at ClassNode items (not UnitNodes) within the specified depth
-                for level, reconstruction_item in enumerate(variable_data['schemaReconstruction']):
-                    if level >= max_depth:
-                        break
-                    
-                    if (reconstruction_item.get('@type') == 'schema:ClassNode' and 
-                        'aestheticLabel' in reconstruction_item and
-                        reconstruction_item.get('placement') != 'before'):
-                        # Remove underscores and format the aesthetic label nicely
-                        aesthetic_label = reconstruction_item['aestheticLabel'].replace('_', ' ')
-                        categories.add(f" {aesthetic_label}")
-        
-        return sorted(list(categories))
 
     def define_layout(self):
         return html.Div([
             dcc.Location(id='url', refresh=False),
-            html.Div(id='authenticated-user-container', className='authenticated-user-container',
-                     hidden=True, children=[
-                html.Span(id='authenticated-user-email', className='authenticated-user-email',
-                          **{'aria-label': 'Signed-in user email'}),
-                html.Div(className='authenticated-user-actions', children=[
-                    html.A('Sign out (switch account)', href='/oauth2/sign_out',
-                           className='authenticated-user-action'),
-                    html.A('Manage Microsoft permissions ↗', href='https://myapps.microsoft.com/',
-                           target='_blank', rel='noopener noreferrer',
-                           className='authenticated-user-action')
-                ])
-            ]),
             dcc.Store(id='store', data=self.dashboard_data),
+            dcc.Store(id='aggregate-store', data=self.aggregate_data),
             dcc.Store(id='data-availability-store-1'),
-            html.Div([
-                dcc.Link('Data availability', href='/data-availability'),
-                dcc.Link('Missing Data', href='/data-completeness')
-            ]),
             dash.page_container
         ])
 
@@ -482,9 +496,9 @@ class Dashboard:
             [Output('tile-content-6', 'children'),
              Output('data-availability-store-1', 'data')],
             [Input('store', 'data'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('availability-variable-dropdown', 'value')]
         )
-        def update_data_availability_table(descriptive_data, prefix_selection):
+        def update_data_availability_table(descriptive_data, variable_selection):
             """
             Callback function to update the data availability table.
 
@@ -501,27 +515,24 @@ class Dashboard:
             Returns:
             The result of the function from the `callbacks` module.
             """
-            try:
-                # Create filtered copies to avoid modifying originals
-                _descriptive_data, selected_variables = callbacks.filter_descriptive_data_by_semantic_map_categories(descriptive_data,
-                                                                  prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth) if prefix_selection else descriptive_data
-            except ValueError:
-                _descriptive_data = copy.deepcopy(descriptive_data)
-                selected_variables = set()
+            _options, var_info = callbacks.build_variable_options(
+                self.global_semantic_map_data, _present_classes(descriptive_data))
+            selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
             # Filter global semantic_map data
             filtered_semantic_map = copy.deepcopy(self.global_semantic_map_data)
-            if prefix_selection and selected_variables:
+            if selected_classes is not None:
                 variables_to_remove = []
                 for variable_name, variable_data in filtered_semantic_map['schema']['variables'].items():
-                    if variable_data.get('class') not in selected_variables:
+                    if variable_data.get('class') not in selected_classes:
                         variables_to_remove.append(variable_name)
 
                 for variable_name in variables_to_remove:
                     filtered_semantic_map['schema']['variables'].pop(variable_name)
 
             # Generate table with filtered data
-            df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, _descriptive_data)
+            df, dash_table = callbacks.generate_fair_data_availability(filtered_semantic_map, descriptive_data,
+                                                                       selected_classes=selected_classes)
             return dash_table, df.to_json()
 
         @self.App.callback(
@@ -569,6 +580,12 @@ class Dashboard:
             country_options = [dict(t) for t in {tuple(d.items()) for d in country_options}]
 
             # Update selected organisations and countries based on the selections
+            ctx = dash.callback_context
+            # initial call has empty triggered; store changes start with 'store'
+            initial_load = (not ctx.triggered) or ctx.triggered[0]['prop_id'].startswith('store')
+            if initial_load and not selected_organisations and not selected_countries:
+                # initial load: select all organisations by default
+                selected_organisations = sorted(latest_data.keys())
             if selected_organisations:
                 selected_countries = list(set([latest_data[org]['country'] for org in selected_organisations]))
             elif selected_countries:
@@ -579,24 +596,13 @@ class Dashboard:
                     selected_organisations, selected_countries)
 
         @self.App.callback(
-            Output('subset-prefix-selection-checkboxes', 'options'),
-            Output('subset-prefix-selection-checkboxes', 'value'),
-            [Input('store', 'data')]
-        )
-        def update_table_prefix_options(descriptive_data):
-            """Updates the prefix selection options with categories extracted from semantic_map."""
-            # Extract categories dynamically from semantic_map
-            semantic_map_categories = self.extract_categories_from_semantic_map(max_depth=self.max_depth)
-            prefix_options = [{'label': category, 'value': category.lower().replace(' ', '_')} for category in semantic_map_categories]
-            return prefix_options, []
-
-        @self.App.callback(
             Output({'type': 'dynamic-completeness-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('completeness-variable-dropdown', 'value'),
+             Input('completeness-view-store', 'data')]
         )
-        def update_variable_completeness_info(descriptive_data, selection, prefix_selection):
+        def update_variable_completeness_info(descriptive_data, selection, variable_selection, view):
             """
             Callback function to update the completeness chart.
 
@@ -621,10 +627,16 @@ class Dashboard:
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
 
-                # Filter data based on selected prefixes
-                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _options, var_info = callbacks.build_variable_options(
+                    self.global_semantic_map_data, _present_classes(_descriptive_data))
+                selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness', semantic_map_data=self.global_semantic_map_data)
+                if view == 'pie':
+                    return callbacks.generate_variable_donut_chart(_descriptive_data, domain='completeness',
+                                                                   semantic_map_data=self.global_semantic_map_data)
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='completeness',
+                                                             semantic_map_data=self.global_semantic_map_data,
+                                                             selected_classes=selected_classes)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='completeness')
 
@@ -632,9 +644,10 @@ class Dashboard:
             Output({'type': 'dynamic-plausibility-bar', 'index': MATCH}, 'figure'),
             [Input('store', 'data'),
              Input('subset-selection-checkboxes', 'value'),
-             Input('subset-prefix-selection-checkboxes', 'value')]
+             Input('plausibility-variable-dropdown', 'value'),
+             Input('plausibility-view-store', 'data')]
         )
-        def update_variable_plausibility_info(descriptive_data, selection, prefix_selection):
+        def update_variable_plausibility_info(descriptive_data, selection, variable_selection, view):
             """
             Callback function to update the plausibility chart.
 
@@ -659,18 +672,25 @@ class Dashboard:
                         if org not in selection:
                             del _descriptive_data[timestamp][org]
 
-                # Filter data based on selected prefixes
-                _descriptive_data, _ = callbacks.filter_descriptive_data_by_semantic_map_categories(_descriptive_data, prefix_selection, self.global_semantic_map_data, max_depth=self.max_depth)
+                _options, var_info = callbacks.build_variable_options(
+                    self.global_semantic_map_data, _present_classes(_descriptive_data))
+                selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
 
-                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility', semantic_map_data=self.global_semantic_map_data)
+                if view == 'pie':
+                    return callbacks.generate_variable_donut_chart(_descriptive_data, domain='plausibility',
+                                                                   semantic_map_data=self.global_semantic_map_data)
+                return callbacks.generate_variable_bar_chart(_descriptive_data, domain='plausibility',
+                                                             semantic_map_data=self.global_semantic_map_data,
+                                                             selected_classes=selected_classes)
             else:
                 return callbacks.generate_unavailable_organisation_annotation(domain='plausibility')
 
         @self.App.callback(
             Output('availability-over-time', 'figure'),
-            [Input('store', 'data')]
+            [Input('store', 'data'),
+             Input('availability-over-time-variable-dropdown', 'value')]
         )
-        def update_availability_over_time(descriptive_data):
+        def update_availability_over_time(descriptive_data, variable_selection):
             """
             Callback function to update the data availability over time chart.
 
@@ -685,7 +705,304 @@ class Dashboard:
             Returns:
             plotly.graph_objs._figure.Figure: The updated availability over time chart figure.
             """
-            return callbacks.generate_sample_size_over_time_chart(descriptive_data)
+            _options, var_info = callbacks.build_variable_options(
+                self.global_semantic_map_data, _present_classes(descriptive_data))
+            selected_classes = callbacks.resolve_variable_selection(variable_selection, var_info)
+            # the over-time chart shows one variable at a time; a category or
+            # empty selection falls back to the overall sample size
+            variable_class = next(iter(selected_classes)) if selected_classes and len(selected_classes) == 1 else None
+            return callbacks.generate_sample_size_over_time_chart(
+                descriptive_data, variable_class=variable_class, semantic_map_data=self.global_semantic_map_data)
+
+        def _register_view_switch(prefix):
+            """Register the toggle/select callbacks for a 'Select visualisation' pill."""
+            @self.App.callback(
+                Output(f'{prefix}-view-menu', 'hidden'),
+                [Input(f'{prefix}-view-toggle', 'n_clicks')]
+            )
+            def _toggle_view_menu(n_clicks):
+                return (n_clicks or 0) % 2 == 0
+
+            @self.App.callback(
+                [Output(f'{prefix}-view-store', 'data'),
+                 Output(f'{prefix}-view-menu', 'hidden'),
+                 Output(f'{prefix}-view-indicator', 'children'),
+                 Output(f'{prefix}-view-bar', 'className'),
+                 Output(f'{prefix}-view-pie', 'className')],
+                [Input(f'{prefix}-view-bar', 'n_clicks'),
+                 Input(f'{prefix}-view-pie', 'n_clicks')]
+            )
+            def _select_view(bar_clicks, pie_clicks):
+                ctx = dash.callback_context
+                view = 'bar'
+                if ctx.triggered:
+                    view = ctx.triggered[0]['prop_id'].split('.')[0].replace(f'{prefix}-view-', '')
+                labels = {'bar': '(Bar chart)', 'pie': '(Pie chart)'}
+                classes = {v: 'filter-option current' if v == view else 'filter-option' for v in ('bar', 'pie')}
+                return view, True, labels[view], classes['bar'], classes['pie']
+
+        _register_view_switch('completeness')
+        _register_view_switch('plausibility')
+
+        def _register_variable_dropdown(dropdown_id):
+            """Populate a variable-selection dropdown (categories first, then variables)."""
+            @self.App.callback(
+                [Output(dropdown_id, 'options'), Output(dropdown_id, 'value')],
+                [Input('store', 'data')]
+            )
+            def _update_variable_options(descriptive_data):
+                latest_data = descriptive_data[max(descriptive_data.keys())]
+                present = set()
+                for org_data in latest_data.values():
+                    categorical, numerical = callbacks._load_organization_stats(org_data)
+                    present.update(categorical['variable'].unique())
+                    present.update(numerical['variable'].unique())
+                options, _var_info = callbacks.build_variable_options(self.global_semantic_map_data, present)
+                return options, []
+
+        _register_variable_dropdown('availability-variable-dropdown')
+        _register_variable_dropdown('availability-over-time-variable-dropdown')
+        _register_variable_dropdown('completeness-variable-dropdown')
+        _register_variable_dropdown('plausibility-variable-dropdown')
+
+        @self.App.callback(
+            Output('availability-table-download', 'data'),
+            [Input('availability-table-download-btn', 'n_clicks')],
+            [State('data-availability-store-1', 'data')]
+        )
+        def download_availability_table(n_clicks, table_json):
+            """Download the semantic consistency table (stored as DataFrame JSON) as CSV."""
+            if not n_clicks or not table_json:
+                return dash.no_update
+            return dcc.send_string(callbacks.dataframe_to_csv(table_json), 'data-availability.csv')
+
+        @self.App.callback(
+            [Output('exploration-subset-selection-checkboxes', 'options'),
+             Output('exploration-subset-selection-checkboxes', 'value')],
+            [Input('store', 'data'),
+             Input('exploration-subset-selection-checkboxes', 'value')]
+        )
+        def update_exploration_checkboxes(descriptive_data, current_selection):
+            """
+            Callback function to populate the organisation selection checkboxes on
+            the data exploration page with the organisations of the latest snapshot.
+            All organisations are selected by default on initial load.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+            current_selection (list): The currently selected organisations.
+
+            Returns:
+            list: A list of dictionaries representing the checkbox options.
+            list: The selected organisations (all of them on initial load).
+            """
+            latest_data = descriptive_data[max(descriptive_data.keys())]
+            options = [{'label': org, 'value': org} for org in sorted(latest_data.keys())]
+            ctx = dash.callback_context
+            initial_load = (not ctx.triggered) or ctx.triggered[0]['prop_id'].startswith('store')
+            if initial_load:
+                return options, sorted(latest_data.keys())
+            return options, current_selection
+
+        @self.App.callback(
+            [Output('exploration-categorical-variable', 'options'),
+             Output('exploration-categorical-variable', 'value')],
+            [Input('store', 'data')]
+        )
+        def update_exploration_categorical_variables(descriptive_data):
+            """
+            Callback function to populate the categorical variable dropdown on the data
+            exploration page. Offers every schema categorical variable present in the
+            latest snapshot, plus a 'cancer_groups' option when ICD-10 coded variables
+            are detected.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+
+            Returns:
+            list: The dropdown options with schema-based labels.
+            str: The initially selected variable.
+            """
+            latest_data = descriptive_data[max(descriptive_data.keys())]
+            present = set()
+            for org_data in latest_data.values():
+                categorical, _ = callbacks._load_organization_stats(org_data)
+                present.update(categorical['variable'].unique())
+
+            schema = self.global_semantic_map_data.get('schema', {})
+            variables = schema.get('variables', {})
+            options = []
+            for var_name, var_data in sorted(variables.items()):
+                if var_data.get('dataType') != 'categorical':
+                    continue
+                var_class = var_data.get('class', var_name)
+                if var_class in present or var_name in present:
+                    options.append({
+                        'label': callbacks._readable_variable_name(var_class, self.global_semantic_map_data),
+                        'value': var_name,
+                    })
+            if callbacks.detect_icd10_variables_in_data(descriptive_data):
+                options.append({'label': 'Grouped cancer types (ICD-10 blocks)',
+                                'value': callbacks.CANCER_GROUPS_VARIABLE})
+            # no default selection: the dropdown shows its 'Categorical variable'
+            # placeholder until the user picks a variable
+            return options, None
+
+        @self.App.callback(
+            Output('exploration-view-menu', 'hidden'),
+            [Input('exploration-view-toggle', 'n_clicks')]
+        )
+        def toggle_exploration_view_menu(n_clicks):
+            """Open/close the 'Select visualisation' menu when the pill button is clicked."""
+            return (n_clicks or 0) % 2 == 0
+
+        @self.App.callback(
+            [Output('exploration-view-store', 'data'),
+             Output('exploration-view-menu', 'hidden'),
+             Output('exploration-view-indicator', 'children'),
+             Output('exploration-view-pie', 'className'),
+             Output('exploration-view-bar', 'className'),
+             Output('exploration-view-csv', 'className')],
+            [Input('exploration-view-pie', 'n_clicks'),
+             Input('exploration-view-bar', 'n_clicks'),
+             Input('exploration-view-csv', 'n_clicks')]
+        )
+        def select_exploration_view(pie_clicks, bar_clicks, csv_clicks):
+            """
+            Store the chosen visualisation view, close the menu, update the current-view
+            indicator on the pill button and mark the chosen menu option as current.
+            """
+            ctx = dash.callback_context
+            view = 'pie'
+            if ctx.triggered:
+                view = ctx.triggered[0]['prop_id'].split('.')[0].replace('exploration-view-', '')
+            labels = {'pie': '(Pie chart)', 'bar': '(Bar chart)', 'csv': '(CSV)'}
+            classes = {v: 'filter-option current' if v == view else 'filter-option'
+                       for v in ('pie', 'bar', 'csv')}
+            return view, True, labels[view], classes['pie'], classes['bar'], classes['csv']
+
+        @self.App.callback(
+            [Output('exploration-categorical-graph', 'figure'),
+             Output('exploration-categorical-graph', 'style'),
+             Output('exploration-categorical-csv', 'hidden'),
+             Output('exploration-categorical-csv-table', 'data'),
+             Output('exploration-csv-store', 'data')],
+            [Input('store', 'data'),
+             Input('exploration-subset-selection-checkboxes', 'value'),
+             Input('exploration-categorical-variable', 'value'),
+             Input('exploration-view-store', 'data')]
+        )
+        def update_exploration_categorical_chart(descriptive_data, selection, variable, view):
+            """
+            Callback function to update the categorical chart on the data exploration
+            page. Depending on the view it renders a pie chart, a bar chart, or the
+            underlying counts as a CSV table (with a downloadable CSV in the store).
+            Counts are summed over the selected organisations.
+
+            Parameters:
+            descriptive_data (dict): The data stored in the 'store' component.
+            selection (list): The selected organisations.
+            variable (str): The selected categorical variable ('cancer_groups' for the
+                            ICD-10 binned cancer types).
+            view (str): 'pie', 'bar' or 'csv'.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The chart figure.
+            dict: The graph style (hidden in CSV view).
+            bool: Whether the CSV view is hidden.
+            list: The CSV table rows.
+            str: The CSV text for download.
+            """
+            if view == 'bar':
+                figure = callbacks.generate_categorical_bar_figure(
+                    descriptive_data, selection, variable, self.global_semantic_map_data)
+            else:
+                figure = callbacks.generate_categorical_pie_figure(
+                    descriptive_data, selection, variable, self.global_semantic_map_data)
+
+            counts = callbacks.categorical_value_counts(
+                descriptive_data, selection, variable, self.global_semantic_map_data)
+            if counts is None:
+                table_data, csv_text = [], ''
+            else:
+                labels, values = counts
+                table_data = [{'category': label, 'count': value} for label, value in zip(labels, values)]
+                csv_text = callbacks.format_categorical_csv(labels, values)
+
+            return (figure,
+                    {'display': 'none'} if view == 'csv' else {},
+                    view != 'csv',
+                    table_data,
+                    csv_text)
+
+        @self.App.callback(
+            Output('exploration-csv-download', 'data'),
+            [Input('exploration-csv-download-btn', 'n_clicks')],
+            [State('exploration-csv-store', 'data')]
+        )
+        def download_exploration_csv(n_clicks, csv_text):
+            """
+            Callback function to download the currently shown categorical counts as CSV.
+
+            Parameters:
+            n_clicks (int): The download button click count.
+            csv_text (str): The CSV text stored by the chart callback.
+
+            Returns:
+            dict: The dcc.Download data payload.
+            """
+            if not n_clicks or not csv_text:
+                return dash.no_update
+            return dcc.send_string(csv_text, 'categorical-variable-counts.csv')
+
+        @self.App.callback(
+            [Output('exploration-variable-dropdown', 'options'),
+             Output('exploration-variable-dropdown', 'value')],
+            [Input('aggregate-store', 'data')]
+        )
+        def update_exploration_variable_dropdown(aggregate_data):
+            """
+            Callback function to populate the variable dropdown on the data exploration
+            page with the continuous variables of the latest central aggregate result.
+
+            Parameters:
+            aggregate_data (dict): The data stored in the 'aggregate-store' component.
+
+            Returns:
+            list: The dropdown options with schema-based labels.
+            str: The initially selected variable.
+            """
+            _, numerical = callbacks.load_aggregate_stats(aggregate_data)
+            variables = sorted(numerical['variable'].unique()) if not numerical.empty else []
+            options = [{'label': callbacks._readable_variable_name(variable, self.global_semantic_map_data),
+                        'value': variable} for variable in variables]
+            # no default selection: the dropdown shows its 'Numerical variable'
+            # placeholder and the graph stays empty until the user picks one
+            return options, None
+
+        @self.App.callback(
+            [Output('exploration-distribution-graph', 'figure'),
+             Output('exploration-distribution-stats', 'children')],
+            [Input('aggregate-store', 'data'),
+             Input('exploration-variable-dropdown', 'value')]
+        )
+        def update_exploration_distribution(aggregate_data, variable):
+            """
+            Callback function to update the distribution density curve on the data
+            exploration page from the central aggregate (federated IQR) result, plus
+            the one-line quartile summary shown next to the graph.
+
+            Parameters:
+            aggregate_data (dict): The data stored in the 'aggregate-store' component.
+            variable (str): The selected variable's ontology class code.
+
+            Returns:
+            plotly.graph_objs._figure.Figure: The updated density curve figure.
+            str: The quartile statistics summary line.
+            """
+            return (callbacks.generate_distribution_curve_figure(aggregate_data, variable,
+                                                                 self.global_semantic_map_data),
+                    callbacks.format_distribution_stats(aggregate_data, variable))
 
     def run(self, debug=None):
         """
