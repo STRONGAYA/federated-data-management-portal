@@ -982,27 +982,36 @@ class Dashboard:
 
         @self.App.callback(
             [Output('exploration-distribution-graph', 'figure'),
-             Output('exploration-distribution-stats', 'children')],
+             Output('exploration-distribution-stats', 'children'),
+             Output('exploration-distribution-warnings', 'children')],
             [Input('aggregate-store', 'data'),
-             Input('exploration-variable-dropdown', 'value')]
+             Input('exploration-variable-dropdown', 'value'),
+             Input('store', 'data')]
         )
-        def update_exploration_distribution(aggregate_data, variable):
+        def update_exploration_distribution(aggregate_data, variable, descriptive_data):
             """
-            Callback function to update the distribution density curve on the data
-            exploration page from the central aggregate (federated IQR) result, plus
-            the one-line quartile summary shown next to the graph.
+            Callback function to update the distribution figure on the data
+            exploration page from the central aggregate (federated quartiles) result,
+            plus the one-line quartile summary and the warnings shown next to the
+            graph. The per-organisation snapshots feed the organisation strip in the
+            graph and the organisation spread warning.
 
             Parameters:
             aggregate_data (dict): The data stored in the 'aggregate-store' component.
             variable (str): The selected variable's ontology class code.
+            descriptive_data (dict): The per-organisation snapshots stored in 'store'.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated density curve figure.
+            plotly.graph_objs._figure.Figure: The updated distribution figure.
             str: The quartile statistics summary line.
+            list: The warnings as a single bullet list, empty when there are none.
             """
-            return (callbacks.generate_distribution_curve_figure(aggregate_data, variable,
-                                                                 self.global_semantic_map_data),
-                    callbacks.format_distribution_stats(aggregate_data, variable))
+            figure = callbacks.generate_distribution_figure(
+                aggregate_data, variable, self.global_semantic_map_data, descriptive_data)
+            stats = callbacks.format_distribution_stats(aggregate_data, variable)
+            warnings = callbacks.distribution_warnings(aggregate_data, variable, descriptive_data)
+            warnings_children = [html.Ul([html.Li(warning) for warning in warnings])] if warnings else []
+            return figure, stats, warnings_children
 
     def run(self, debug=None):
         """

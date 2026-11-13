@@ -87,17 +87,26 @@ layout = chrome.page_scaffold(
                 )
             ]),
             html.Div(id='exploration-distribution-stats', className='explanation', children=[]),
+            html.Div(id='exploration-distribution-warnings', className='explanation', children=[]),
             html.Div(id='exploration-distribution-disclaimer', className='explanation', children=[
-                "The curve is an approximation reconstructed from the federated quartiles "
-                "(q1, median, q3) and IQR; min/max and raw values are not part of the central "
-                "aggregate result."
+                "The solid line is what the federated quartiles record: the Q1–Q3 range, which "
+                "holds the middle 50% of patients in a typical organisation, with the Q1, Q2 and "
+                "Q3 values labelled in the plot and the median marked by a short dashed tick. No "
+                "density curve is drawn, because the quartiles do "
+                "not record the shape or peak of the distribution. The grey dashed extensions "
+                "show that a further 25% of patients lie on each side of the IQR, but their "
+                "actual range is not shared (minimum, maximum and raw values are removed), so "
+                "that extent is inferred, not recorded. The federated quartiles combine each "
+                "organisation's quartiles, so they describe a typical organisation rather than "
+                "all patients combined; the whiskers below show each organisation's Q1–median–Q3 "
+                "in the same style."
             ])
         ]),
     ],
     prev_topic=('Plausibility', '/data-plausibility'),
     next_topic=('Availability', '/data-availability'),
-    explanation=["These graphics show the overall data distributions as curves reconstructed "
-                 "from the federated quartiles and IQR, and key variable characteristics such as "
+    explanation=["These graphics show the overall data distributions through "
+                 "the federated quartiles, and key variable characteristics such as "
                  "the biological sex balance and the grouped cancer types.",
                  html.Br(), html.Br(),
                  'Distributions and variable info are based on the "Descriptive statistics" Vantage6 '
