@@ -123,6 +123,10 @@ uv sync
 uv run --group dev pytest tests/
 ```
 
+## Security scan
+
+A weekly scheduled workflow (`.github/workflows/security-scan.yml`) runs Bandit on `src/` and `safety check` on the exported runtime dependencies. On failure it files a **private draft repository security advisory (GHSA)** — never a public issue. The built-in `GITHUB_TOKEN` cannot create advisories, so the report job runs with no token permissions and instead mints a short-lived token from the organisation's GitHub App (`actions/create-github-app-token`, permission "Repository security advisories: read and write", scoped to this repository). The App's client ID is the `SECURITY_ADVISORY_APP_CLIENT_ID` variable and its private key the `SECURITY_ADVISORY_APP_PRIVATE_KEY` secret; without them the report job fails with an error naming both. Publishing a draft advisory stays a human decision after the finding is fixed and released.
+
 ## Dependencies
 
 Runtime dependencies are pinned in `pyproject.toml`.
