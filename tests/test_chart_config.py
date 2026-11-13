@@ -53,7 +53,7 @@ class ChartHoverTests(unittest.TestCase):
             callbacks.generate_sample_size_over_time_chart(snapshots),
             callbacks.generate_sample_size_horizontal_bar(snapshots),
             callbacks.generate_variable_bar_chart(snapshots, domain="completeness", semantic_map_data=schema),
-            callbacks.generate_distribution_curve_figure(aggregate, "ncit:C156420", schema),
+            callbacks.generate_distribution_figure(aggregate, "ncit:C156420", schema),
             callbacks.generate_categorical_pie_figure(snapshots, orgs, "biological_sex", schema),
             callbacks.generate_categorical_bar_figure(snapshots, orgs, "biological_sex", schema),
         ]

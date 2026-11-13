@@ -165,63 +165,159 @@ class LoadAggregateStatsTests(unittest.TestCase):
         self.assertEqual(len(numerical), 0)
 
 
-class DistributionCurveFigureTests(unittest.TestCase):
-    @staticmethod
-    def curve_area(trace):
-        x, y = np.asarray(trace.x), np.asarray(trace.y)
-        return float(np.sum((y[:-1] + y[1:]) / 2 * np.diff(x)))
-
-    def test_curve_is_a_density_on_a_dense_evenly_spaced_grid(self):
-        figure = callbacks.generate_distribution_curve_figure(
+class DistributionFigureTests(unittest.TestCase):
+    def test_whisker_spans_the_recorded_iqr_with_caps(self):
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
         trace = figure.data[0]
         self.assertEqual(trace.type, "scatter")
-        self.assertEqual(trace.fill, "tozeroy")
-        self.assertEqual(len(trace.x), callbacks._CURVE_GRID_POINTS)
-        diffs = np.diff(trace.x)
-        self.assertTrue(np.allclose(diffs, diffs[0]))
-        # the curve is a proper density: it integrates to ~1
-        self.assertAlmostEqual(self.curve_area(trace), 1.0, places=2)
+        self.assertEqual(trace.mode, "lines")
+        x = np.asarray(trace.x, dtype=float)
+        y = np.asarray(trace.y, dtype=float)
+        # the whisker line and its caps touch only Q1 and Q3
+        self.assertEqual(set(np.round(x[~np.isnan(x)], 9)), {30.0, 38.75})
+        self.assertAlmostEqual(float(np.nanmax(y)), 0.68)
+        self.assertAlmostEqual(float(np.nanmin(y)), 0.32)
         self.assertEqual(figure.layout.title.text, "Federated distribution of Age At Diagnosis")
 
-    def test_symmetric_quartiles_peak_at_the_median(self):
-        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 35.0])
-        figure = callbacks.generate_distribution_curve_figure(
+    def test_no_density_axis_is_shown(self):
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
+
+        # the quartiles record no shape, so the whisker row hides the y-axis
+        self.assertFalse(figure.layout.yaxis.visible)
+
+    def test_whisker_is_drawn_regardless_of_skew(self):
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [10.0, 12.0, 30.0])
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
 
-        trace = figure.data[0]
-        peak_x = trace.x[int(np.argmax(trace.y))]
-        self.assertAlmostEqual(peak_x, 32.5, places=1)
+        x = np.asarray(figure.data[0].x, dtype=float)
+        self.assertEqual(set(np.round(x[~np.isnan(x)], 9)), {10.0, 30.0})
 
-    def test_right_skewed_positive_quartiles_are_log_transformed(self):
-        figure = callbacks.generate_distribution_curve_figure(
+    def test_outer_quarters_are_grey_dashed_and_marked_as_inferred(self):
+        numerical = numerical_stats(
+            ["ncit:C156420"] * 3, ["q1", "median", "q3"], [29.9, 32.2, 37.1])
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
+
+        self.assertEqual(len(figure.data), 3)
+        tail = figure.data[1]
+        self.assertEqual(tail.type, "scatter")
+        self.assertEqual(tail.line.dash, "dash")
+        x_lo, x_hi = figure.layout.xaxis.range
+        x = np.asarray(tail.x, dtype=float)
+        y = np.asarray(tail.y, dtype=float)
+        left = ~np.isnan(x) & (x <= 29.9)
+        right = ~np.isnan(x) & (x >= 37.1)
+        self.assertAlmostEqual(float(x[left][0]), x_lo)
+        self.assertAlmostEqual(float(x[left][-1]), 29.9)
+        self.assertAlmostEqual(float(x[right][0]), 37.1)
+        self.assertAlmostEqual(float(x[right][-1]), x_hi)
+        # the extensions sit at the whisker height
+        self.assertTrue(np.all(y[~np.isnan(y)] == 0.5))
+        # hover says the extent is inferred, not recorded
+        self.assertIn("inferred", tail.hovertemplate)
+        self.assertIn("not shared", tail.hovertemplate)
+        # the recorded whisker is solid colour, not dashed grey
+        self.assertNotEqual(figure.data[0].line.dash, "dash")
+
+    def test_x_range_covers_quartiles_and_organisations(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 38.75])),
+            "Org B": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [29.0, 31.0, 36.0])),
+        })
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA, descriptive)
+
+        # iqr = 38.75 - 30.0 = 8.75; lo/hi pad the outermost quartiles by a quarter IQR
+        x_range = list(figure.layout.xaxis.range)
+        self.assertAlmostEqual(x_range[0], 29.0 - 0.25 * 8.75)
+        self.assertAlmostEqual(x_range[1], 38.75 + 0.25 * 8.75)
+
+    def test_coinciding_quartiles_render_an_annotation(self):
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 30.0, 35.0])
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
+
+        self.assertIn("Quartiles coincide", figure.layout.annotations[0].text)
+
+    def test_unordered_quartiles_render_an_annotation(self):
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 40.0, 35.0])
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
+
+        self.assertIn("not in order", figure.layout.annotations[0].text)
+
+    def test_quartile_values_are_labelled_in_the_plot(self):
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
-        trace = figure.data[0]
-        peak_x = trace.x[int(np.argmax(trace.y))]
-        # the log-normal mode lies below the median
-        self.assertLess(peak_x, 32.5)
-        self.assertAlmostEqual(self.curve_area(trace), 1.0, places=2)
+        labels = figure.data[2]
+        self.assertEqual(labels.mode, "text")
+        self.assertEqual(list(labels.text), ["Q1: 30.00", "Q2: 32.50", "Q3: 38.75"])
+        self.assertEqual(list(labels.x), [30.0, 32.5, 38.75])
+        # labels are trace text, so the layout keeps zero annotations
+        self.assertEqual(len(figure.layout.annotations), 0)
 
-    def test_iqr_band_and_median_are_marked(self):
-        figure = callbacks.generate_distribution_curve_figure(
+    def test_organisation_strip(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [30.0, 32.5, 38.75, 18.0])),
+            "Org B": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 4, ["q1", "median", "q3", "count"], [29.0, 31.0, 36.0, 16.0])),
+        })
+
+        figure = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA, descriptive)
+
+        strip_traces = [trace for trace in figure.data if trace.name in ("Org A", "Org B")]
+        self.assertEqual(len(strip_traces), 2)
+        self.assertTrue(all(trace.yaxis == "y2" for trace in strip_traces))
+        # each organisation is drawn as a whisker: line Q1-Q3 with caps and a median tick
+        for trace, q1, median, q3 in ((strip_traces[0], 30.0, 32.5, 38.75),
+                                      (strip_traces[1], 29.0, 31.0, 36.0)):
+            x = np.asarray(trace.x, dtype=float)
+            points = x[~np.isnan(x)]
+            self.assertAlmostEqual(float(points.min()), q1)
+            self.assertAlmostEqual(float(points.max()), q3)
+            self.assertIn(median, set(np.round(points, 9)))
+        self.assertEqual(list(figure.layout.yaxis2.ticktext), ["Org B", "Org A"])
+        self.assertEqual(len(figure.layout.shapes), 1)
+        # the median tick matches the aggregate whisker caps also in the two-row layout
+        median_shape = figure.layout.shapes[0]
+        self.assertAlmostEqual(median_shape.y0, 0.32)
+        self.assertAlmostEqual(median_shape.y1, 0.68)
+
+        plain = callbacks.generate_distribution_figure(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
+        self.assertEqual(len(plain.data), 3)
+
+    def test_median_is_marked_with_a_small_tick(self):
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
-        shapes = {shape.type: shape for shape in figure.layout.shapes}
-        self.assertEqual(shapes["rect"].x0, 30.0)
-        self.assertEqual(shapes["rect"].x1, 38.75)
-        self.assertEqual(shapes["line"].x0, 32.5)
+        self.assertEqual(len(figure.layout.shapes), 1)
+        shape = figure.layout.shapes[0]
+        self.assertEqual(shape.type, "line")
+        self.assertEqual(shape.x0, 32.5)
+        # a short tick at the whisker height, not a full-height line
+        self.assertEqual(shape.yref, "y")
+        self.assertAlmostEqual(shape.y0, 0.32)
+        self.assertAlmostEqual(shape.y1, 0.68)
 
     def test_the_figure_keeps_the_graph_space_free_of_numbers(self):
-        figure = callbacks.generate_distribution_curve_figure(
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420", SCHEMA)
 
         self.assertEqual(len(figure.layout.annotations), 0)
 
 
 class FormatDistributionStatsTests(unittest.TestCase):
-    def test_summarises_the_quartiles_and_transform(self):
+    def test_summarises_the_quartiles(self):
         text = callbacks.format_distribution_stats(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), "ncit:C156420")
 
@@ -229,37 +325,96 @@ class FormatDistributionStatsTests(unittest.TestCase):
         self.assertIn("Median: 32.50", text)
         self.assertIn("Q3: 38.75", text)
         self.assertIn("IQR: 8.75", text)
+        self.assertIn("Mean: 34.50", text)
+        self.assertIn("SD (within organisations): 7.80", text)
         self.assertIn("n: 18", text)
-        self.assertIn("(log-transformed)", text)
+        self.assertNotIn("log-transformed", text)
+        self.assertNotIn("(normal)", text)
 
-    def test_symmetric_quartiles_are_marked_normal(self):
-        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 32.5, 35.0])
+    def test_adjusted_std_is_preferred(self):
+        numerical = numerical_stats(
+            ["ncit:C156420"] * 5, ["q1", "median", "q3", "std", "adjusted std"],
+            [30.0, 32.5, 35.0, 3.0, 6.0])
         text = callbacks.format_distribution_stats(aggregate_data(numerical=numerical), "ncit:C156420")
 
-        self.assertIn("(normal)", text)
+        self.assertIn("SD (all patients): 6.00", text)
+        self.assertNotIn("within organisations", text)
 
     def test_returns_empty_string_without_quartiles(self):
         self.assertEqual(callbacks.format_distribution_stats({}, "ncit:C156420"), "")
         self.assertEqual(callbacks.format_distribution_stats(aggregate_data(), None), "")
 
     def test_missing_aggregate_section_renders_an_annotation(self):
-        figure = callbacks.generate_distribution_curve_figure({}, "ncit:C156420", SCHEMA)
+        figure = callbacks.generate_distribution_figure({}, "ncit:C156420", SCHEMA)
 
         self.assertEqual(len(figure.data), 0)
         self.assertIn("No central aggregate result available", figure.layout.annotations[0].text)
 
     def test_missing_variable_renders_an_annotation(self):
-        figure = callbacks.generate_distribution_curve_figure(
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=AGGREGATE_NUMERICAL), None, SCHEMA)
 
         self.assertIn("Select a variable", figure.layout.annotations[0].text)
 
     def test_variable_without_quartiles_renders_an_annotation(self):
         numerical = numerical_stats(["ncit:C156420", "ncit:C156420"], ["mean", "count"], [34.5, 18.0])
-        figure = callbacks.generate_distribution_curve_figure(
+        figure = callbacks.generate_distribution_figure(
             aggregate_data(numerical=numerical), "ncit:C156420", SCHEMA)
 
         self.assertIn("No quartile statistics available", figure.layout.annotations[0].text)
+
+
+class DistributionWarningsTests(unittest.TestCase):
+    def test_returns_empty_when_the_figure_cannot_be_drawn(self):
+        self.assertEqual(callbacks.distribution_warnings({}, "ncit:C156420"), [])
+        self.assertEqual(callbacks.distribution_warnings(
+            aggregate_data(numerical=AGGREGATE_NUMERICAL), None), [])
+        numerical = numerical_stats(["ncit:C156420"], ["mean"], [34.5])
+        self.assertEqual(callbacks.distribution_warnings(
+            aggregate_data(numerical=numerical), "ncit:C156420"), [])
+        coinciding = numerical_stats(
+            ["ncit:C156420"] * 3, ["q1", "median", "q3"], [30.0, 30.0, 35.0])
+        self.assertEqual(callbacks.distribution_warnings(
+            aggregate_data(numerical=coinciding), "ncit:C156420"), [])
+
+    def test_between_organisation_share_is_reported(self):
+        numerical = numerical_stats(
+            ["ncit:C156420"] * 5, ["q1", "median", "q3", "std", "adjusted std"],
+            [24.0, 26.1, 28.0, 3.17, 6.87])
+        warnings = callbacks.distribution_warnings(
+            aggregate_data(numerical=numerical), "ncit:C156420")
+
+        self.assertTrue(any("79% of the variation lies between organisations" in warning
+                            for warning in warnings))
+
+    def test_small_between_organisation_share_is_silent(self):
+        numerical = numerical_stats(
+            ["ncit:C156420"] * 5, ["q1", "median", "q3", "std", "adjusted std"],
+            [24.0, 26.1, 28.0, 5.0, 5.2])
+
+        self.assertEqual(callbacks.distribution_warnings(
+            aggregate_data(numerical=numerical), "ncit:C156420"), [])
+
+    def test_between_organisation_check_needs_both_sds(self):
+        numerical = numerical_stats(
+            ["ncit:C156420"] * 4, ["q1", "median", "q3", "std"], [24.0, 26.1, 28.0, 3.17])
+
+        self.assertEqual(callbacks.distribution_warnings(
+            aggregate_data(numerical=numerical), "ncit:C156420"), [])
+
+    def test_wide_organisation_medians_are_reported(self):
+        descriptive = dashboard_data({
+            "Org A": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [17.0, 19.0, 21.0])),
+            "Org B": organisation(numerical=numerical_stats(
+                ["ncit:C156420"] * 3, ["q1", "median", "q3"], [31.0, 33.0, 35.0])),
+        })
+        numerical = numerical_stats(["ncit:C156420"] * 3, ["q1", "median", "q3"], [24.0, 26.1, 28.0])
+        warnings = callbacks.distribution_warnings(
+            aggregate_data(numerical=numerical), "ncit:C156420", descriptive)
+
+        self.assertTrue(any("Organisation medians range from 19.00 to 33.00" in warning
+                            for warning in warnings))
 
 
 class CategoricalValueCountsTests(unittest.TestCase):
@@ -396,6 +551,27 @@ class ViewSelectionButtonTests(unittest.TestCase):
         self.assertLess(rendered.index("plot-download-btn"),
                         rendered.index("tile-divider"))
 
+    def test_exploration_page_has_the_distribution_warnings_div(self):
+        import json as _json
+        import tempfile as _tempfile
+        from pathlib import Path as _Path
+
+        from federated_data_management_portal.main import Dashboard
+        with _tempfile.TemporaryDirectory() as td:
+            _Path(td, "schema.jsonld").write_text("{}")
+            _Path(td, "dashboard.json").write_text(_json.dumps({"2026-01-01T00:00:00": {}}))
+            Dashboard(_Path(td, "schema.jsonld"), _Path(td, "dashboard.json"))
+        import dash
+        from federated_data_management_portal.pages import layout_exploration  # noqa: F401
+
+        rendered = _json.dumps(dash.page_registry["pages.layout_exploration"]["layout"], default=str)
+        self.assertIn("exploration-distribution-warnings", rendered)
+        # the warnings div sits between the stats line and the disclaimer
+        self.assertLess(rendered.index("exploration-distribution-stats"),
+                        rendered.index("exploration-distribution-warnings"))
+        self.assertLess(rendered.index("exploration-distribution-warnings"),
+                        rendered.index("exploration-distribution-disclaimer"))
+
 
 class VariableDonutViewTests(unittest.TestCase):
     def test_donut_view_aggregates_the_latest_snapshot(self):
@@ -518,18 +694,40 @@ class ExampleDataExplorationTests(unittest.TestCase):
         with (EXAMPLE_DATA / "schema.jsonld").open(encoding="utf-8") as f:
             self.schema = json.load(f)
 
-    def test_distribution_curve_renders_for_the_example_aggregate(self):
-        figure = callbacks.generate_distribution_curve_figure(
+    def test_distribution_whisker_renders_for_the_example_aggregate(self):
+        figure = callbacks.generate_distribution_figure(
             self.aggregate_data, "ncit:C156420", self.schema)
 
         trace = figure.data[0]
-        self.assertEqual(len(trace.x), callbacks._CURVE_GRID_POINTS)
-        x, y = np.asarray(trace.x), np.asarray(trace.y)
-        area = float(np.sum((y[:-1] + y[1:]) / 2 * np.diff(x)))
-        self.assertAlmostEqual(area, 1.0, places=2)
-        shapes = {shape.type: shape for shape in figure.layout.shapes}
-        self.assertEqual(shapes["rect"].x0, 29.9)
-        self.assertEqual(shapes["rect"].x1, 37.1)
+        self.assertEqual(trace.type, "scatter")
+        x = np.asarray(trace.x, dtype=float)
+        self.assertEqual(set(np.round(x[~np.isnan(x)], 9)), {29.9, 37.1})
+        self.assertFalse(figure.layout.yaxis.visible)
+        self.assertEqual(list(figure.data[2].text), ["Q1: 29.90", "Q2: 32.20", "Q3: 37.10"])
+        tail_x = np.asarray(figure.data[1].x, dtype=float)
+        self.assertAlmostEqual(float(np.nanmin(tail_x)), 28.1)
+        self.assertAlmostEqual(float(np.nanmax(tail_x)), 38.9)
+        self.assertEqual(len(figure.layout.shapes), 1)
+        self.assertEqual(figure.layout.shapes[0].x0, 32.2)
+
+    def test_example_aggregate_produces_no_warnings(self):
+        self.assertEqual(
+            callbacks.distribution_warnings(self.aggregate_data, "ncit:C156420", self.dashboard_data),
+            [])
+
+    def test_example_figure_has_one_strip_trace_per_organisation(self):
+        figure = callbacks.generate_distribution_figure(
+            self.aggregate_data, "ncit:C156420", self.schema, self.dashboard_data)
+
+        strip_traces = [trace for trace in figure.data if trace.yaxis == "y2"]
+        self.assertEqual(len(strip_traces), 3)
+        x_range = list(figure.layout.xaxis.range)
+        self.assertAlmostEqual(x_range[0], 27.95)
+        self.assertAlmostEqual(x_range[1], 40.55)
+        # the grey tails span from the padded range ends to Q1 and Q3
+        tail_x = np.asarray(figure.data[1].x, dtype=float)
+        self.assertAlmostEqual(float(np.nanmin(tail_x)), 27.95)
+        self.assertAlmostEqual(float(np.nanmax(tail_x)), 40.55)
 
     def test_sex_counts_sum_the_latest_snapshot(self):
         orgs = sorted(self.dashboard_data["2026-01-01T00:00:00"].keys())

@@ -1,7 +1,6 @@
 import copy
 import io
 import json
-import math
 import re
 
 import numpy as np
@@ -9,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 import simple_icd_10 as icd10
+from plotly.subplots import make_subplots
 
 from collections import defaultdict
 from dash import dash_table
@@ -1943,87 +1943,243 @@ def load_aggregate_stats(aggregate_data):
     return categorical, numerical
 
 
-# For a normal distribution the IQR spans q1..q3 = mu +/- z*sigma with z ~ 0.6745
-_QUARTILE_Z = 0.6744897501960817
-# Number of evenly spaced grid points the density curve is evaluated on
-_CURVE_GRID_POINTS = 500
+# Share of the total variance lying between organisation means above which
+# distribution_warnings flags that the federated quartiles understate the spread
+_BETWEEN_ORGANISATION_SHARE_LIMIT = 0.25
 
 
-def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_data=None):
+def _aggregate_variable_stats(aggregate_data, variable):
     """
-    Generate a density curve of one continuous variable, reconstructed from the
-    central aggregate quartiles (q1, median, q3).
+    Load the statistics of one variable from the latest central aggregate snapshot.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data, keyed by
+                           ISO timestamp.
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    dict: Statistic name mapped to its float value, empty when nothing is available.
+    """
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    return {statistic: float(value) for statistic, value in zip(rows['statistic'], rows['value'])}
+
+
+def _reported_sd(stats):
+    """
+    Pick the reported standard deviation to check the curve against.
+
+    'adjusted std' is the exact SD of all patients combined and preferred; 'std' is
+    the pooled within-organisation SD.
+
+    Parameters:
+    stats (dict): Statistic name mapped to value, from _aggregate_variable_stats.
+
+    Returns:
+    tuple | None: (SD value, 'all patients' or 'within organisations'), or None when
+                  no positive SD is reported.
+    """
+    if stats.get('adjusted std', 0) > 0:
+        return stats['adjusted std'], 'all patients'
+    if stats.get('std', 0) > 0:
+        return stats['std'], 'within organisations'
+    return None
+
+
+def _organisation_quartiles(descriptive_data, variable):
+    """
+    Collect the Q1/median/Q3 (and count, when reported) of one variable per
+    organisation from the latest descriptive snapshot, sorted by organisation name.
+
+    Organisations without all three quartiles, or whose quartiles are not ordered
+    q1 <= median <= q3, are skipped.
+
+    Parameters:
+    descriptive_data (dict): The per-organisation snapshots (the 'store' data).
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    list[dict]: {'organisation', 'q1', 'median', 'q3', 'count'} per organisation;
+                count is None when the organisation reports no count.
+    """
+    if not descriptive_data or not variable:
+        return []
+    latest = descriptive_data[max(descriptive_data.keys())]
+    if not isinstance(latest, dict):
+        return []
+    quartiles = []
+    for organisation in sorted(latest):
+        org_data = latest[organisation]
+        if not isinstance(org_data, dict):
+            continue
+        _, numerical = _load_organization_stats(org_data)
+        rows = numerical[numerical['variable'] == variable]
+        stats = dict(zip(rows['statistic'], rows['value']))
+        if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+            continue
+        q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+        if not q1 <= median <= q3:
+            continue
+        count = float(stats['count']) if 'count' in stats else None
+        quartiles.append({'organisation': organisation, 'q1': q1, 'median': median,
+                          'q3': q3, 'count': count})
+    return quartiles
+
+
+def generate_distribution_figure(aggregate_data, variable, semantic_map_data=None,
+                                 descriptive_data=None):
+    """
+    Generate the distribution figure of one continuous variable from the central
+    aggregate quartiles (q1, median, q3).
 
     The central v6-descriptive-statistics result carries the federated q1, median
-    and q3 per variable (the algorithm removes min and max), so the distribution
-    is modelled from the quartiles alone: a log-normal when the quartiles are
-    right-skewed and strictly positive (the log transform makes it normal), a
-    normal otherwise. In both cases sigma follows from the IQR = q3 - q1 via
-    IQR = 2*z*sigma. The curve is evaluated on a dense, evenly spaced grid, the
-    IQR band (q1..q3) is shaded and the median is marked.
+    and q3 per variable (the algorithm removes min and max). Those three values
+    are all that is recorded about the shape of the distribution, so the figure
+    draws them directly as a horizontal whisker: a solid line spanning Q1 to Q3
+    (the middle 50% of patients in a typical organisation) with caps at Q1 and
+    Q3, and the median marked with a dashed line. No density is drawn, because
+    the quartiles do not record it. The outer quarters (another 25% of patients
+    on each side) are shown as grey dashed extensions to the padded x-range,
+    because their actual range is not shared (min/max removed) and their extent
+    is inferred, not recorded. The Q1, Q2 (median) and Q3 values are labelled in
+    the plot. When per-organisation descriptive data is given, a second row below
+    the whisker shows each organisation's Q1-median-Q3 as a whisker in the same
+    style, in the organisation's own colour.
 
     Parameters:
     aggregate_data (dict): The 'aggregate' section of the dashboard data.
     variable (str): The ontology class code of the variable to plot.
     semantic_map_data (dict, optional): The semantic map used for the variable label.
+    descriptive_data (dict, optional): The per-organisation snapshots (the 'store'
+                                       data), used for the organisation strip.
 
     Returns:
-    plotly.graph_objs._figure.Figure: The density curve, or an annotation figure when
-                                      no aggregate result or quartiles are available.
+    plotly.graph_objs._figure.Figure: The distribution figure, or an annotation
+                                      figure when no aggregate result or quartiles
+                                      are available.
     """
     if not aggregate_data:
         return _empty_annotation_figure('No central aggregate result available')
     if not variable:
         return _empty_annotation_figure('Select a variable to visualise its distribution')
     label = _readable_variable_name(variable, semantic_map_data)
-    _, numerical = load_aggregate_stats(aggregate_data)
-    rows = numerical[numerical['variable'] == variable]
-    stats = dict(zip(rows['statistic'], rows['value']))
+    stats = _aggregate_variable_stats(aggregate_data, variable)
     if not all(stat in stats for stat in ('q1', 'median', 'q3')):
         return _empty_annotation_figure(f'No quartile statistics available for {label}')
 
-    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
     iqr = q3 - q1
     if iqr <= 0:
         return _empty_annotation_figure(f'Degenerate IQR of 0 for {label}')
+    if not q1 <= median <= q3:
+        return _empty_annotation_figure(f'Federated quartiles are not in order for {label}')
+    if median == q1 or median == q3:
+        # one block would have zero width
+        return _empty_annotation_figure(
+            f'Quartiles coincide for {label}: at least a quarter of patients share one value')
 
-    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
-    if right_skewed:
-        # Log transform: the log-normal median is exp(mu) and its log-scale
-        # quartiles are mu +/- z*sigma, so sigma = ln(q3/q1) / (2*z)
-        mu = math.log(median)
-        sigma = math.log(q3 / q1) / (2 * _QUARTILE_Z)
-        x = np.linspace(math.exp(mu - 4 * sigma), math.exp(mu + 4 * sigma), _CURVE_GRID_POINTS)
-        y = np.exp(-((np.log(x) - mu) ** 2) / (2 * sigma ** 2)) / (x * sigma * math.sqrt(2 * math.pi))
-    else:
-        mu = median
-        sigma = iqr / (2 * _QUARTILE_Z)
-        x_lo = max(0.0, mu - 4 * sigma) if q1 > 0 else mu - 4 * sigma
-        x = np.linspace(x_lo, mu + 4 * sigma, _CURVE_GRID_POINTS)
-        y = np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
+    organisations = _organisation_quartiles(descriptive_data, variable)
+    x_lo = min([q1] + [org['q1'] for org in organisations]) - 0.25 * iqr
+    x_hi = max([q3] + [org['q3'] for org in organisations]) + 0.25 * iqr
 
-    curve_color = pio.templates[pio.templates.default].layout.colorway[0]
-    figure = go.Figure(go.Scatter(
-        x=x,
-        y=y,
+    color = pio.templates[pio.templates.default].layout.colorway[0]
+    # Recorded: the federated IQR (Q1..Q3) holds the middle 50% of patients in a
+    # typical organisation. Draw it as a horizontal whisker with caps at Q1 and
+    # Q3; no density is shown, because the quartiles do not record the shape.
+    whisker_y, cap = 0.5, 0.18
+    x_whisker = [q1, q3, np.nan, q1, q1, np.nan, q3, q3]
+    y_whisker = [whisker_y, whisker_y, np.nan,
+                 whisker_y - cap, whisker_y + cap, np.nan,
+                 whisker_y - cap, whisker_y + cap]
+    recorded_trace = go.Scatter(
+        x=x_whisker,
+        y=y_whisker,
         mode='lines',
-        fill='tozeroy',
-        name=label,
-        line=dict(color=curve_color, width=2),
+        showlegend=False,
+        line=dict(color=color, width=3),
         hovertemplate=(
             f"<b>{label}</b><br>"
-            "Value: <b>%{x:.2f}</b><br>"
-            "Density: <b>%{y:.4f}</b><extra></extra>"
+            f"IQR {q1:.2f}–{q3:.2f}: the middle 50% of patients in a typical organisation<br>"
+            f"Median {median:.2f} (dashed line)<extra></extra>"
         ),
-    ))
-
-    # Shade the IQR band and mark the median
-    figure.add_shape(
-        type='rect', x0=q1, x1=q3, y0=0, y1=1, yref='paper',
-        fillcolor=f'rgba(72, 72, 72, 0.15)', line=dict(width=0),
     )
+    # Outer quarters: another 25% of patients lie on each side of the IQR, but
+    # their actual range is not shared (min/max removed), so they are grey
+    # dashed extensions to the padded x-range: the extent is inferred.
+    tail_trace = go.Scatter(
+        x=[x_lo, q1, np.nan, q3, x_hi],
+        y=[whisker_y, whisker_y, np.nan, whisker_y, whisker_y],
+        mode='lines',
+        showlegend=False,
+        line=dict(color='#484848', width=2, dash='dash'),
+        hovertemplate=(
+            f"<b>{label}</b><br>"
+            "Outer 25% on each side of the IQR<br>"
+            "Actual range not shared (min/max removed): extent inferred, not recorded<extra></extra>"
+        ),
+    )
+    # the recorded quartile values, labelled inside the plot (trace text, so the
+    # layout keeps zero annotations)
+    label_trace = go.Scatter(
+        x=[q1, median, q3],
+        y=[0.78, 0.78, 0.78],
+        mode='text',
+        text=[f'Q1: {q1:.2f}', f'Q2: {median:.2f}', f'Q3: {q3:.2f}'],
+        textposition='bottom center',
+        textfont=dict(family='Poppins, sans-serif', size=12, color='#484848'),
+        hoverinfo='skip',
+        showlegend=False,
+    )
+
+    if organisations:
+        figure = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                               row_heights=[0.8, 0.2], vertical_spacing=0.08)
+        figure.add_trace(recorded_trace, row=1, col=1)
+        figure.add_trace(tail_trace, row=1, col=1)
+        figure.add_trace(label_trace, row=1, col=1)
+        organisation_colors = _organisation_color_map(descriptive_data)
+        n_orgs = len(organisations)
+        org_cap = 0.22
+        for i, org in enumerate(organisations):
+            org_color = organisation_colors[org['organisation']]
+            level = n_orgs - 1 - i  # first organisation on top
+            # same whisker style as the aggregate: line Q1-Q3, caps, median tick
+            x_org = [org['q1'], org['q3'], np.nan,
+                     org['q1'], org['q1'], np.nan,
+                     org['q3'], org['q3'], np.nan,
+                     org['median'], org['median']]
+            y_org = [level, level, np.nan,
+                     level - org_cap, level + org_cap, np.nan,
+                     level - org_cap, level + org_cap, np.nan,
+                     level - 0.15, level + 0.15]
+            hovertemplate = (
+                f"<b>{org['organisation']}</b><br>"
+                f"Q1: <b>{org['q1']:.2f}</b><br>"
+                f"Median: <b>{org['median']:.2f}</b><br>"
+                f"Q3: <b>{org['q3']:.2f}</b>"
+            )
+            if org['count'] is not None:
+                hovertemplate += f"<br>n: <b>{org['count']:.0f}</b>"
+            hovertemplate += "<extra></extra>"
+            figure.add_trace(go.Scatter(
+                x=x_org,
+                y=y_org,
+                mode='lines',
+                name=org['organisation'],
+                showlegend=False,
+                line=dict(color=org_color, width=3),
+                hovertemplate=hovertemplate,
+            ), row=2, col=1)
+    else:
+        figure = go.Figure()
+        figure.add_trace(recorded_trace)
+        figure.add_trace(tail_trace)
+        figure.add_trace(label_trace)
+
+    # Mark the median with a small dashed tick on the whisker, like the Q1/Q3 caps
     figure.add_shape(
-        type='line', x0=median, x1=median, y0=0, y1=1, yref='paper',
+        type='line', x0=median, x1=median, y0=whisker_y - cap, y1=whisker_y + cap,
+        xref='x', yref='y',
         line=dict(color='#484848', width=2, dash='dash'),
     )
 
@@ -2033,19 +2189,33 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        height=400,
+        height=400 + 28 * len(organisations) if organisations else 400,
         margin=dict(l=60, r=20, t=40, b=40),
-        xaxis=dict(title=label),
-        yaxis=dict(title='Density', rangemode='tozero'),
     )
+    figure.update_xaxes(range=[x_lo, x_hi])
+    if organisations:
+        figure.update_xaxes(title=label, row=2, col=1)
+        # the whisker row carries no density axis: the quartiles record no shape
+        figure.update_yaxes(visible=False, range=[0, 1], row=1, col=1)
+        names = [org['organisation'] for org in organisations]
+        figure.update_yaxes(
+            range=[-0.6, n_orgs - 0.4],
+            tickvals=list(range(n_orgs)),
+            ticktext=list(reversed(names)),
+            title='Organisations', row=2, col=1)
+    else:
+        figure.update_xaxes(title=label)
+        figure.update_yaxes(visible=False, range=[0, 1])
     return _finalize_figure(figure)
 
 
 def format_distribution_stats(aggregate_data, variable):
     """
     Format the quartile statistics of one variable from the central aggregate
-    result as a one-line summary (Q1, median, Q3, IQR, mean, std, n, transform),
-    rendered next to the distribution curve instead of inside the graph.
+    result as a one-line summary (Q1, median, Q3, IQR, mean, SD, n), rendered next
+    to the distribution figure instead of inside the graph. The SD is the
+    'adjusted std' (all patients combined) when reported, otherwise the
+    within-organisation 'std'.
 
     Parameters:
     aggregate_data (dict): The 'aggregate' section of the dashboard data.
@@ -2056,24 +2226,77 @@ def format_distribution_stats(aggregate_data, variable):
     """
     if not aggregate_data or not variable:
         return ''
-    _, numerical = load_aggregate_stats(aggregate_data)
-    rows = numerical[numerical['variable'] == variable]
-    stats = dict(zip(rows['statistic'], rows['value']))
+    stats = _aggregate_variable_stats(aggregate_data, variable)
     if not all(stat in stats for stat in ('q1', 'median', 'q3')):
         return ''
 
-    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
     iqr = q3 - q1
-    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
     text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
     if 'mean' in stats:
-        text += f' | Mean: {float(stats["mean"]):.2f}'
-    if 'std' in stats:
-        text += f' | Std: {float(stats["std"]):.2f}'
+        text += f' | Mean: {stats["mean"]:.2f}'
+    reported_sd = _reported_sd(stats)
+    if reported_sd is not None:
+        sd_value, sd_label = reported_sd
+        text += f' | SD ({sd_label}): {sd_value:.2f}'
     if 'count' in stats:
-        text += f' | n: {float(stats["count"]):.0f}'
-    text += ' (log-transformed)' if right_skewed else ' (normal)'
+        text += f' | n: {stats["count"]:.0f}'
     return text
+
+
+def distribution_warnings(aggregate_data, variable, descriptive_data=None):
+    """
+    Check the federated quartiles of one variable against the other statistics of
+    the central aggregate result and the per-organisation quartiles, and explain
+    where the blocks are misleading.
+
+    Returns an empty list when the figure cannot be drawn at all (same guards as
+    generate_distribution_figure).
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable.
+    descriptive_data (dict, optional): The per-organisation snapshots (the 'store'
+                                       data), used for the organisation medians check.
+
+    Returns:
+    list[str]: Human-readable warnings, in a stable order.
+    """
+    if not aggregate_data or not variable:
+        return []
+    stats = _aggregate_variable_stats(aggregate_data, variable)
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return []
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
+    iqr = q3 - q1
+    if iqr <= 0 or not q1 <= median <= q3:
+        return []
+    if median == q1 or median == q3:
+        return []
+
+    warnings = []
+    std = stats.get('std')
+    adjusted_std = stats.get('adjusted std')
+    if std is not None and adjusted_std is not None and adjusted_std > 0:
+        # std is the within-organisation SD and adjusted std the SD of all
+        # patients, both over the same N, so 1 - (std / adjusted std)^2 is
+        # exactly the share of the variance that lies between organisation means
+        share = min(1.0, max(0.0, 1 - (std / adjusted_std) ** 2))
+        if share > _BETWEEN_ORGANISATION_SHARE_LIMIT:
+            warnings.append(
+                f'{share:.0%} of the variation lies between organisations '
+                f'(SD within organisations {std:.2f}, all patients {adjusted_std:.2f}): '
+                'the blocks show a typical organisation and understate the spread of all '
+                'patients combined.')
+    organisations = _organisation_quartiles(descriptive_data, variable)
+    if len(organisations) >= 2:
+        medians = [org['median'] for org in organisations]
+        if max(medians) - min(medians) > iqr:
+            warnings.append(
+                f'Organisation medians range from {min(medians):.2f} to {max(medians):.2f}, '
+                f'wider than the federated IQR ({iqr:.2f}): the blocks show a typical '
+                'organisation, not all patients combined.')
+    return warnings
 
 
 def _donut_figure(labels, values):
