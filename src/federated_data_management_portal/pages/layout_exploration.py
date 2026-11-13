@@ -11,7 +11,7 @@ layout = chrome.page_scaffold(
         html.Div(id='tile-exploration-categorical', className='tile tile-7', children=[
             html.H5('Categorical variables', className='tile-title'),
             html.Div(className='options-row', children=[
-                "Select the organisation(s) for this chart",
+                "Select the organisation(s) for these charts",
                 dcc.Checklist(
                     id='exploration-subset-selection-checkboxes', className='subset-selection-checkboxes',
                     options=[],
@@ -28,38 +28,93 @@ layout = chrome.page_scaffold(
                         placeholder='Categorical variable',
                         clearable=False
                     )]),
-                chrome.toolbar_right(
-                    html.Div(className='filter-wrap visualisation-selector', children=[
-                        html.Button([
-                            'Select visualisation ',
-                            html.Span(id='exploration-view-indicator', className='view-type-indicator',
-                                      children='(Pie chart)'),
-                            html.I(className='fas fa-chevron-down'),
-                        ], id='exploration-view-toggle', className='vis-btn view-selection-btn'),
-                        html.Div(id='exploration-view-menu', className='filter-dropdown', hidden=True, children=[
-                            html.Button('Pie chart', id='exploration-view-pie', className='filter-option current'),
-                            html.Button('Bar chart', id='exploration-view-bar', className='filter-option'),
-                            html.Button('CSV', id='exploration-view-csv', className='filter-option'),
-                        ]),
-                        dcc.Store(id='exploration-view-store', data='pie'),
-                    ]),
-                    chrome.plot_download_control(include_csv=True, csv_button_id='exploration-csv-download-btn'),
-                ),
-                dcc.Download(id='exploration-csv-download'),
             ]),
             html.Hr(className='tile-divider'),
-            dcc.Graph(
-                id='exploration-categorical-graph',
-                config=chrome.graph_config('categorical-variable-counts')
-            ),
-            html.Div(id='exploration-categorical-csv', hidden=True, children=[
-                dash_table.DataTable(
-                    id='exploration-categorical-csv-table',
-                    columns=[{'name': 'Category', 'id': 'category'},
-                             {'name': 'Count', 'id': 'count'}]
+            # the per-organisation chart is its own section: label on the left,
+            # visualisation selector and download on the right
+            html.Div(className='exploration-categorical-section', children=[
+                html.Div(className='filter-bar', children=[
+                    html.Div('Selected organisations', className='exploration-plot-label'),
+                    chrome.toolbar_right(
+                        html.Div(className='filter-wrap visualisation-selector', children=[
+                            html.Button([
+                                'Select visualisation ',
+                                html.Span(id='exploration-view-indicator', className='view-type-indicator',
+                                          children='(Pie chart)'),
+                                html.I(className='fas fa-chevron-down'),
+                            ], id='exploration-view-toggle', className='vis-btn view-selection-btn'),
+                            html.Div(id='exploration-view-menu', className='filter-dropdown', hidden=True, children=[
+                                html.Button('Pie chart', id='exploration-view-pie', className='filter-option current'),
+                                html.Button('Bar chart', id='exploration-view-bar', className='filter-option'),
+                                html.Button('CSV', id='exploration-view-csv', className='filter-option'),
+                            ]),
+                            dcc.Store(id='exploration-view-store', data='pie'),
+                        ]),
+                        chrome.plot_download_control(include_csv=True, csv_button_id='exploration-csv-download-btn'),
+                    ),
+                ]),
+                dcc.Graph(
+                    id='exploration-categorical-graph',
+                    config=chrome.graph_config('categorical-variable-counts')
                 ),
+                html.Div(id='exploration-categorical-csv', hidden=True, children=[
+                    dash_table.DataTable(
+                        id='exploration-categorical-csv-table',
+                        columns=[{'name': 'Category', 'id': 'category'},
+                                 {'name': 'Count', 'id': 'count'}]
+                    ),
+                ]),
+                dcc.Store(id='exploration-csv-store'),
+                dcc.Download(id='exploration-csv-download'),
             ]),
-            dcc.Store(id='exploration-csv-store')
+            # the per-country chart is its own section below a subtle dotted
+            # line, with its own visualisation selector and download button;
+            # it follows the same organisation selection
+            html.Hr(className='exploration-categorical-divider'),
+            html.Div(className='exploration-country-section', children=[
+                html.Div(className='filter-bar', children=[
+                    html.Div('Per country (selected organisations)',
+                             className='exploration-plot-label'),
+                    chrome.toolbar_right(
+                        html.Div(className='filter-wrap visualisation-selector', children=[
+                            html.Button([
+                                'Select visualisation ',
+                                html.Span(id='exploration-country-view-indicator',
+                                          className='view-type-indicator',
+                                          children='(Bar chart)'),
+                                html.I(className='fas fa-chevron-down'),
+                            ], id='exploration-country-view-toggle',
+                               className='vis-btn view-selection-btn'),
+                            html.Div(id='exploration-country-view-menu',
+                                     className='filter-dropdown', hidden=True, children=[
+                                html.Button('Bar chart', id='exploration-country-view-bar',
+                                            className='filter-option current'),
+                                html.Button('Proportions', id='exploration-country-view-percent',
+                                            className='filter-option'),
+                                html.Button('CSV', id='exploration-country-view-csv',
+                                            className='filter-option'),
+                            ]),
+                            dcc.Store(id='exploration-country-view-store', data='bar'),
+                        ]),
+                        chrome.plot_download_control(
+                            include_csv=True, csv_button_id='exploration-country-csv-download-btn'),
+                    ),
+                ]),
+                dcc.Graph(
+                    id='exploration-categorical-graph-country',
+                    config=chrome.graph_config('categorical-variable-counts-per-country')
+                ),
+                html.Div(id='exploration-categorical-country-csv', hidden=True, children=[
+                    dash_table.DataTable(
+                        id='exploration-categorical-country-csv-table',
+                        columns=[{'name': 'Country', 'id': 'country'},
+                                 {'name': 'Category', 'id': 'category'},
+                                 {'name': 'Count', 'id': 'count'}]
+                    ),
+                ]),
+                dcc.Store(id='exploration-country-csv-store'),
+                dcc.Download(id='exploration-country-csv-download'),
+            ]),
         ]),
         html.Div(id='tile-exploration-distributions', className='tile tile-7', children=[
             html.H5('Numerical variables', className='tile-title'),
@@ -99,7 +154,9 @@ layout = chrome.page_scaffold(
                 "that extent is inferred, not recorded. The federated quartiles combine each "
                 "organisation's quartiles, so they describe a typical organisation rather than "
                 "all patients combined; the whiskers below show each organisation's Q1–median–Q3 "
-                "in the same style."
+                "in the same style, and beneath those each country's whisker on the same axis — "
+                "estimated by combining that country's organisations' quartiles weighted by "
+                "their counts, so an estimate rather than a recorded value."
             ])
         ]),
     ],

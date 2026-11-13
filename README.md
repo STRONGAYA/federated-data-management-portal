@@ -61,8 +61,14 @@ labelled in the plot, and the median marked with a short dashed tick; no density
 because the quartiles do not record the shape or peak of the distribution. The lowest and
 highest 25% (a further 25% on each side) are shown as grey dashed extensions outside Q1–Q3;
 their actual range is not shared (minimum, maximum and raw values are removed), so their
-extent is inferred, not recorded. Below the whisker, one whisker per organisation shows its own
-Q1–median–Q3 in the same style, in the organisation's own colour. The page also warns when more than a quarter of the
+extent is inferred, not recorded. Below the whisker, one strip row on a single vertical axis shows
+each organisation's own Q1–median–Q3 whisker in the organisation's own colour, and beneath those
+one whisker per country (estimated by combining that country's organisations' quartiles weighted
+by their counts — an estimate, not a recorded value), with a subtle dotted separator and
+'Organisations'/'Countries' labels between the two groups. The categorical tile has two sections, each with its own label, visualisation selector
+and download button: the top one over the selected organisations, and below a subtle dotted
+line one per country (counts or proportions, or a CSV table) showing the variable's values
+within each country (e.g. males/females per country) over the selected organisations. The page also warns when more than a quarter of the
 variation lies between organisations (computed from `std` versus `adjusted std`) or when
 organisation medians spread wider than the federated IQR; the stats line and the warnings
 prefer `adjusted std` (the SD of all patients combined) over `std` (the within-organisation
