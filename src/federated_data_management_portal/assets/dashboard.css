@@ -151,6 +151,20 @@ body {
     position: relative;
 }
 
+/* the distribution tile's explanation texts (note, stats, warnings, disclaimer)
+   span the full tile width, so the long disclaimer wraps onto fewer lines */
+#tile-exploration-distributions .explanation {
+    width: 100%;
+    margin-left: 0;
+}
+
+/* the note directly under the tile title sits closer to the title, with more
+   air between it and the filter controls below */
+#tile-exploration-distributions .tile-title + .explanation {
+    margin-top: 0.4%;
+    margin-bottom: 2.5%;
+}
+
 
 .landing-content {
     text-align: center;
