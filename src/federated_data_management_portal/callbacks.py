@@ -1,7 +1,6 @@
 import copy
 import io
 import json
-import math
 import re
 
 import numpy as np
@@ -9,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 import simple_icd_10 as icd10
+from plotly.subplots import make_subplots
 
 from collections import defaultdict
 from dash import dash_table
@@ -1943,87 +1943,395 @@ def load_aggregate_stats(aggregate_data):
     return categorical, numerical
 
 
-# For a normal distribution the IQR spans q1..q3 = mu +/- z*sigma with z ~ 0.6745
-_QUARTILE_Z = 0.6744897501960817
-# Number of evenly spaced grid points the density curve is evaluated on
-_CURVE_GRID_POINTS = 500
+# Share of the total variance lying between organisation means above which
+# distribution_warnings flags that the federated quartiles understate the spread
+_BETWEEN_ORGANISATION_SHARE_LIMIT = 0.25
 
 
-def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_data=None):
+def _aggregate_variable_stats(aggregate_data, variable):
     """
-    Generate a density curve of one continuous variable, reconstructed from the
-    central aggregate quartiles (q1, median, q3).
+    Load the statistics of one variable from the latest central aggregate snapshot.
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data, keyed by
+                           ISO timestamp.
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    dict: Statistic name mapped to its float value, empty when nothing is available.
+    """
+    _, numerical = load_aggregate_stats(aggregate_data)
+    rows = numerical[numerical['variable'] == variable]
+    return {statistic: float(value) for statistic, value in zip(rows['statistic'], rows['value'])}
+
+
+def _reported_sd(stats):
+    """
+    Pick the reported standard deviation to check the curve against.
+
+    'adjusted std' is the exact SD of all patients combined and preferred; 'std' is
+    the pooled within-organisation SD.
+
+    Parameters:
+    stats (dict): Statistic name mapped to value, from _aggregate_variable_stats.
+
+    Returns:
+    tuple | None: (SD value, 'all patients' or 'within organisations'), or None when
+                  no positive SD is reported.
+    """
+    if stats.get('adjusted std', 0) > 0:
+        return stats['adjusted std'], 'all patients'
+    if stats.get('std', 0) > 0:
+        return stats['std'], 'within organisations'
+    return None
+
+
+def _organisation_quartiles(descriptive_data, variable):
+    """
+    Collect the Q1/median/Q3 (and count, when reported) of one variable per
+    organisation from the latest descriptive snapshot, sorted by organisation name.
+
+    Organisations without all three quartiles, or whose quartiles are not ordered
+    q1 <= median <= q3, are skipped.
+
+    Parameters:
+    descriptive_data (dict): The per-organisation snapshots (the 'store' data).
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    list[dict]: {'organisation', 'q1', 'median', 'q3', 'count'} per organisation;
+                count is None when the organisation reports no count.
+    """
+    if not descriptive_data or not variable:
+        return []
+    latest = descriptive_data[max(descriptive_data.keys())]
+    if not isinstance(latest, dict):
+        return []
+    quartiles = []
+    for organisation in sorted(latest):
+        org_data = latest[organisation]
+        if not isinstance(org_data, dict):
+            continue
+        _, numerical = _load_organization_stats(org_data)
+        rows = numerical[numerical['variable'] == variable]
+        stats = dict(zip(rows['statistic'], rows['value']))
+        if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+            continue
+        q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+        if not q1 <= median <= q3:
+            continue
+        count = float(stats['count']) if 'count' in stats else None
+        quartiles.append({'organisation': organisation, 'country': org_data.get('country'),
+                          'q1': q1, 'median': median, 'q3': q3, 'count': count})
+    return quartiles
+
+
+def organisations_by_country(descriptive_data):
+    """
+    Map every country of the latest snapshot to its organisations.
+
+    Parameters:
+    descriptive_data (dict): The per-organisation snapshots (the 'store' data).
+
+    Returns:
+    dict: Country name mapped to the sorted list of its organisation names;
+          empty when there is no snapshot. Organisations without a country
+          field are grouped under 'Unknown'.
+    """
+    if not descriptive_data:
+        return {}
+    latest = descriptive_data[max(descriptive_data.keys())]
+    if not isinstance(latest, dict):
+        return {}
+    by_country = defaultdict(list)
+    for organisation, org_data in latest.items():
+        if isinstance(org_data, dict):
+            by_country[org_data.get('country') or 'Unknown'].append(organisation)
+    return {country: sorted(orgs) for country, orgs in by_country.items()}
+
+
+def _country_quartiles(descriptive_data, variable):
+    """
+    Combine the per-organisation quartiles of one variable into per-country
+    quartiles from the latest descriptive snapshot, sorted by country name.
+
+    Only the per-organisation quartiles are shared, not the raw values, so a
+    country's quartiles are estimated by averaging its organisations' quartiles
+    weighted by each organisation's count for the variable (equal weights when
+    any count is missing). Countries whose combined quartiles are not ordered
+    q1 <= median <= q3, or with no organisation reporting quartiles, are skipped.
+
+    Parameters:
+    descriptive_data (dict): The per-organisation snapshots (the 'store' data).
+    variable (str): The ontology class code of the variable.
+
+    Returns:
+    list[dict]: {'country', 'q1', 'median', 'q3', 'count', 'organisations'} per
+                country; count is the summed count (None when no organisation
+                reports one) and organisations the number of organisations
+                combined.
+    """
+    by_country = defaultdict(list)
+    for org in _organisation_quartiles(descriptive_data, variable):
+        by_country[org['country'] or 'Unknown'].append(org)
+    countries = []
+    for country in sorted(by_country):
+        orgs = by_country[country]
+        if all(org['count'] is not None for org in orgs):
+            weights = [org['count'] for org in orgs]
+        else:
+            weights = [1.0] * len(orgs)
+        total = sum(weights)
+        combined = {stat: sum(w * org[stat] for org, w in zip(orgs, weights)) / total
+                    for stat in ('q1', 'median', 'q3')}
+        if not combined['q1'] <= combined['median'] <= combined['q3']:
+            continue
+        counts = [org['count'] for org in orgs if org['count'] is not None]
+        countries.append({'country': country, 'q1': combined['q1'], 'median': combined['median'],
+                          'q3': combined['q3'],
+                          'count': sum(counts) if counts else None,
+                          'organisations': len(orgs)})
+    return countries
+
+
+def _country_color_map(descriptive_data):
+    """
+    Assign every country a fixed colour from the active template colourway,
+    so a country keeps its colour across charts.
+
+    Parameters:
+    descriptive_data (dict): The per-organisation snapshots (the 'store' data).
+
+    Returns:
+    dict: Country name mapped to a colour from the template colourway.
+    """
+    countries = sorted({country for country, _ in organisations_by_country(descriptive_data).items()})
+    colorway = pio.templates[pio.templates.default].layout.colorway
+    return {country: colorway[i % len(colorway)] for i, country in enumerate(countries)}
+
+
+def _strip_whisker_trace(name, entry, level, color, cap, is_country):
+    """
+    Build one strip whisker trace (line Q1-Q3 with caps and a median tick) for an
+    organisation or a country at the given y level.
+
+    Parameters:
+    name (str): The organisation or country name (trace name and hover header).
+    entry (dict): The quartile entry with 'q1', 'median', 'q3' and optionally
+                  'count'; countries also carry 'organisations'.
+    level (float): The y level of the whisker in the strip row.
+    color (str): The line colour.
+    cap (float): Half the cap height.
+    is_country (bool): Whether the entry is a country (adds the combination note
+                       to the hover).
+
+    Returns:
+    plotly.graph_objs.Scatter: The whisker trace.
+    """
+    x_entry = [entry['q1'], entry['q3'], np.nan,
+               entry['q1'], entry['q1'], np.nan,
+               entry['q3'], entry['q3'], np.nan,
+               entry['median'], entry['median']]
+    y_entry = [level, level, np.nan,
+               level - cap, level + cap, np.nan,
+               level - cap, level + cap, np.nan,
+               level - 0.15, level + 0.15]
+    hovertemplate = (
+        f"<b>{name}</b><br>"
+        f"Q1: <b>{entry['q1']:.2f}</b><br>"
+        f"Median: <b>{entry['median']:.2f}</b><br>"
+        f"Q3: <b>{entry['q3']:.2f}</b>"
+    )
+    if is_country:
+        hovertemplate += (f"<br>Estimated from {entry['organisations']} organisations: "
+                          "quartiles combined weighted by their counts — an estimate, "
+                          "not a recorded value")
+    if entry.get('count') is not None:
+        hovertemplate += f"<br>n: <b>{entry['count']:.0f}</b>"
+    hovertemplate += "<extra></extra>"
+    return go.Scatter(
+        x=x_entry,
+        y=y_entry,
+        mode='lines',
+        name=name,
+        showlegend=False,
+        line=dict(color=color, width=3),
+        hovertemplate=hovertemplate,
+    )
+
+
+def generate_distribution_figure(aggregate_data, variable, semantic_map_data=None,
+                                 descriptive_data=None):
+    """
+    Generate the distribution figure of one continuous variable from the central
+    aggregate quartiles (q1, median, q3).
 
     The central v6-descriptive-statistics result carries the federated q1, median
-    and q3 per variable (the algorithm removes min and max), so the distribution
-    is modelled from the quartiles alone: a log-normal when the quartiles are
-    right-skewed and strictly positive (the log transform makes it normal), a
-    normal otherwise. In both cases sigma follows from the IQR = q3 - q1 via
-    IQR = 2*z*sigma. The curve is evaluated on a dense, evenly spaced grid, the
-    IQR band (q1..q3) is shaded and the median is marked.
+    and q3 per variable (the algorithm removes min and max). Those three values
+    are all that is recorded about the shape of the distribution, so the figure
+    draws them directly as a horizontal whisker: a solid line spanning Q1 to Q3
+    (the middle 50% of patients in a typical organisation) with caps at Q1 and
+    Q3, and the median marked with a dashed line. No density is drawn, because
+    the quartiles do not record it. The outer quarters (another 25% of patients
+    on each side) are shown as grey dashed extensions to the padded x-range,
+    because their actual range is not shared (min/max removed) and their extent
+    is inferred, not recorded. The Q1, Q2 (median) and Q3 values are labelled in
+    the plot. When per-organisation descriptive data is given, one strip row
+    below the whisker shows each organisation's Q1-median-Q3 as a whisker in
+    the same style, in the organisation's own colour, and beneath those each
+    country's whisker, estimated by combining the country's organisations'
+    quartiles weighted by their counts, in the country's own colour.
+    Organisations and
+    countries share a single vertical axis with an empty level between the
+    groups, a subtle dotted separator, and 'Organisations' and 'Countries'
+    labelled at the right of the row.
 
     Parameters:
     aggregate_data (dict): The 'aggregate' section of the dashboard data.
     variable (str): The ontology class code of the variable to plot.
     semantic_map_data (dict, optional): The semantic map used for the variable label.
+    descriptive_data (dict, optional): The per-organisation snapshots (the 'store'
+                                       data), used for the organisation strip.
 
     Returns:
-    plotly.graph_objs._figure.Figure: The density curve, or an annotation figure when
-                                      no aggregate result or quartiles are available.
+    plotly.graph_objs._figure.Figure: The distribution figure, or an annotation
+                                      figure when no aggregate result or quartiles
+                                      are available.
     """
     if not aggregate_data:
         return _empty_annotation_figure('No central aggregate result available')
     if not variable:
         return _empty_annotation_figure('Select a variable to visualise its distribution')
     label = _readable_variable_name(variable, semantic_map_data)
-    _, numerical = load_aggregate_stats(aggregate_data)
-    rows = numerical[numerical['variable'] == variable]
-    stats = dict(zip(rows['statistic'], rows['value']))
+    stats = _aggregate_variable_stats(aggregate_data, variable)
     if not all(stat in stats for stat in ('q1', 'median', 'q3')):
         return _empty_annotation_figure(f'No quartile statistics available for {label}')
 
-    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
     iqr = q3 - q1
     if iqr <= 0:
         return _empty_annotation_figure(f'Degenerate IQR of 0 for {label}')
+    if not q1 <= median <= q3:
+        return _empty_annotation_figure(f'Federated quartiles are not in order for {label}')
+    if median == q1 or median == q3:
+        # one block would have zero width
+        return _empty_annotation_figure(
+            f'Quartiles coincide for {label}: at least a quarter of patients share one value')
 
-    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
-    if right_skewed:
-        # Log transform: the log-normal median is exp(mu) and its log-scale
-        # quartiles are mu +/- z*sigma, so sigma = ln(q3/q1) / (2*z)
-        mu = math.log(median)
-        sigma = math.log(q3 / q1) / (2 * _QUARTILE_Z)
-        x = np.linspace(math.exp(mu - 4 * sigma), math.exp(mu + 4 * sigma), _CURVE_GRID_POINTS)
-        y = np.exp(-((np.log(x) - mu) ** 2) / (2 * sigma ** 2)) / (x * sigma * math.sqrt(2 * math.pi))
-    else:
-        mu = median
-        sigma = iqr / (2 * _QUARTILE_Z)
-        x_lo = max(0.0, mu - 4 * sigma) if q1 > 0 else mu - 4 * sigma
-        x = np.linspace(x_lo, mu + 4 * sigma, _CURVE_GRID_POINTS)
-        y = np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
+    organisations = _organisation_quartiles(descriptive_data, variable)
+    countries = _country_quartiles(descriptive_data, variable)
+    strip_entries = list(organisations) + list(countries)
+    has_strip = bool(strip_entries)
+    # one empty level between the organisation and country groups for breathing room
+    gap = 1 if (organisations and countries) else 0
+    n_levels = len(organisations) + len(countries) + gap
+    x_lo = min([q1] + [entry['q1'] for entry in strip_entries]) - 0.25 * iqr
+    x_hi = max([q3] + [entry['q3'] for entry in strip_entries]) + 0.25 * iqr
 
-    curve_color = pio.templates[pio.templates.default].layout.colorway[0]
-    figure = go.Figure(go.Scatter(
-        x=x,
-        y=y,
+    color = pio.templates[pio.templates.default].layout.colorway[0]
+    # Recorded: the federated IQR (Q1..Q3) holds the middle 50% of patients in a
+    # typical organisation. Draw it as a horizontal whisker with caps at Q1 and
+    # Q3; no density is shown, because the quartiles do not record the shape.
+    whisker_y, cap = 0.5, 0.18
+    x_whisker = [q1, q3, np.nan, q1, q1, np.nan, q3, q3]
+    y_whisker = [whisker_y, whisker_y, np.nan,
+                 whisker_y - cap, whisker_y + cap, np.nan,
+                 whisker_y - cap, whisker_y + cap]
+    recorded_trace = go.Scatter(
+        x=x_whisker,
+        y=y_whisker,
         mode='lines',
-        fill='tozeroy',
-        name=label,
-        line=dict(color=curve_color, width=2),
+        showlegend=False,
+        line=dict(color=color, width=3),
         hovertemplate=(
             f"<b>{label}</b><br>"
-            "Value: <b>%{x:.2f}</b><br>"
-            "Density: <b>%{y:.4f}</b><extra></extra>"
+            f"IQR {q1:.2f}–{q3:.2f}: the middle 50% of patients in a typical organisation<br>"
+            f"Median {median:.2f} (dashed line)<extra></extra>"
         ),
-    ))
-
-    # Shade the IQR band and mark the median
-    figure.add_shape(
-        type='rect', x0=q1, x1=q3, y0=0, y1=1, yref='paper',
-        fillcolor=f'rgba(72, 72, 72, 0.15)', line=dict(width=0),
     )
+    # Outer quarters: another 25% of patients lie on each side of the IQR, but
+    # their actual range is not shared (min/max removed), so they are grey
+    # dashed extensions to the padded x-range: the extent is inferred.
+    tail_trace = go.Scatter(
+        x=[x_lo, q1, np.nan, q3, x_hi],
+        y=[whisker_y, whisker_y, np.nan, whisker_y, whisker_y],
+        mode='lines',
+        showlegend=False,
+        line=dict(color='#484848', width=2, dash='dash'),
+        hovertemplate=(
+            f"<b>{label}</b><br>"
+            "Outer 25% on each side of the IQR<br>"
+            "Actual range not shared (min/max removed): extent inferred, not recorded<extra></extra>"
+        ),
+    )
+    # the recorded quartile values, labelled inside the plot (trace text, so the
+    # layout keeps zero annotations)
+    label_trace = go.Scatter(
+        x=[q1, median, q3],
+        y=[0.78, 0.78, 0.78],
+        mode='text',
+        text=[f'Q1: {q1:.2f}', f'Q2: {median:.2f}', f'Q3: {q3:.2f}'],
+        textposition='bottom center',
+        textfont=dict(family='Poppins, sans-serif', size=12, color='#484848'),
+        hoverinfo='skip',
+        showlegend=False,
+    )
+
+    organisation_colors = _organisation_color_map(descriptive_data) if descriptive_data else {}
+    country_colors = _country_color_map(descriptive_data) if descriptive_data else {}
+
+    if has_strip:
+        # one strip row on a single vertical axis: organisations on top,
+        # countries below, separated by a subtle dotted line
+        figure = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                               row_heights=[0.75, 0.25], vertical_spacing=0.0)
+        figure.add_trace(recorded_trace, row=1, col=1)
+        figure.add_trace(tail_trace, row=1, col=1)
+        figure.add_trace(label_trace, row=1, col=1)
+        strip_cap = 0.22
+        n_orgs, n_countries = len(organisations), len(countries)
+        for i, org in enumerate(organisations):
+            level = n_levels - 1 - i  # first organisation on top
+            figure.add_trace(_strip_whisker_trace(
+                org['organisation'], org, level, organisation_colors[org['organisation']],
+                strip_cap, is_country=False), row=2, col=1)
+        for j, country in enumerate(countries):
+            level = n_countries - 1 - j  # countries sit below the empty gap level
+            figure.add_trace(_strip_whisker_trace(
+                country['country'], country, level, country_colors[country['country']],
+                strip_cap, is_country=True), row=2, col=1)
+        if gap:
+            # subtle dotted line exactly between the two groups: the empty
+            # level's centre is equidistant from the lowest organisation
+            # (level n_countries + 1) and the highest country (level
+            # n_countries - 1)
+            separator_y = n_countries
+            figure.add_shape(
+                type='line', x0=x_lo, x1=x_hi, y0=separator_y, y1=separator_y,
+                xref='x', yref='y2',
+                line=dict(color='#b8b8b8', width=1, dash='dot'),
+            )
+        # group labels on the same vertical axis, outside the plot area in the
+        # right margin so they never overlap a whisker
+        label_font = dict(family='Poppins, sans-serif', size=11, color='#8a8a8a')
+        if organisations:
+            figure.add_annotation(
+                x=1.0, y=(n_countries + gap + n_levels - 1) / 2, xref='paper', yref='y2',
+                text='Organisations', showarrow=False, xanchor='left', font=label_font)
+        if countries:
+            figure.add_annotation(
+                x=1.0, y=(n_countries - 1) / 2, xref='paper', yref='y2',
+                text='Countries', showarrow=False, xanchor='left', font=label_font)
+    else:
+        figure = go.Figure()
+        figure.add_trace(recorded_trace)
+        figure.add_trace(tail_trace)
+        figure.add_trace(label_trace)
+
+    # Mark the median with a small dashed tick on the whisker, like the Q1/Q3 caps
     figure.add_shape(
-        type='line', x0=median, x1=median, y0=0, y1=1, yref='paper',
+        type='line', x0=median, x1=median, y0=whisker_y - cap, y1=whisker_y + cap,
+        xref='x', yref='y',
         line=dict(color='#484848', width=2, dash='dash'),
     )
 
@@ -2033,19 +2341,40 @@ def generate_distribution_curve_figure(aggregate_data, variable, semantic_map_da
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        height=400,
-        margin=dict(l=60, r=20, t=40, b=40),
-        xaxis=dict(title=label),
-        yaxis=dict(title='Density', rangemode='tozero'),
+        height=400 + 28 * n_levels if has_strip else 400,
+        # the strip row carries group labels in the right margin
+        margin=dict(l=60, r=110 if has_strip else 20, t=40, b=40),
     )
+    figure.update_xaxes(range=[x_lo, x_hi])
+    if has_strip:
+        figure.update_xaxes(title=label, row=2, col=1)
+        # the whisker row carries no density axis: the quartiles record no shape
+        # trim the empty space below the whisker so the strip row sits close
+        figure.update_yaxes(visible=False, range=[0.3, 1], row=1, col=1)
+        # organisations and countries share one vertical axis (the strip row),
+        # with an empty tick for the gap level between the two groups
+        names = [org['organisation'] for org in organisations]
+        if gap:
+            names.append('')
+        names += [c['country'] for c in countries]
+        figure.update_yaxes(
+            range=[-0.3, n_levels - 0.7],
+            tickvals=list(range(n_levels)),
+            ticktext=list(reversed(names)),
+            row=2, col=1)
+    else:
+        figure.update_xaxes(title=label)
+        figure.update_yaxes(visible=False, range=[0.3, 1])
     return _finalize_figure(figure)
 
 
 def format_distribution_stats(aggregate_data, variable):
     """
     Format the quartile statistics of one variable from the central aggregate
-    result as a one-line summary (Q1, median, Q3, IQR, mean, std, n, transform),
-    rendered next to the distribution curve instead of inside the graph.
+    result as a one-line summary (Q1, median, Q3, IQR, mean, SD, n), rendered next
+    to the distribution figure instead of inside the graph. The SD is the
+    'adjusted std' (all patients combined) when reported, otherwise the
+    within-organisation 'std'.
 
     Parameters:
     aggregate_data (dict): The 'aggregate' section of the dashboard data.
@@ -2056,24 +2385,77 @@ def format_distribution_stats(aggregate_data, variable):
     """
     if not aggregate_data or not variable:
         return ''
-    _, numerical = load_aggregate_stats(aggregate_data)
-    rows = numerical[numerical['variable'] == variable]
-    stats = dict(zip(rows['statistic'], rows['value']))
+    stats = _aggregate_variable_stats(aggregate_data, variable)
     if not all(stat in stats for stat in ('q1', 'median', 'q3')):
         return ''
 
-    q1, median, q3 = float(stats['q1']), float(stats['median']), float(stats['q3'])
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
     iqr = q3 - q1
-    right_skewed = q1 > 0 and (q3 - median) > (median - q1)
     text = f'Q1: {q1:.2f} | Median: {median:.2f} | Q3: {q3:.2f} | IQR: {iqr:.2f}'
     if 'mean' in stats:
-        text += f' | Mean: {float(stats["mean"]):.2f}'
-    if 'std' in stats:
-        text += f' | Std: {float(stats["std"]):.2f}'
+        text += f' | Mean: {stats["mean"]:.2f}'
+    reported_sd = _reported_sd(stats)
+    if reported_sd is not None:
+        sd_value, sd_label = reported_sd
+        text += f' | SD ({sd_label}): {sd_value:.2f}'
     if 'count' in stats:
-        text += f' | n: {float(stats["count"]):.0f}'
-    text += ' (log-transformed)' if right_skewed else ' (normal)'
+        text += f' | n: {stats["count"]:.0f}'
     return text
+
+
+def distribution_warnings(aggregate_data, variable, descriptive_data=None):
+    """
+    Check the federated quartiles of one variable against the other statistics of
+    the central aggregate result and the per-organisation quartiles, and explain
+    where the blocks are misleading.
+
+    Returns an empty list when the figure cannot be drawn at all (same guards as
+    generate_distribution_figure).
+
+    Parameters:
+    aggregate_data (dict): The 'aggregate' section of the dashboard data.
+    variable (str): The ontology class code of the variable.
+    descriptive_data (dict, optional): The per-organisation snapshots (the 'store'
+                                       data), used for the organisation medians check.
+
+    Returns:
+    list[str]: Human-readable warnings, in a stable order.
+    """
+    if not aggregate_data or not variable:
+        return []
+    stats = _aggregate_variable_stats(aggregate_data, variable)
+    if not all(stat in stats for stat in ('q1', 'median', 'q3')):
+        return []
+    q1, median, q3 = stats['q1'], stats['median'], stats['q3']
+    iqr = q3 - q1
+    if iqr <= 0 or not q1 <= median <= q3:
+        return []
+    if median == q1 or median == q3:
+        return []
+
+    warnings = []
+    std = stats.get('std')
+    adjusted_std = stats.get('adjusted std')
+    if std is not None and adjusted_std is not None and adjusted_std > 0:
+        # std is the within-organisation SD and adjusted std the SD of all
+        # patients, both over the same N, so 1 - (std / adjusted std)^2 is
+        # exactly the share of the variance that lies between organisation means
+        share = min(1.0, max(0.0, 1 - (std / adjusted_std) ** 2))
+        if share > _BETWEEN_ORGANISATION_SHARE_LIMIT:
+            warnings.append(
+                f'{share:.0%} of the variation lies between organisations '
+                f'(SD within organisations {std:.2f}, all patients {adjusted_std:.2f}): '
+                'the blocks show a typical organisation and understate the spread of all '
+                'patients combined.')
+    organisations = _organisation_quartiles(descriptive_data, variable)
+    if len(organisations) >= 2:
+        medians = [org['median'] for org in organisations]
+        if max(medians) - min(medians) > iqr:
+            warnings.append(
+                f'Organisation medians range from {min(medians):.2f} to {max(medians):.2f}, '
+                f'wider than the federated IQR ({iqr:.2f}): the blocks show a typical '
+                'organisation, not all patients combined.')
+    return warnings
 
 
 def _donut_figure(labels, values):
@@ -2107,7 +2489,13 @@ def _donut_figure(labels, values):
         font=dict(family='Poppins, sans-serif'),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation='h', yanchor='top', y=0, xanchor='center', x=0.5),
+        # autoexpand lets plotly grow the top margin to fit the (possibly
+        # multi-row) legend, so the legend can never overlap the chart;
+        # no fixed t, which would switch expansion off for that side
+        margin=dict(b=20, l=20, r=20, autoexpand=True),
+        # legend centred above the plot, clear of the chart
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5,
+                    font=dict(size=11)),
     )
     return _finalize_figure(figure)
 
@@ -2179,6 +2567,178 @@ def categorical_value_counts(descriptive_data, selection, variable, semantic_map
     return labels, [count for _, count in items]
 
 
+def categorical_country_breakdown(descriptive_data, variable, semantic_map_data=None, selection=None):
+    """
+    Aggregate the counts of one categorical variable per country AND per value
+    over the latest snapshot (each country's organisations are combined), so a
+    chart can show e.g. how many males/females each country includes. With
+    selection, only the selected organisations are included. Value labels come
+    from the schema valueMapping terms like in categorical_value_counts;
+    'outliers' is excluded and 'nan' is labelled 'Missing'. For the special
+    'cancer_groups' variable the ICD-10 blocks act as the values.
+
+    Parameters:
+    descriptive_data (dict): The descriptive data; each key is a timestamp and each
+                             value maps organisations to their statistics.
+    variable (str): The schema variable name, or 'cancer_groups'.
+    semantic_map_data (dict, optional): The semantic map used for labels.
+    selection (list, optional): The selected organisation names; None means all.
+
+    Returns:
+    tuple: (countries, categories, counts) — countries sorted by total count
+           descending, categories sorted by total count descending, and counts
+           mapping each category label to a list of counts aligned with the
+           countries; or None when there is nothing to show.
+    """
+    if not descriptive_data or not variable:
+        return None
+    latest_data = descriptive_data[max(descriptive_data.keys())]
+    frames = []
+    for organisation, org_data in latest_data.items():
+        if selection is not None and organisation not in selection:
+            continue
+        if not isinstance(org_data, dict):
+            continue
+        categorical, _ = _load_organization_stats(org_data)
+        categorical = categorical.copy()
+        categorical['country'] = org_data.get('country') or 'Unknown'
+        frames.append(categorical)
+    if not frames:
+        return None
+    combined = pd.concat(frames, ignore_index=True)
+
+    if variable == CANCER_GROUPS_VARIABLE:
+        rows = combined[combined['variable'].isin(detect_icd10_variables(combined))].copy()
+        rows = rows[rows['value'].notna()]
+        rows = rows[~rows['value'].astype(str).str.strip().str.lower().isin(SPECIAL_CATEGORICAL_VALUES)]
+        rows['block'] = rows['value'].apply(_get_icd10_block)
+        rows = rows[rows['block'].notna()]
+        rows['count'] = pd.to_numeric(rows['count'], errors='coerce')
+        block_labels = {}
+
+        def block_label(block):
+            if block not in block_labels:
+                try:
+                    description = icd10.get_description(block)
+                except Exception:
+                    description = None
+                block_labels[block] = f'{block} - {description}' if description else str(block)
+            return block_labels[block]
+
+        rows['label'] = rows['block'].apply(block_label)
+    else:
+        variable_class = _variable_class(variable, semantic_map_data)
+        rows = combined[combined['variable'] == variable_class].copy()
+        rows = rows[rows['value'].astype(str).str.lower() != 'outliers']
+        rows['label'] = rows['value'].apply(
+            lambda value: 'Missing' if str(value).lower() == 'nan'
+            else _value_label(value, variable_class, semantic_map_data))
+    rows = rows.dropna(subset=['count'])
+    if rows.empty:
+        return None
+    grouped = rows.groupby(['country', 'label'])['count'].sum().unstack(fill_value=0)
+    if grouped.empty:
+        return None
+    countries = grouped.sum(axis=1).sort_values(ascending=False).index.tolist()
+    categories = grouped.sum(axis=0).sort_values(ascending=False).index.tolist()
+    grouped = grouped.reindex(index=countries, columns=categories, fill_value=0)
+    counts = {category: [float(value) for value in grouped[category]] for category in categories}
+    return countries, categories, counts
+
+
+def generate_categorical_country_breakdown_figure(descriptive_data, variable, semantic_map_data=None,
+                                                  text="AYA", proportions=False, selection=None):
+    """
+    Generate one stacked horizontal bar per country showing the selected
+    categorical variable's counts per value within that country (the selected
+    organisations combined per country, see categorical_country_breakdown) —
+    e.g. how many males/females each country includes. Largest country on top.
+    With proportions=True the bars show each value's share of the country
+    instead of the raw counts. The figure has no title; the small label above
+    the chart provides it.
+
+    Parameters:
+    proportions (bool): Stack proportions (0-1) instead of counts.
+    selection (list, optional): The selected organisation names; None means all.
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The stacked bar chart, or an annotation figure.
+    """
+    if not descriptive_data:
+        return _empty_annotation_figure(f'No {text} data available')
+    if selection is not None and not selection:
+        return _empty_annotation_figure('Select an organisation to visualise the variable distribution')
+    if not variable:
+        return _empty_annotation_figure('Select a variable to visualise')
+    breakdown = categorical_country_breakdown(descriptive_data, variable, semantic_map_data,
+                                              selection=selection)
+    if breakdown is None:
+        return _empty_annotation_figure('No per-country data available for the selected variable')
+    countries, categories, counts = breakdown
+    colorway = pio.templates[pio.templates.default].layout.colorway
+    order = list(reversed(range(len(countries))))  # largest country on top
+    totals = [sum(counts[category][j] for category in categories) for j in range(len(countries))]
+    figure = go.Figure()
+    for i, category in enumerate(categories):
+        if proportions:
+            x = [counts[category][j] / totals[j] if totals[j] else 0.0 for j in order]
+            hover = f"<b>{category}</b><br>%{{y}}: <b>%{{x:.0%}}</b><extra></extra>"
+        else:
+            x = [counts[category][j] for j in order]
+            hover = f"<b>{category}</b><br>%{{y}}: <b>%{{x}}</b><extra></extra>"
+        figure.add_trace(go.Bar(
+            y=[countries[j] for j in order],
+            x=x,
+            name=category,
+            orientation='h',
+            marker_color=colorway[i % len(colorway)],
+            hovertemplate=hover,
+        ))
+    if proportions:
+        xaxis = dict(title=f'Proportion of {text}s', range=[0, 1], tickformat='.0%')
+    else:
+        xaxis = dict(title=f'Number of {text}s', rangemode='tozero')
+    figure.update_layout(
+        barmode='stack',
+        hoverlabel=dict(font_family='Poppins, sans-serif'),
+        font=dict(family='Poppins, sans-serif'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=max(300, len(countries) * 30 + 170),
+        # autoexpand lets plotly grow the top margin to fit the legend, so the
+        # legend can never overlap the plot or the x-axis; no fixed t
+        margin=dict(l=140, r=20, b=30, autoexpand=True),
+        xaxis=xaxis,
+        yaxis=dict(title=None, automargin=True),
+        # legend centred above the plot, clear of the x-axis
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5,
+                    font=dict(size=11)),
+    )
+    return _finalize_figure(figure)
+
+
+def format_categorical_country_csv(countries, categories, counts):
+    """
+    Format a per-country categorical breakdown as CSV text with a
+    'country,category,count' header.
+
+    Parameters:
+    countries (list): The country labels (rows).
+    categories (list): The category labels (columns).
+    counts (dict): Category label mapped to counts aligned with countries.
+
+    Returns:
+    str: The CSV text.
+    """
+    lines = ['country,category,count']
+    for i, country in enumerate(countries):
+        for category in categories:
+            safe_country = str(country).replace('"', '""')
+            safe_category = str(category).replace('"', '""')
+            lines.append(f'"{safe_country}","{safe_category}",{counts[category][i]:g}')
+    return '\n'.join(lines) + '\n'
+
+
 def generate_categorical_pie_figure(descriptive_data, selection, variable, semantic_map_data=None, text="AYA"):
     """
     Generate a donut chart of the counts of one categorical variable (see
@@ -2219,7 +2779,22 @@ def generate_categorical_bar_figure(descriptive_data, selection, variable, seman
     if counts is None:
         return _empty_annotation_figure('No data available for the selected organisations and variable')
 
-    labels, values = counts
+    return _horizontal_count_bar_figure(*counts, text)
+
+
+def _horizontal_count_bar_figure(labels, values, text):
+    """
+    Build a horizontal bar chart of counts, largest bar on top. The figure has
+    no title; the small label above the chart provides it.
+
+    Parameters:
+    labels (list): The bar labels.
+    values (list): The counts.
+    text (str): The record noun for the x-axis title (e.g. 'AYA').
+
+    Returns:
+    plotly.graph_objs._figure.Figure: The bar chart.
+    """
     # ascending order so the largest bar ends up on top
     order = sorted(range(len(values)), key=lambda i: values[i])
     labels = [labels[i] for i in order]
@@ -2229,6 +2804,7 @@ def generate_categorical_bar_figure(descriptive_data, selection, variable, seman
         x=values,
         y=labels,
         orientation='h',
+        showlegend=False,  # the y labels already name the categories
         hovertemplate=("<b>%{y}</b><br>"
                        "Count: <b>%{x}</b><extra></extra>"),
     ))

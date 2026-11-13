@@ -52,12 +52,27 @@ available data between those moments:
 
 In addition, a reserved top-level `aggregate` key may hold the results of the central
 (aggregating) task of the "Descriptive statistics" Vantage6 algorithm. It is keyed by ISO
-timestamp as well and feeds the data exploration page, which reconstructs a density curve
-per continuous variable from the federated quartiles (q1, median, q3) and the derived IQR.
-The central result has `min` and `max` removed by the algorithm, so the curve is modelled
-from the quartiles alone: log-normal when the quartiles are right-skewed and strictly
-positive, normal otherwise, evaluated on a dense evenly spaced grid with the IQR band
-shaded:
+timestamp as well and feeds the data exploration page, which draws the distribution of each
+continuous variable from the federated quartiles (q1, median, q3) and the derived IQR.
+The central result has `min` and `max` removed by the algorithm, so the figure shows only
+what the quartiles state: the Q1–Q3 range holds the middle 50% of patients in a typical
+organisation. That range is drawn as a solid horizontal whisker with caps at Q1 and Q3, the Q1/Q2/Q3 values
+labelled in the plot, and the median marked with a short dashed tick; no density curve is drawn,
+because the quartiles do not record the shape or peak of the distribution. The lowest and
+highest 25% (a further 25% on each side) are shown as grey dashed extensions outside Q1–Q3;
+their actual range is not shared (minimum, maximum and raw values are removed), so their
+extent is inferred, not recorded. Below the whisker, one strip row on a single vertical axis shows
+each organisation's own Q1–median–Q3 whisker in the organisation's own colour, and beneath those
+one whisker per country (estimated by combining that country's organisations' quartiles weighted
+by their counts — an estimate, not a recorded value), with a subtle dotted separator and
+'Organisations'/'Countries' labels between the two groups. The categorical tile has two sections, each with its own label, visualisation selector
+and download button: the top one over the selected organisations, and below a subtle dotted
+line one per country (counts or proportions, or a CSV table) showing the variable's values
+within each country (e.g. males/females per country) over the selected organisations. The page also warns when more than a quarter of the
+variation lies between organisations (computed from `std` versus `adjusted std`) or when
+organisation medians spread wider than the federated IQR; the stats line and the warnings
+prefer `adjusted std` (the SD of all patients combined) over `std` (the within-organisation
+SD) when the central result carries both:
 
 ```json
 {
