@@ -882,36 +882,85 @@ class Dashboard:
             return view, True, labels[view], classes['pie'], classes['bar'], classes['csv']
 
         @self.App.callback(
+            Output('exploration-country-view-menu', 'hidden'),
+            [Input('exploration-country-view-toggle', 'n_clicks')]
+        )
+        def toggle_exploration_country_view_menu(n_clicks):
+            """Open/close the per-country chart's 'Select visualisation' menu."""
+            return (n_clicks or 0) % 2 == 0
+
+        @self.App.callback(
+            [Output('exploration-country-view-store', 'data'),
+             Output('exploration-country-view-menu', 'hidden'),
+             Output('exploration-country-view-indicator', 'children'),
+             Output('exploration-country-view-bar', 'className'),
+             Output('exploration-country-view-percent', 'className'),
+             Output('exploration-country-view-csv', 'className')],
+            [Input('exploration-country-view-bar', 'n_clicks'),
+             Input('exploration-country-view-percent', 'n_clicks'),
+             Input('exploration-country-view-csv', 'n_clicks')]
+        )
+        def select_exploration_country_view(bar_clicks, percent_clicks, csv_clicks):
+            """Store the per-country chart's view ('bar', 'percent' or 'csv'), close
+            the menu, update the indicator and mark the chosen option current."""
+            ctx = dash.callback_context
+            view = 'bar'
+            if ctx.triggered:
+                view = ctx.triggered[0]['prop_id'].split('.')[0].replace(
+                    'exploration-country-view-', '')
+            labels = {'bar': '(Bar chart)', 'percent': '(Proportions)', 'csv': '(CSV)'}
+            classes = {v: 'filter-option current' if v == view else 'filter-option'
+                       for v in ('bar', 'percent', 'csv')}
+            return view, True, labels[view], classes['bar'], classes['percent'], classes['csv']
+
+        @self.App.callback(
             [Output('exploration-categorical-graph', 'figure'),
              Output('exploration-categorical-graph', 'style'),
+             Output('exploration-categorical-graph-country', 'figure'),
+             Output('exploration-categorical-graph-country', 'style'),
              Output('exploration-categorical-csv', 'hidden'),
              Output('exploration-categorical-csv-table', 'data'),
-             Output('exploration-csv-store', 'data')],
+             Output('exploration-csv-store', 'data'),
+             Output('exploration-categorical-country-csv', 'hidden'),
+             Output('exploration-categorical-country-csv-table', 'data'),
+             Output('exploration-country-csv-store', 'data')],
             [Input('store', 'data'),
              Input('exploration-subset-selection-checkboxes', 'value'),
              Input('exploration-categorical-variable', 'value'),
-             Input('exploration-view-store', 'data')]
+             Input('exploration-view-store', 'data'),
+             Input('exploration-country-view-store', 'data')]
         )
-        def update_exploration_categorical_chart(descriptive_data, selection, variable, view):
+        def update_exploration_categorical_chart(descriptive_data, selection, variable, view,
+                                                 country_view):
             """
-            Callback function to update the categorical chart on the data exploration
-            page. Depending on the view it renders a pie chart, a bar chart, or the
-            underlying counts as a CSV table (with a downloadable CSV in the store).
-            Counts are summed over the selected organisations.
+            Callback function to update the two categorical charts on the data
+            exploration page. The top chart depends on its view: a pie chart, a
+            bar chart, or the underlying counts as a CSV table (with a
+            downloadable CSV in the store), summed over the selected
+            organisations. The bottom chart shows the same variable broken down
+            per country over the selected organisations (one stacked bar per
+            country, counts or proportions, or a CSV table). Each chart is
+            hidden in its own CSV view.
 
             Parameters:
             descriptive_data (dict): The data stored in the 'store' component.
             selection (list): The selected organisations.
             variable (str): The selected categorical variable ('cancer_groups' for the
                             ICD-10 binned cancer types).
-            view (str): 'pie', 'bar' or 'csv'.
+            view (str): The top chart's view: 'pie', 'bar' or 'csv'.
+            country_view (str): The bottom chart's view: 'bar', 'percent' or 'csv'.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The chart figure.
-            dict: The graph style (hidden in CSV view).
-            bool: Whether the CSV view is hidden.
-            list: The CSV table rows.
-            str: The CSV text for download.
+            plotly.graph_objs._figure.Figure: The selected-organisations chart figure.
+            dict: Its style (hidden in its CSV view).
+            plotly.graph_objs._figure.Figure: The per-country chart figure.
+            dict: Its style (hidden in its CSV view).
+            bool: Whether the top CSV view is hidden.
+            list: The top CSV table rows.
+            str: The top CSV text for download.
+            bool: Whether the per-country CSV view is hidden.
+            list: The per-country CSV table rows.
+            str: The per-country CSV text for download.
             """
             if view == 'bar':
                 figure = callbacks.generate_categorical_bar_figure(
@@ -919,6 +968,9 @@ class Dashboard:
             else:
                 figure = callbacks.generate_categorical_pie_figure(
                     descriptive_data, selection, variable, self.global_semantic_map_data)
+            country_figure = callbacks.generate_categorical_country_breakdown_figure(
+                descriptive_data, variable, self.global_semantic_map_data,
+                proportions=(country_view == 'percent'), selection=selection)
 
             counts = callbacks.categorical_value_counts(
                 descriptive_data, selection, variable, self.global_semantic_map_data)
@@ -929,11 +981,28 @@ class Dashboard:
                 table_data = [{'category': label, 'count': value} for label, value in zip(labels, values)]
                 csv_text = callbacks.format_categorical_csv(labels, values)
 
+            breakdown = callbacks.categorical_country_breakdown(
+                descriptive_data, variable, self.global_semantic_map_data, selection=selection)
+            if breakdown is None:
+                country_table_data, country_csv_text = [], ''
+            else:
+                countries, categories, country_counts = breakdown
+                country_table_data = [
+                    {'country': country, 'category': category, 'count': country_counts[category][i]}
+                    for i, country in enumerate(countries) for category in categories]
+                country_csv_text = callbacks.format_categorical_country_csv(
+                    countries, categories, country_counts)
+
             return (figure,
                     {'display': 'none'} if view == 'csv' else {},
+                    country_figure,
+                    {'display': 'none'} if country_view == 'csv' else {},
                     view != 'csv',
                     table_data,
-                    csv_text)
+                    csv_text,
+                    country_view != 'csv',
+                    country_table_data,
+                    country_csv_text)
 
         @self.App.callback(
             Output('exploration-csv-download', 'data'),
@@ -954,6 +1023,27 @@ class Dashboard:
             if not n_clicks or not csv_text:
                 return dash.no_update
             return dcc.send_string(csv_text, 'categorical-variable-counts.csv')
+
+        @self.App.callback(
+            Output('exploration-country-csv-download', 'data'),
+            [Input('exploration-country-csv-download-btn', 'n_clicks')],
+            [State('exploration-country-csv-store', 'data')]
+        )
+        def download_exploration_country_csv(n_clicks, csv_text):
+            """
+            Callback function to download the per-country breakdown of the
+            currently shown categorical variable as CSV.
+
+            Parameters:
+            n_clicks (int): The download button click count.
+            csv_text (str): The CSV text stored by the chart callback.
+
+            Returns:
+            dict: The dcc.Download data payload.
+            """
+            if not n_clicks or not csv_text:
+                return dash.no_update
+            return dcc.send_string(csv_text, 'categorical-variable-counts-per-country.csv')
 
         @self.App.callback(
             [Output('exploration-variable-dropdown', 'options'),
@@ -982,27 +1072,36 @@ class Dashboard:
 
         @self.App.callback(
             [Output('exploration-distribution-graph', 'figure'),
-             Output('exploration-distribution-stats', 'children')],
+             Output('exploration-distribution-stats', 'children'),
+             Output('exploration-distribution-warnings', 'children')],
             [Input('aggregate-store', 'data'),
-             Input('exploration-variable-dropdown', 'value')]
+             Input('exploration-variable-dropdown', 'value'),
+             Input('store', 'data')]
         )
-        def update_exploration_distribution(aggregate_data, variable):
+        def update_exploration_distribution(aggregate_data, variable, descriptive_data):
             """
-            Callback function to update the distribution density curve on the data
-            exploration page from the central aggregate (federated IQR) result, plus
-            the one-line quartile summary shown next to the graph.
+            Callback function to update the distribution figure on the data
+            exploration page from the central aggregate (federated quartiles) result,
+            plus the one-line quartile summary and the warnings shown next to the
+            graph. The per-organisation snapshots feed the organisation strip in the
+            graph and the organisation spread warning.
 
             Parameters:
             aggregate_data (dict): The data stored in the 'aggregate-store' component.
             variable (str): The selected variable's ontology class code.
+            descriptive_data (dict): The per-organisation snapshots stored in 'store'.
 
             Returns:
-            plotly.graph_objs._figure.Figure: The updated density curve figure.
+            plotly.graph_objs._figure.Figure: The updated distribution figure.
             str: The quartile statistics summary line.
+            list: The warnings as a single bullet list, empty when there are none.
             """
-            return (callbacks.generate_distribution_curve_figure(aggregate_data, variable,
-                                                                 self.global_semantic_map_data),
-                    callbacks.format_distribution_stats(aggregate_data, variable))
+            figure = callbacks.generate_distribution_figure(
+                aggregate_data, variable, self.global_semantic_map_data, descriptive_data)
+            stats = callbacks.format_distribution_stats(aggregate_data, variable)
+            warnings = callbacks.distribution_warnings(aggregate_data, variable, descriptive_data)
+            warnings_children = [html.Ul([html.Li(warning) for warning in warnings])] if warnings else []
+            return figure, stats, warnings_children
 
     def run(self, debug=None):
         """
