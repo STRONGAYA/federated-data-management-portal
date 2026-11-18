@@ -6,6 +6,7 @@ from federated_data_management_portal import callbacks
 from federated_data_management_portal.main import (
     load_json_file,
     load_static_dashboard_data,
+    split_aggregate_section,
 )
 
 EXAMPLE_DATA = Path(__file__).resolve().parent.parent / "example_data"
@@ -13,7 +14,8 @@ EXAMPLE_DATA = Path(__file__).resolve().parent.parent / "example_data"
 
 class ExampleDataTests(unittest.TestCase):
     def setUp(self):
-        self.dashboard_data = load_static_dashboard_data(EXAMPLE_DATA / "dashboard.json")
+        raw_dashboard_data = load_static_dashboard_data(EXAMPLE_DATA / "dashboard.json")
+        self.dashboard_data, self.aggregate_data = split_aggregate_section(raw_dashboard_data)
         self.schema = load_json_file(EXAMPLE_DATA / "schema.jsonld")
 
     def assert_no_nan(self, values):
@@ -39,6 +41,21 @@ class ExampleDataTests(unittest.TestCase):
     def test_keeps_the_example_totals(self):
         self.assertEqual(callbacks.fetch_total_sample_size(self.dashboard_data)[0], "1100")
         self.assertEqual(callbacks.fetch_field_count(self.dashboard_data)[0], "2")
+
+    def test_aggregate_section_is_split_from_the_snapshots(self):
+        self.assertEqual(
+            sorted(self.dashboard_data.keys()),
+            ["2025-12-01T00:00:00", "2026-01-01T00:00:00"],
+        )
+        self.assertEqual(list(self.aggregate_data.keys()), ["2026-01-01T00:00:00"])
+
+        categorical, numerical = callbacks.load_aggregate_stats(self.aggregate_data)
+        self.assertIn("q1", set(numerical["statistic"]))
+        self.assertIn("q3", set(numerical["statistic"]))
+        # The central algorithm result has min and max removed
+        self.assertNotIn("min", set(numerical["statistic"]))
+        self.assertNotIn("max", set(numerical["statistic"]))
+        self.assertIn("ncit:C3263", set(categorical["variable"]))
 
     def test_donut_charts_render_for_every_domain(self):
         for domain in ("availability", "completeness", "plausibility"):

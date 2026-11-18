@@ -12,6 +12,12 @@ The version of the deployed portal is shown in the footer of every page. Release
 
 https://github.com/user-attachments/assets/6a0a236c-e856-4fde-9f2e-331bc5b36da6
 
+## How was this work funded?
+
+This work and the associated scientific publication ([https://doi.org/10.3389/fams.2026.1981705](https://doi.org/10.3389/fams.2026.1981705)) were predominantly
+supported by the European Union's Horizon 2020 research and innovation programme through _The STRONG-AYA Initiative_
+(Grant agreement ID: 101057482).
+
 ## Data files
 
 The Compose setup expects two files outside the repository:
@@ -43,6 +49,29 @@ available data between those moments:
   }
 }
 ```
+
+In addition, a reserved top-level `aggregate` key may hold the results of the central
+(aggregating) task of the "Descriptive statistics" Vantage6 algorithm. It is keyed by ISO
+timestamp as well and feeds the data exploration page, which reconstructs a density curve
+per continuous variable from the federated quartiles (q1, median, q3) and the derived IQR.
+The central result has `min` and `max` removed by the algorithm, so the curve is modelled
+from the quartiles alone: log-normal when the quartiles are right-skewed and strictly
+positive, normal otherwise, evaluated on a dense evenly spaced grid with the IQR band
+shaded:
+
+```json
+{
+  "aggregate": {
+    "2026-01-01T00:00:00": {
+      "categorical": "{\"variable\":{},\"value\":{},\"count\":{}}",
+      "numerical": "{\"variable\":{},\"statistic\":{},\"value\":{}}"
+    }
+  }
+}
+```
+
+The vantage6-native key names `categorical_general_statistics` and
+`numerical_general_statistics` are accepted as aliases for `categorical` and `numerical`.
 
 Example versions of both files are included in `example_data/` and can be used to run the
 dashboard locally:
